@@ -1,0 +1,6 @@
+schema:
+  - ${STRAPI_BASE_URL}/graphql:
+      headers:
+        Authorization: Bearer ${STRAPI_TOKEN}
+documents:
+  - src/lib/config/domain/gql/**/*.ts

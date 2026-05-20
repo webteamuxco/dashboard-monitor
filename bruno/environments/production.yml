@@ -1,0 +1,10 @@
+name: production
+variables:
+  - name: url
+    value: https://glitchtip.uxco-group.com
+  - name: projectId
+    value: "1"
+  - name: organizationSlug
+    value: uxco-group
+  - secret: true
+    name: token-api

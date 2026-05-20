@@ -1,0 +1,1 @@
+export type ErrorLevel = "fatal" | "error" | "warning" | "info" | "debug";
