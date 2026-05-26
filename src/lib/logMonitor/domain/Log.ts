@@ -1,9 +1,9 @@
-import { ErrorLevel } from "./ErrorLevel";
+import { LogLevel } from "./LogLevel";
 
 export interface Log {
   id: string;
   message: string;
-  level: ErrorLevel;
+  level: LogLevel;
   timestamp: string;
 }
 

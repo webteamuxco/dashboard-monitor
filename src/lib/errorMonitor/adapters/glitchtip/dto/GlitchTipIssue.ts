@@ -1,4 +1,4 @@
-import { GlitchTipLevel, GlitchTipStatus } from "./GlitchTipType";
+import { GlitchTipLevel, GlitchTipStatus } from "@/lib/glitchtip/dto/GlitchTipType";
 
 export interface GlitchTipIssueDto {
   id: string;

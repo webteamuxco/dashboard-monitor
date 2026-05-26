@@ -73,7 +73,7 @@ export function ChartTooltipContent({
     : (label ?? "");
 
   return (
-    <div className="rounded-md border border-border bg-popover px-2.5 py-1.5 font-mono text-[11px] shadow-md">
+    <div className="rounded-md border border-border bg-popover px-2.5 py-1.5 font-mono text-[0.6875rem] shadow-md">
       <div className="mb-1 text-muted-foreground">{displayLabel}</div>
       {payload.map((entry) => {
         const cfg = config[entry.dataKey];

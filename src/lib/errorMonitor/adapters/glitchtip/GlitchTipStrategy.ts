@@ -1,15 +1,13 @@
 import "server-only";
 import type { ErrorMonitorStrategyInterface } from "../../strategy/ErrorMonitorStrategyInterface";
 import type { Issue, IssueFilters } from "../../domain/Issue";
-import type { Log, LogFilters } from "../../domain/Log";
-import type { Period } from "../../domain/Period";
-import type { GlitchTipClient } from "./GlitchTipClient";
+import type { Period } from "@/lib/shared/domain/Period";
+import type { TimeSeriesPoint } from "../../domain/TimeSeriesPoint";
+import type { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "./dto/GlitchTipIssue";
-import type { GlitchTipLogDto } from "./dto/GlitchTipLogs";
+import type { GlitchTipStatsV2Dto } from "./dto/GlitchTipStatsV2";
 import { mapGlitchTipIssue } from "./mappers/IssueMapper";
-import { mapGlitchTipLog } from "./mappers/logsMapper";
-
-const RESERVATION_TAG = "reservation.sent";
+import { mapGlitchTipStatsV2 } from "./mappers/statsV2Mapper";
 
 function buildIssueQuery(filters?: IssueFilters): string | undefined {
   if (!filters) return undefined;
@@ -38,20 +36,18 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
     return dto.map(mapGlitchTipIssue);
   }
 
-  async getLogs(projectId: string, filters?: LogFilters, period?: Period): Promise<Log[]> {
-    const dto = await this.client.get<GlitchTipLogDto[]>(
-      `/api/0/organizations/${this.organizationSlug}/logs/`,
+  async getErrorStats(projectId: string, period: Period): Promise<TimeSeriesPoint[]> {
+    const dto = await this.client.get<GlitchTipStatsV2Dto>(
+      `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
       {
+        category: "error",
+        interval: period.interval,
+        field: "sum(quantity)",
         project: projectId,
-        start: period?.from,
-        end: period?.to,
-        query: filters?.query,
+        start: period.from,
+        end: period.to,
       },
     );
-    return dto.map(mapGlitchTipLog);
-  }
-
-  getReservations(projectId: string, period: Period): Promise<Log[]> {
-    return this.getLogs(projectId, { query: RESERVATION_TAG }, period);
+    return mapGlitchTipStatsV2(dto);
   }
 }

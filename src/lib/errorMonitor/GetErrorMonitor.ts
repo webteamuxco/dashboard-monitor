@@ -12,11 +12,13 @@ const resolver = new ErrorMonitorResolver(factories);
 
 export function getErrorMonitor(): ErrorMonitorStrategyInterface {
 
-  const driver = process.env.ERROR_MONITOR_DRIVER;
+  const defaultDriver = process.env.NEXT_PUBLIC_ERROR_MONITOR_DRIVER;
 
+  const driver = defaultDriver
+  
   if (!driver) {
     throw new Error(
-      'ERROR_MONITOR_DRIVER env variable is not set. See .env.example.',
+      'NEXT_PUBLIC_ERROR_MONITOR_DRIVER env variable is not set. See .env.example.',
     );
   }
   

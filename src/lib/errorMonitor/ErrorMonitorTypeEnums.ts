@@ -6,8 +6,6 @@ type ErrorMonitorType = ToolMappedType & {
 }
 
 export const errorMonitorMapper: ErrorMonitorType = {
-    toolList: [
-        ...GLITCHTIP
-    ]
+    toolList: [GLITCHTIP],
 }
 

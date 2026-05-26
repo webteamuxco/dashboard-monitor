@@ -162,5 +162,11 @@
   }
   html {
     @apply font-sans;
+    font-size: clamp(12px, 0.9vw, 28px);
+  }
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
   }
 }

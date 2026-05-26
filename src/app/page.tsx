@@ -1,11 +1,14 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
-import { BarChart3, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { IssuesPanel } from "./features/issues/ui/IssuesPanel";
 import { issuesDataAccess } from "./features/issues/data-access/IssuesDataAccess";
 import { issuesKeys } from "./features/issues/queryKeys";
 import { ReservationsPanel } from "./features/reservations/ui/ReservationsPanel";
 import { reservationsDataAccess } from "./features/reservations/data-access/ReservationsDataAccess";
 import { reservationsKeys } from "./features/reservations/queryKeys";
+import { ErrorRatePanel } from "./features/errorRate/ui/ErrorRatePanel";
+import { errorRateDataAccess } from "./features/errorRate/data-access/ErrorRateDataAccess";
+import { errorRateKeys } from "./features/errorRate/queryKeys";
 import { DashboardHeader } from "./features/dashboard/ui/DashboardHeader";
 import { IssuesKpiRow } from "./features/dashboard/ui/IssuesKpiRow";
 import { PlaceholderChartPanel } from "./features/dashboard/ui/PlaceholderChartPanel";
@@ -55,34 +58,34 @@ export default async function Home() {
       queryKey: reservationsKeys.series(projectId, reservationsWindow),
       queryFn: () => reservationsDataAccess.getSeries(projectId, reservationsWindow),
     }),
+    queryClient.prefetchQuery({
+      queryKey: errorRateKeys.series(projectId),
+      queryFn: () => errorRateDataAccess.getSeries(projectId),
+    }),
   ]);
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
-      <DashboardHeader projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
-      <main className="flex flex-1 flex-col gap-3 p-4">
-        <IssuesKpiRow projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
+      <div className="flex h-screen flex-col overflow-hidden">
+        <DashboardHeader projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
+        <main className="flex flex-1 min-h-0 flex-col gap-3 p-4">
+          <IssuesKpiRow projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
 
-        <div className="grid grid-cols-2 gap-3">
-          <IssuesPanel projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
-          <PlaceholderChartPanel
-            title="Taux d'erreurs"
-            icon={BarChart3}
-            hint="erreurs / min · 30 pts"
-            height={280}
-          />
-        </div>
+          <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
+            <IssuesPanel projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
+            <ErrorRatePanel projectId={projectId} intervalMs={intervalMs} />
+          </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <ReservationsPanel projectId={projectId} intervalMs={intervalMs} height={200} />
-          <PlaceholderChartPanel
-            title="Visiteurs en temps réel"
-            icon={Users}
-            hint="sessions actives"
-            height={200}
-          />
-        </div>
-      </main>
+          <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
+            <ReservationsPanel projectId={projectId} intervalMs={intervalMs} />
+            <PlaceholderChartPanel
+              title="Visiteurs en temps réel"
+              icon={Users}
+              hint="sessions actives"
+            />
+          </div>
+        </main>
+      </div>
     </HydrationBoundary>
   );
 }

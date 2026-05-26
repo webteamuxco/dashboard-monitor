@@ -21,14 +21,13 @@ import { useReservations } from "../hooks/useReservations";
 interface ReservationsPanelProps {
   projectId: string;
   intervalMs: number;
-  height?: number;
 }
 
 const config = {
   count: { label: "Réservations", color: "var(--primary)" },
 } satisfies ChartConfig;
 
-export function ReservationsPanel({ projectId, intervalMs, height = 200 }: ReservationsPanelProps) {
+export function ReservationsPanel({ projectId, intervalMs }: ReservationsPanelProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
   const { data, isPending, isError, error, isFetching } = useReservations(
     projectId,
@@ -39,7 +38,7 @@ export function ReservationsPanel({ projectId, intervalMs, height = 200 }: Reser
   const showBackgroundDot = isFetching && !isPending;
 
   return (
-    <Card>
+    <Card className="flex h-full flex-col">
       <CardHeader>
         <CardTitle>
           <CalendarCheck className="h-3.5 w-3.5 text-muted-foreground" />
@@ -52,11 +51,11 @@ export function ReservationsPanel({ projectId, intervalMs, height = 200 }: Reser
               aria-label="Mise à jour en cours"
             />
           )}
-          <span className="font-mono text-[10px] text-muted-foreground/60">req / min</span>
+          <span className="font-mono text-[0.625rem] text-muted-foreground/60">req / min</span>
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="relative" style={{ height }}>
+      <CardContent className="flex-1 min-h-0">
+        <div className="relative h-full">
           {isPending ? (
             <PanelMessage>Chargement…</PanelMessage>
           ) : isError ? (
@@ -73,14 +72,14 @@ export function ReservationsPanel({ projectId, intervalMs, height = 200 }: Reser
                   axisLine={false}
                   interval="preserveStartEnd"
                   minTickGap={28}
-                  tick={{ fontFamily: "var(--font-mono)", fontSize: 10 }}
+                  tick={{ fontFamily: "var(--font-mono)", fontSize: "0.625rem" }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
                   width={28}
-                  tick={{ fontFamily: "var(--font-mono)", fontSize: 10 }}
+                  tick={{ fontFamily: "var(--font-mono)", fontSize: "0.625rem" }}
                 />
                 <ChartTooltip
                   cursor={{ fill: "var(--muted)", opacity: 0.4 }}
@@ -110,7 +109,7 @@ function PanelMessage({
 }) {
   return (
     <div
-      className={`flex h-full items-center justify-center font-mono text-[11px] ${
+      className={`flex h-full items-center justify-center font-mono text-[0.6875rem] ${
         tone === "error" ? "text-level-fatal" : "text-muted-foreground/60"
       }`}
     >

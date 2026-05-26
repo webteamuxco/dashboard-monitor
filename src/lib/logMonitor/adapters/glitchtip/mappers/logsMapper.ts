@@ -1,9 +1,9 @@
-import { ErrorLevel } from "@/lib/errorMonitor/domain/ErrorLevel";
-import { GlitchTipLevel } from "../dto/GlitchTipType";
+import { LogLevel } from "@/lib/logMonitor/domain/LogLevel";
+import { GlitchTipLevel } from "@/lib/glitchtip/dto/GlitchTipType";
 import { GlitchTipLogDto } from "../dto/GlitchTipLogs";
-import { Log } from "@/lib/errorMonitor/domain/Log";
+import { Log } from "@/lib/logMonitor/domain/Log";
 
-function mapLevel(level: GlitchTipLevel): ErrorLevel {
+function mapLevel(level: GlitchTipLevel): LogLevel {
   return level === "fatal" ? "error" : level;
 }
 

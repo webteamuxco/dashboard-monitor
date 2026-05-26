@@ -14,7 +14,7 @@ export function WindowSelector() {
     <div
       role="radiogroup"
       aria-label="Fenêtre temporelle"
-      className="flex items-center gap-0.5 rounded-md border border-border bg-muted p-0.5 font-mono text-[11px]"
+      className="flex items-center gap-0.5 rounded-md border border-border bg-muted p-0.5 font-mono text-[0.6875rem]"
     >
       {WINDOW_PRESETS.map((preset) => {
         const active = preset.minutes === windowMinutes;

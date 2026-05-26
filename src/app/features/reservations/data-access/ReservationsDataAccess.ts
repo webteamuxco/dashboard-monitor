@@ -1,11 +1,12 @@
 import "server-only";
 import { cache } from "react";
-import { getErrorMonitor } from "@/lib/errorMonitor/GetErrorMonitor";
-import type { Log } from "@/lib/errorMonitor/domain/Log";
-import type { Period } from "@/lib/errorMonitor/domain/Period";
+import { getLogMonitor } from "@/lib/logMonitor/GetLogMonitor";
+import type { Log } from "@/lib/logMonitor/domain/Log";
+import type { Period } from "@/lib/shared/domain/Period";
 import type { ReservationPoint } from "../domain/ReservationPoint";
 
 const MINUTE_MS = 60_000;
+const RESERVATION_TAG = "reservation.sent";
 
 function formatHourMinute(date: Date): string {
   return date.toLocaleTimeString("fr-FR", {
@@ -48,10 +49,10 @@ const fetchSeries = cache(
     const period: Period = {
       from: new Date(now.getTime() - windowMinutes * MINUTE_MS).toISOString(),
       to: now.toISOString(),
-      granularity: "hour",
+      interval: "1m",
     };
 
-    const logs = await getErrorMonitor().getReservations(projectId, period);
+    const logs = await getLogMonitor().getLogs(projectId, { query: RESERVATION_TAG }, period);
     return aggregateByMinute(logs, buildEmptySeries(now, windowMinutes));
   },
 );

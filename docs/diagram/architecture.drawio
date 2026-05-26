@@ -1,0 +1,321 @@
+<mxfile host="app.diagrams.net" agent="claude" version="24.0.0">
+  <diagram name="1. Vue d'ensemble" id="overview">
+    <mxGraphModel dx="1422" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title" value="dashboard-monitor — Vue d'ensemble" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1320" height="36" as="geometry" />
+        </mxCell>
+
+        <mxCell id="zoneBrowser" value="Browser (Client)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="70" width="900" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="reactComp" value="React Components&#10;pages, lists, charts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="70" y="120" width="200" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="zustand" value="Zustand store&#10;État UI uniquement&#10;(filtres, sélection projet)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="295" y="120" width="220" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="tanstack" value="TanStack Query&#10;useProjects() · useIssues()&#10;useStats() · cache + retry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="540" y="120" width="300" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="browserNote" value="Règle : pas de données serveur dans Zustand. Pas d'état UI dans TanStack." style="text;html=1;align=center;fontSize=11;fontStyle=2;fontColor=#444444" vertex="1" parent="1">
+          <mxGeometry x="60" y="225" width="860" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="zoneServer" value="Next.js Server — src/app/api/* + src/lib/errorMonitor/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="320" width="900" height="780" as="geometry" />
+        </mxCell>
+
+        <mxCell id="routes" value="Route Handlers&#10;app/api/projects/route.ts  ·  app/api/issues/route.ts  ·  app/api/stats/route.ts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="370" width="840" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="entry" value="getErrorMonitor()  [server-only]&#10;src/lib/errorMonitor/getErrorMonitor.ts&#10;lit process.env.ERROR_MONITOR_DRIVER&#10;→ ErrorMonitorResolver.resolve(driver)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="460" width="400" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="envNote" value="process.env&#10;ERROR_MONITOR_DRIVER=glitchtip" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="490" y="460" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="enumNote" value="errorMonitorTypeEnums.ts&#10;export const GLITCHTIP = &quot;glitchtip&quot;" style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="1">
+          <mxGeometry x="690" y="460" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="resolver" value="ErrorMonitorResolver  [server-only]&#10;factories: ErrorMonitorFactoryInterface[]&#10;resolve(type) → factories.find(f =&gt; f.support(type)).create()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="590" width="840" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="factoryInterface" value="«interface» ErrorMonitorFactoryInterface&#10;support(errorMonitorType: string): boolean&#10;create(): ErrorMonitorStrategyInterface" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="700" width="400" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="strategyInterface" value="«interface» ErrorMonitorStrategyInterface&#10;getProjects(): Promise&lt;Project[]&gt;&#10;getIssues(projectId, filters?): Promise&lt;Issue[]&gt;&#10;getStats(projectId, period): Promise&lt;StatPoint[]&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="700" width="400" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gtFactory" value="GlitchTipFactory  [server-only]&#10;support(t) → t === GLITCHTIP&#10;create() → reads env, builds Client + Strategy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="830" width="400" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gtStrategy" value="GlitchTipStrategy  [server-only]&#10;implements ErrorMonitorStrategyInterface&#10;uses GlitchTipClient + mappers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="510" y="830" width="400" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gtClient" value="GlitchTipClient&#10;[server-only]&#10;get&lt;T&gt;(path, query)&#10;Bearer auth + fetch" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="70" y="940" width="200" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dtos" value="DTOs (réponses brutes)&#10;adapters/glitchtip/dto/&#10;  GlitchTipProjectDto&#10;  GlitchTipIssueDto&#10;  GlitchTipStatsDto" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="290" y="940" width="280" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mappers" value="Mappers (DTO → Domain)&#10;adapters/glitchtip/mappers/&#10;  mapGlitchTipProject&#10;  mapGlitchTipIssue&#10;  mapGlitchTipStats" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="590" y="940" width="320" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="domain" value="Domain Model (partagé client + serveur)&#10;src/lib/errorMonitor/domain/&#10;&#10;Project { id, slug, name, openIssueCount }&#10;&#10;Issue { id, title, level, projectId,&#10;        firstSeen, lastSeen, eventCount, isResolved }&#10;ErrorLevel = error | warning | info | debug&#10;IssueFilters { level?, resolved?, limit? }&#10;&#10;Period { from, to, granularity }&#10;StatPoint { timestamp, count }" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=0;align=left;verticalAlign=top;spacingTop=8;spacingLeft=12;" vertex="1" parent="1">
+          <mxGeometry x="970" y="370" width="390" height="370" as="geometry" />
+        </mxCell>
+
+        <mxCell id="domainNote" value="Types TS purs.&#10;Aucune dépendance Next ni GlitchTip.&#10;Importables côté client (composants)&#10;ET côté serveur (Strategy, mappers).&#10;Pas de &quot;server-only&quot;." style="text;html=1;align=center;fontSize=10;fontStyle=2;fontColor=#666666" vertex="1" parent="1">
+          <mxGeometry x="970" y="750" width="390" height="80" as="geometry" />
+        </mxCell>
+
+        <mxCell id="glitchtipApi" value="GlitchTip API REST&#10;(self-hosted / SaaS)&#10;/api/0/organizations/{org}/..." style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="900" width="300" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eFetch" value="fetch JSON" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="tanstack" target="routes">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eRoutesEntry" value="getErrorMonitor()" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="routes" target="entry">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eEnvEntry" value="lit" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="envNote" target="entry">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eEnumFactory" value="utilise" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="enumNote" target="gtFactory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eEntryResolver" value="instancie" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="entry" target="resolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eResolverFactoryInterface" value="itère" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="resolver" target="factoryInterface">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eResolverStrategyInterface" value="retourne" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="resolver" target="strategyInterface">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eGtFactoryImpl" value="implements" style="endArrow=block;endFill=0;html=1;rounded=0;dashed=1;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="gtFactory" target="factoryInterface">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eGtStrategyImpl" value="implements" style="endArrow=block;endFill=0;html=1;rounded=0;dashed=1;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="gtStrategy" target="strategyInterface">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eFactoryCreates" value="create()" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="gtFactory" target="gtStrategy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eStrategyClient" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="gtStrategy" target="gtClient">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eStrategyMappers" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;" edge="1" parent="1" source="gtStrategy" target="mappers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eClientDtos" value="returns" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="gtClient" target="dtos">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eDtosMappers" value="input" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="dtos" target="mappers">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eMappersDomain" value="produit" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=11;" edge="1" parent="1" source="mappers" target="domain">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eStrategyInterfaceDomain" value="utilise" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="strategyInterface" target="domain">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eClientApi" value="HTTPS&#10;Bearer token" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="gtClient" target="glitchtipApi">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="eBrowserDomain" value="types partagés" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="tanstack" target="domain">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram name="2. Détail UML du module" id="uml-detail">
+    <mxGraphModel dx="1422" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="title2" value="src/lib/errorMonitor/ — Détail UML" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="1520" height="36" as="geometry" />
+        </mxCell>
+
+        <mxCell id="subtitle2" value="Légende : ▷ implements (pointillé)   →  uses/returns   « » stéréotype UML" style="text;html=1;align=center;fontSize=11;fontStyle=2;fontColor=#666" vertex="1" parent="1">
+          <mxGeometry x="40" y="56" width="1520" height="20" as="geometry" />
+        </mxCell>
+
+        <mxCell id="domainLane" value="domain/ — types TS purs (client + serveur)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="90" width="1520" height="180" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dProject" value="«type» Project&#10;──────────────&#10;id: string&#10;slug: string&#10;name: string&#10;openIssueCount: number" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="130" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dIssue" value="«type» Issue&#10;──────────────&#10;id: string&#10;title: string&#10;level: ErrorLevel&#10;projectId: string&#10;firstSeen: string (ISO)&#10;lastSeen: string (ISO)&#10;eventCount: number&#10;isResolved: boolean" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="310" y="130" width="240" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dLevel" value="«union» ErrorLevel&#10;──────────────&#10;&quot;error&quot;&#10;&quot;warning&quot;&#10;&quot;info&quot;&#10;&quot;debug&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="570" y="130" width="180" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dFilters" value="«type» IssueFilters&#10;──────────────&#10;level?: ErrorLevel&#10;resolved?: boolean&#10;limit?: number" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="770" y="130" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dPeriod" value="«type» Period&#10;──────────────&#10;from: string (ISO)&#10;to: string (ISO)&#10;granularity:&#10;  &quot;hour&quot; | &quot;day&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1010" y="130" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dStatPoint" value="«type» StatPoint&#10;──────────────&#10;timestamp: string (ISO)&#10;count: number" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1250" y="130" width="220" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="portsLane" value="strategy/  +  factory/  —  ports (interfaces TS, partageables)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="1520" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="iStrategy" value="«interface» ErrorMonitorStrategyInterface&#10;──────────────&#10;+ getProjects(): Promise&lt;Project[]&gt;&#10;+ getIssues(projectId: string, filters?: IssueFilters): Promise&lt;Issue[]&gt;&#10;+ getStats(projectId: string, period: Period): Promise&lt;StatPoint[]&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="340" width="700" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="iFactory" value="«interface» ErrorMonitorFactoryInterface&#10;──────────────&#10;+ support(errorMonitorType: string): boolean&#10;+ create(): ErrorMonitorStrategyInterface" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;dashed=1;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="340" width="500" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="enumBox" value="errorMonitorTypeEnums.ts&#10;──────────────&#10;export const GLITCHTIP = &quot;glitchtip&quot;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="340" width="220" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="orchLane" value="factory/  +  point d'entrée  —  orchestration  [server-only]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="530" width="1520" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cResolver" value="«class» ErrorMonitorResolver  [server-only]&#10;──────────────&#10;- factories: ErrorMonitorFactoryInterface[]&#10;──────────────&#10;+ constructor(factories: ErrorMonitorFactoryInterface[])&#10;+ resolve(type: string): ErrorMonitorStrategyInterface&#10;    factories.find(f =&gt; f.support(type)).create()&#10;    else throw" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="570" width="700" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="fEntry" value="«function» getErrorMonitor()  [server-only]&#10;──────────────&#10;module-scope:&#10;  const factories = [new GlitchTipFactory()]&#10;  const resolver = new ErrorMonitorResolver(factories)&#10;exported:&#10;  () =&gt; resolver.resolve(process.env.ERROR_MONITOR_DRIVER)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="570" width="750" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="adaptersLane" value="adapters/glitchtip/  —  implémentation concrète  [server-only]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="760" width="1520" height="410" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cGtFactory" value="«class» GlitchTipFactory  [server-only]&#10;──────────────&#10;+ support(t): boolean&#10;    return t === GLITCHTIP&#10;+ create(): ErrorMonitorStrategyInterface&#10;    reads GLITCHTIP_URL, GLITCHTIP_TOKEN,&#10;          GLITCHTIP_ORGANIZATION_SLUG&#10;    throws if missing&#10;    → new GlitchTipStrategy(client, orgSlug)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="800" width="460" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cGtStrategy" value="«class» GlitchTipStrategy  [server-only]&#10;──────────────&#10;- client: GlitchTipClient&#10;- organizationSlug: string&#10;──────────────&#10;+ getProjects() → /api/0/organizations/{org}/projects/&#10;+ getIssues(id, f?) → /api/0/organizations/{org}/issues/&#10;        ?project={id}&amp;query=is:unresolved level:error&#10;+ getStats(id, p) → /api/0/organizations/{org}/stats/&#10;        ?project={id}&amp;start&amp;end&amp;resolution" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="560" y="800" width="540" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="cGtClient" value="«class» GlitchTipClient  [server-only]&#10;──────────────&#10;- baseUrl: string&#10;- token: string&#10;──────────────&#10;+ get&lt;T&gt;(path, query?): Promise&lt;T&gt;&#10;    fetch + Authorization: Bearer&#10;    throws on HTTP &gt;= 400" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="1130" y="800" width="420" height="200" as="geometry" />
+        </mxCell>
+
+        <mxCell id="dtosBox" value="dto/ — types des réponses brutes GlitchTip&#10;──────────────&#10;GlitchTipProjectDto { id, slug, name, platform }&#10;GlitchTipIssueDto { id, title, level, status, firstSeen, lastSeen, count, project }&#10;GlitchTipStatsDto = [timestampSeconds, count][]" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="70" y="1020" width="700" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="mappersBox" value="mappers/ — fonctions pures DTO → Domain&#10;──────────────&#10;mapGlitchTipProject(dto): Project&#10;mapGlitchTipIssue(dto): Issue&#10;    + fold &quot;fatal&quot; → &quot;error&quot;, status === &quot;resolved&quot; → isResolved&#10;mapGlitchTipStats(dto): StatPoint[]&#10;    + convert seconds → ISO string" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+          <mxGeometry x="800" y="1020" width="750" height="130" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rImplStrategy" value="implements" style="endArrow=block;endFill=0;html=1;rounded=0;dashed=1;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="cGtStrategy" target="iStrategy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rImplFactory" value="implements" style="endArrow=block;endFill=0;html=1;rounded=0;dashed=1;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="cGtFactory" target="iFactory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rEntryResolver" value="instancie" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="fEntry" target="cResolver">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rEntryGtFactory" value="enregistre" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="fEntry" target="cGtFactory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rResolverIFactory" value="dépend" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="cResolver" target="iFactory">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rResolverIStrategy" value="retourne" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="cResolver" target="iStrategy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rGtFactoryEnum" value="lit" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="cGtFactory" target="enumBox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rGtFactoryStrategy" value="create()" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="cGtFactory" target="cGtStrategy">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rGtStrategyClient" value="uses" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="cGtStrategy" target="cGtClient">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rClientDtos" value="returns" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="cGtClient" target="dtosBox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rDtosMappers" value="input" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="dtosBox" target="mappersBox">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rMappersDomain" value="produit (Project, Issue, StatPoint)" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="mappersBox" target="domainLane">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="rIStrategyDomain" value="signatures utilisent" style="endArrow=classic;html=1;rounded=0;dashed=1;fontSize=10;" edge="1" parent="1" source="iStrategy" target="domainLane">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

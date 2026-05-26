@@ -13,11 +13,20 @@ interface IssuesPanelProps {
   intervalMs: number;
 }
 
-const LEVEL_VARIANT: Record<ErrorLevel, "error" | "warning" | "info" | "debug"> = {
+const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" | "debug"> = {
+  fatal: "fatal",
   error: "error",
   warning: "warning",
   info: "info",
   debug: "debug",
+};
+
+const LEVEL_ROW_CLASS: Record<ErrorLevel, string> = {
+  fatal: "bg-level-fatal-bg hover:bg-level-fatal-bg/80",
+  error: "bg-level-error-bg hover:bg-level-error-bg/80",
+  warning: "hover:bg-muted/40",
+  info: "hover:bg-muted/40",
+  debug: "hover:bg-muted/40",
 };
 
 export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) {
@@ -31,12 +40,12 @@ export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) 
   const showBackgroundDot = isFetching && !isPending;
 
   return (
-    <Card>
+    <Card className="flex h-full min-h-0 flex-col">
       <CardHeader>
         <CardTitle>
           <AlertCircle className="h-3.5 w-3.5 text-muted-foreground" />
           Flux d&apos;erreurs
-          <span className="ml-1 rounded-full border border-level-fatal-border bg-level-fatal-bg/50 px-1.5 py-0 font-mono text-[10px] text-level-fatal">
+          <span className="ml-1 rounded-full border border-level-fatal-border bg-level-fatal-bg/50 px-1.5 py-0 font-mono text-[0.625rem] text-level-fatal">
             {rows.length}
           </span>
         </CardTitle>
@@ -49,12 +58,12 @@ export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) 
       </CardHeader>
 
       {isError && rows.length > 0 && (
-        <div className="border-b border-level-fatal-border bg-level-fatal-bg/40 px-3.5 py-2 font-mono text-[11px] text-level-fatal">
+        <div className="border-b border-level-fatal-border bg-level-fatal-bg/40 px-3.5 py-2 font-mono text-[0.6875rem] text-level-fatal">
           Mise à jour impossible{error instanceof Error ? ` (${error.message})` : ""}.
         </div>
       )}
 
-      <div className="max-h-[340px] overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         {isPending ? (
           <EmptyState>Chargement…</EmptyState>
         ) : isError && rows.length === 0 ? (
@@ -95,20 +104,22 @@ function EmptyState({
 
 function IssueLine({ row }: { row: IssueRow }) {
   return (
-    <li className="border-b border-border px-3.5 py-2.5 transition-colors last:border-b-0 hover:bg-muted/40">
+    <li
+      className={`border-b border-border px-3.5 py-2.5 transition-colors last:border-b-0 ${LEVEL_ROW_CLASS[row.level]}`}
+    >
       <div className="flex items-start gap-2">
         <span className="mt-1.5 h-1 w-1 shrink-0" aria-hidden />
         <div className="min-w-0 flex-1">
-          <div className="mb-1 truncate font-mono text-[11.5px] text-foreground">{row.title}</div>
+          <div className="mb-1 truncate font-mono text-[0.71875rem] text-foreground">{row.title}</div>
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant={LEVEL_VARIANT[row.level]}>{row.level}</Badge>
             <Badge variant="warning">{row.type}</Badge>
             <ProjectPill projectId={row.projectId} />
-            <span className="font-mono text-[10px] text-muted-foreground/60">
+            <span className="font-mono text-[0.625rem] text-muted-foreground/60">
               ×{row.eventCount}
             </span>
             <span
-              className="font-mono text-[10px] text-muted-foreground/60"
+              className="font-mono text-[0.625rem] text-muted-foreground/60"
               title={row.lastSeenIso}
             >
               {row.lastSeenLabel}
@@ -122,7 +133,7 @@ function IssueLine({ row }: { row: IssueRow }) {
 
 function ProjectPill({ projectId }: { projectId: string }) {
   return (
-    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium text-muted-foreground">
+    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[0.625rem] font-medium text-muted-foreground">
       {projectId}
     </span>
   );

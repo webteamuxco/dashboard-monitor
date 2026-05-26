@@ -1,7 +1,7 @@
 import "server-only";
 import type { ErrorMonitorFactoryInterface } from "../../factory/ErrorMonitorFactoryInterface";
 import type { ErrorMonitorStrategyInterface } from "../../strategy/ErrorMonitorStrategyInterface";
-import { GlitchTipClient } from "./GlitchTipClient";
+import { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
 import { GlitchTipStrategy } from "./GlitchTipStrategy";
 import { GLITCHTIP } from "../../ErrorMonitorTypeEnums";
 
