@@ -1,7 +1,10 @@
 "use client";
 
 import { KpiCard } from "@/app/features/dashboard/ui/KpiCard";
-import { useDashboardWindow } from "@/app/features/dashboard/state/useDashboardWindow";
+import {
+  formatWindowLabel,
+  useDashboardWindow,
+} from "@/app/features/dashboard/state/useDashboardWindow";
 import { useReservations } from "../hooks/useReservations";
 
 interface ReservationsKpiCardProps {
@@ -11,16 +14,16 @@ interface ReservationsKpiCardProps {
 
 export function ReservationsKpiCard({ projectId, intervalMs }: ReservationsKpiCardProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
-  const { data, isPending } = useReservations(projectId, windowMinutes, intervalMs);
+  const { data } = useReservations(projectId, windowMinutes, intervalMs);
 
-  const lastCount = data?.length ? data[data.length - 1].count : 0;
-  const value = isPending && !data ? "—" : lastCount;
+  const sum = data?.reduce((acc, p) => acc + p.count, 0);
+  const value = data === undefined ? "—" : (sum ?? 0);
 
   return (
     <KpiCard
-      label="RÉSERVATIONS/MIN"
+      label="RÉSERVATIONS"
       value={value}
-      subtitle="débit courant"
+      subtitle={`fenêtre ${formatWindowLabel(windowMinutes)}`}
       accent="blue"
     />
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useGlitchTipConfig } from "../state/useDashboardConfig";
 import { useDashboardConfig } from "../../shared/state/useDashboardConfig";
@@ -47,16 +47,9 @@ function clampInterval(value: number): number {
 export function GlitchTipConfigPanel() {
   const config = useGlitchTipConfig((s) => s.config);
   const setConfig = useGlitchTipConfig((s) => s.setConfig);
-  const isPanelOpen = useDashboardConfig((s) => s.isPanelOpen);
   const closePanel = useDashboardConfig((s) => s.closePanel);
 
   const [draft, setDraft] = useState<DraftConfig>(() => configToDraft(config));
-
-  useEffect(() => {
-    if (isPanelOpen) {
-      setDraft(configToDraft(config));
-    }
-  }, [isPanelOpen, config]);
 
   const isOrgValid = draft.organizationSlug.trim().length > 0;
   const isProjectsValid = draft.projectsText

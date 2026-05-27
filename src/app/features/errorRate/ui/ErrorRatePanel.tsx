@@ -2,12 +2,13 @@
 
 import { useMemo } from "react";
 import { TrendingUp } from "lucide-react";
-import { Area, AreaChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  chartAxisTick,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useErrorRate } from "../hooks/useErrorRate";
@@ -63,7 +64,7 @@ export function ErrorRatePanel({ projectId, intervalMs }: ErrorRatePanelProps) {
             </PanelMessage>
           ) : (
             <ChartContainer config={config}>
-              <AreaChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+              <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="errorRateFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-count)" stopOpacity={0.25} />
@@ -81,14 +82,14 @@ export function ErrorRatePanel({ projectId, intervalMs }: ErrorRatePanelProps) {
                   axisLine={false}
                   interval="preserveStartEnd"
                   minTickGap={28}
-                  tick={{ fontFamily: "var(--font-mono)", fontSize: "0.625rem" }}
+                  tick={chartAxisTick}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
-                  width={28}
-                  tick={{ fontFamily: "var(--font-mono)", fontSize: "0.625rem" }}
+                  width={36}
+                  tick={chartAxisTick}
                 />
                 <ChartTooltip
                   cursor={{ stroke: "var(--muted)", strokeWidth: 1 }}
@@ -103,19 +104,6 @@ export function ErrorRatePanel({ projectId, intervalMs }: ErrorRatePanelProps) {
                   dot={{ r: 2 }}
                   activeDot={{ r: 4 }}
                   connectNulls={false}
-                />
-                <ReferenceLine
-                  x={Date.now()}
-                  stroke="var(--muted-foreground)"
-                  strokeDasharray="3 3"
-                  strokeOpacity={0.6}
-                  label={{
-                    value: "now",
-                    position: "top",
-                    fill: "var(--muted-foreground)",
-                    fontSize: "0.625rem",
-                    fontFamily: "var(--font-mono)",
-                  }}
                 />
               </AreaChart>
             </ChartContainer>

@@ -5,8 +5,7 @@ import type { Period } from "@/lib/shared/domain/Period";
 import type { ErrorRatePoint } from "../domain/ErrorRatePoint";
 
 const HOUR_MS = 3_600_000;
-const PAST_HOURS = 12;
-const FUTURE_HOURS = 12;
+const PAST_HOURS = 24;
 const DISPLAY_TIMEZONE = "Europe/Paris";
 
 const hourLabelFormatter = new Intl.DateTimeFormat("fr-FR", {
@@ -40,17 +39,7 @@ const fetchSeries = cache(async (projectId: string): Promise<ErrorRatePoint[]> =
   };
 
   const points = await getErrorMonitor().getErrorStats(projectId, period);
-  const pastSeries = points.map((p) => toPoint(p.timestamp, p.count));
-
-  const lastPastEpoch = pastSeries.length
-    ? pastSeries[pastSeries.length - 1].bucketEpoch
-    : Math.floor(now.getTime() / HOUR_MS) * HOUR_MS;
-
-  const futureSeries: ErrorRatePoint[] = Array.from({ length: FUTURE_HOURS }, (_, i) =>
-    toPoint(new Date(lastPastEpoch + (i + 1) * HOUR_MS), null),
-  );
-
-  return [...pastSeries, ...futureSeries];
+  return points.map((p) => toPoint(p.timestamp, p.count));
 });
 
 export class ErrorRateDataAccess {

@@ -13,6 +13,7 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
+  chartAxisTick,
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useDashboardWindow } from "@/app/features/dashboard/state/useDashboardWindow";
@@ -64,7 +65,7 @@ export function ReservationsPanel({ projectId, intervalMs }: ReservationsPanelPr
             </PanelMessage>
           ) : (
             <ChartContainer config={config}>
-              <BarChart data={data} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+              <BarChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="label"
@@ -72,14 +73,14 @@ export function ReservationsPanel({ projectId, intervalMs }: ReservationsPanelPr
                   axisLine={false}
                   interval="preserveStartEnd"
                   minTickGap={28}
-                  tick={{ fontFamily: "var(--font-mono)", fontSize: "0.625rem" }}
+                  tick={chartAxisTick}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   allowDecimals={false}
-                  width={28}
-                  tick={{ fontFamily: "var(--font-mono)", fontSize: "0.625rem" }}
+                  width={36}
+                  tick={chartAxisTick}
                 />
                 <ChartTooltip
                   cursor={{ fill: "var(--muted)", opacity: 0.4 }}

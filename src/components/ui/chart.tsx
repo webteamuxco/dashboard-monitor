@@ -12,6 +12,14 @@ export type ChartConfig = Record<
   }
 >;
 
+export const chartAxisTick = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 12,
+  fontWeight: 600,
+  fill: "var(--foreground)",
+  fillOpacity: 0.65,
+} as const;
+
 const ChartContext = React.createContext<{ config: ChartConfig } | null>(null);
 
 function useChartConfig() {
@@ -34,8 +42,7 @@ export function ChartContainer({ config, className, children, ...rest }: ChartCo
     <ChartContext.Provider value={{ config }}>
       <div
         className={cn(
-          "h-full w-full [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground/60",
-          "[&_.recharts-cartesian-grid_line]:stroke-border/40",
+          "h-full w-full [&_.recharts-cartesian-grid_line]:stroke-border/40",
           className,
         )}
         style={styleVars}

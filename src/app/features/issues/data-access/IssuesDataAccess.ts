@@ -3,6 +3,9 @@ import { cache } from "react";
 import { getErrorMonitor } from "@/lib/errorMonitor/GetErrorMonitor";
 import type { Issue } from "@/lib/errorMonitor/domain/Issue";
 import type { IssueRow } from "../domain/IssueRow";
+import type { IssueDetailView } from "../domain/IssueDetailView";
+
+const EVENTS_PAGE_SIZE = 25;
 
 function formatRelative(iso: string, now: Date = new Date()): string {
   const then = new Date(iso);
@@ -39,9 +42,34 @@ const fetchRecentUnresolved = cache(
   },
 );
 
+const fetchDetail = cache(async (issueId: string): Promise<IssueDetailView> => {
+  const monitor = getErrorMonitor();
+  const [issue, latestEvent, events, comments] = await Promise.all([
+    monitor.getIssue(issueId),
+    monitor.getIssueLatestEvent(issueId),
+    monitor.getIssueEvents(issueId, EVENTS_PAGE_SIZE),
+    monitor.getIssueComments(issueId),
+  ]);
+
+  return {
+    issue: {
+      ...toRow(issue),
+      firstSeenIso: issue.firstSeen,
+      firstSeenLabel: formatRelative(issue.firstSeen),
+    },
+    latestEvent,
+    events,
+    comments,
+  };
+});
+
 export class IssuesDataAccess {
   getRecentUnresolved(projectId: string, limit = 20): Promise<IssueRow[]> {
     return fetchRecentUnresolved(projectId, limit);
+  }
+
+  getDetail(issueId: string): Promise<IssueDetailView> {
+    return fetchDetail(issueId);
   }
 }
 

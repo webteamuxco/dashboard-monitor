@@ -1,11 +1,10 @@
 "use client";
 
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
-import { RotateCw, Settings, ShieldCheck } from "lucide-react";
+import { RotateCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIssues } from "@/app/features/issues/hooks/useIssues";
 import { ConfigPanel } from "@/app/features/config/shared/ui/ConfigPanel";
-import { useDashboardConfig } from "@/app/features/config/shared/state/useDashboardConfig";
 import { WindowSelector } from "./WindowSelector";
 import { isDashboardInteractive } from "../state/useDashboardWindow";
 
@@ -19,8 +18,6 @@ export function DashboardHeader({ projectId, limit, intervalMs }: DashboardHeade
   const queryClient = useQueryClient();
   const { dataUpdatedAt } = useIssues(projectId, limit, intervalMs);
   const isFetching = useIsFetching() > 0;
-  const togglePanel = useDashboardConfig((s) => s.togglePanel);
-  const isPanelOpen = useDashboardConfig((s) => s.isPanelOpen);
 
   const intervalSeconds = Math.round(intervalMs / 1000);
   const lastUpdate = dataUpdatedAt
@@ -37,7 +34,7 @@ export function DashboardHeader({ projectId, limit, intervalMs }: DashboardHeade
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
             <ShieldCheck className="h-4 w-4 text-primary-foreground" />
           </span>
-          MonitorFlow
+          UXCO dashboard monitor
         </div>
 
         <div className="flex items-center gap-1.5 rounded border border-status-live/25 bg-status-live-bg px-2 py-0.5 font-mono text-[0.6875rem] text-status-live">

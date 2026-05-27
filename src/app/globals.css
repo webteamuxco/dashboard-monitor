@@ -156,6 +156,8 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(139, 148, 158, 0.45) transparent;
   }
   body {
     @apply bg-background text-foreground;
@@ -168,5 +170,23 @@
   body {
     height: 100%;
     overflow: hidden;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(139, 148, 158, 0.2);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(139, 148, 158, 0.4);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
   }
 }

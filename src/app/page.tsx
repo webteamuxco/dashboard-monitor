@@ -1,5 +1,4 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
-import { Users } from "lucide-react";
 import { IssuesPanel } from "./features/issues/ui/IssuesPanel";
 import { issuesDataAccess } from "./features/issues/data-access/IssuesDataAccess";
 import { issuesKeys } from "./features/issues/queryKeys";
@@ -9,9 +8,11 @@ import { reservationsKeys } from "./features/reservations/queryKeys";
 import { ErrorRatePanel } from "./features/errorRate/ui/ErrorRatePanel";
 import { errorRateDataAccess } from "./features/errorRate/data-access/ErrorRateDataAccess";
 import { errorRateKeys } from "./features/errorRate/queryKeys";
+import { VisitorsPanel } from "./features/visitors/ui/VisitorsPanel";
+import { visitorsTimelineDataAccess } from "./features/visitors/data-access/VisitorsTimelineDataAccess";
+import { visitorsKeys } from "./features/visitors/queryKeys";
 import { DashboardHeader } from "./features/dashboard/ui/DashboardHeader";
 import { IssuesKpiRow } from "./features/dashboard/ui/IssuesKpiRow";
-import { PlaceholderChartPanel } from "./features/dashboard/ui/PlaceholderChartPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -62,6 +63,10 @@ export default async function Home() {
       queryKey: errorRateKeys.series(projectId),
       queryFn: () => errorRateDataAccess.getSeries(projectId),
     }),
+    queryClient.prefetchQuery({
+      queryKey: visitorsKeys.timeline(projectId, reservationsWindow),
+      queryFn: () => visitorsTimelineDataAccess.getSeries(projectId, reservationsWindow),
+    }),
   ]);
 
   return (
@@ -78,11 +83,7 @@ export default async function Home() {
 
           <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
             <ReservationsPanel projectId={projectId} intervalMs={intervalMs} />
-            <PlaceholderChartPanel
-              title="Visiteurs en temps réel"
-              icon={Users}
-              hint="sessions actives"
-            />
+            <VisitorsPanel projectId={projectId} intervalMs={intervalMs} />
           </div>
         </main>
       </div>

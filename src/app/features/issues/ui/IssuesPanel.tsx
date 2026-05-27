@@ -1,11 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import type { IssueRow } from "../domain/IssueRow";
 import { useIssues } from "../hooks/useIssues";
 import { ErrorLevel } from "@/lib/errorMonitor/domain/ErrorLevel";
+import { IssueDetailSheet } from "./IssueDetailSheet";
+import { isDashboardInteractive } from "../../dashboard/state/useDashboardWindow";
 
 interface IssuesPanelProps {
   projectId: string;
@@ -35,10 +38,11 @@ export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) 
     limit,
     intervalMs,
   );
+  const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);
 
   const rows = data ?? [];
   const showBackgroundDot = isFetching && !isPending;
-
+  const isInteractive = isDashboardInteractive()
   return (
     <Card className="flex h-full min-h-0 flex-col">
       <CardHeader>
@@ -75,11 +79,26 @@ export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) 
         ) : (
           <ul>
             {rows.map((row) => (
-              <IssueLine key={row.id} row={row} />
+              <IssueLine
+                key={row.id}
+                row={row}
+                onSelect={() => setSelectedIssueId(row.id)}
+              />
             ))}
           </ul>
         )}
       </div>
+
+      {isInteractive && (
+          <>
+          <IssueDetailSheet
+            issueId={selectedIssueId}
+            onOpenChange={(open) => {
+              if (!open) setSelectedIssueId(null);
+            }}
+          />
+        </>
+      )}
     </Card>
   );
 }
@@ -102,31 +121,37 @@ function EmptyState({
   );
 }
 
-function IssueLine({ row }: { row: IssueRow }) {
+function IssueLine({ row, onSelect }: { row: IssueRow; onSelect: () => void }) {
   return (
     <li
-      className={`border-b border-border px-3.5 py-2.5 transition-colors last:border-b-0 ${LEVEL_ROW_CLASS[row.level]}`}
+      className={`border-b border-border last:border-b-0 ${LEVEL_ROW_CLASS[row.level]}`}
     >
-      <div className="flex items-start gap-2">
-        <span className="mt-1.5 h-1 w-1 shrink-0" aria-hidden />
-        <div className="min-w-0 flex-1">
-          <div className="mb-1 truncate font-mono text-[0.71875rem] text-foreground">{row.title}</div>
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant={LEVEL_VARIANT[row.level]}>{row.level}</Badge>
-            <Badge variant="warning">{row.type}</Badge>
-            <ProjectPill projectId={row.projectId} />
-            <span className="font-mono text-[0.625rem] text-muted-foreground/60">
-              ×{row.eventCount}
-            </span>
-            <span
-              className="font-mono text-[0.625rem] text-muted-foreground/60"
-              title={row.lastSeenIso}
-            >
-              {row.lastSeenLabel}
-            </span>
+      <button
+        type="button"
+        onClick={onSelect}
+        className="block w-full cursor-pointer px-3.5 py-2.5 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+      >
+        <div className="flex items-start gap-2">
+          <span className="mt-1.5 h-1 w-1 shrink-0" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <div className="mb-1 truncate font-mono text-[0.71875rem] text-foreground">{row.title}</div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge variant={LEVEL_VARIANT[row.level]}>{row.level}</Badge>
+              {row.type && <Badge variant="warning">{row.type}</Badge>}
+              <ProjectPill projectId={row.projectId} />
+              <span className="font-mono text-[0.625rem] text-muted-foreground/60">
+                ×{row.eventCount}
+              </span>
+              <span
+                className="font-mono text-[0.625rem] text-muted-foreground/60"
+                title={row.lastSeenIso}
+              >
+                {row.lastSeenLabel}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
+      </button>
     </li>
   );
 }

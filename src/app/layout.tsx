@@ -16,7 +16,7 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MonitorFlow",
+  title: "UXCO dashboard monitor",
   description: "Dashboard de monitoring des erreurs",
 };
 

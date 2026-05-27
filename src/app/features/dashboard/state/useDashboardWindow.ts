@@ -1,15 +1,21 @@
 "use client";
 
-import { boolean } from "zod";
 import { create } from "zustand";
 
 export const WINDOW_PRESETS = [
   { minutes: 30, label: "30m" },
   { minutes: 60, label: "1h" },
-  { minutes: 180, label: "3h" },
+  { minutes: 720, label: "12h" },
+  { minutes: 1440, label: "24h" },
 ] as const;
 
 export type WindowPreset = (typeof WINDOW_PRESETS)[number];
+
+export function formatWindowLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes}m`;
+  if (minutes % 60 === 0) return `${minutes / 60}h`;
+  return `${minutes}m`;
+}
 
 export type Interactivity = boolean;
 

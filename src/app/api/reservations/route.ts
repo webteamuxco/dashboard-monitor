@@ -14,9 +14,9 @@ export async function GET(request: NextRequest) {
 
   const raw = request.nextUrl.searchParams.get("windowMinutes");
   const windowMinutes = raw ? Number(raw) : 30;
-  if (!Number.isInteger(windowMinutes) || windowMinutes <= 0 || windowMinutes > 360) {
+  if (!Number.isInteger(windowMinutes) || windowMinutes <= 0 || windowMinutes > 1440) {
     return NextResponse.json(
-      { error: "Query param 'windowMinutes' must be an integer between 1 and 360." },
+      { error: "Query param 'windowMinutes' must be an integer between 1 and 1440." },
       { status: 400 },
     );
   }
