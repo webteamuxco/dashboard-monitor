@@ -103,6 +103,13 @@ Used by the `trackerMonitor` PostHog adapter.
 - **Consumed by:** [src/app/page.tsx](../src/app/page.tsx) (via `getRefreshIntervalMs()`)
 - **Effect:** auto-refresh interval applied to all panel TanStack Query hooks. Set `0` to disable polling.
 
+### `NEXT_PUBLIC_PROJECT_TITLE`
+
+- **Example:** `"Tunnel reservations v1"`
+- **Default:** none (header center stays empty if unset)
+- **Consumed by:** [DashboardHeader.tsx](../src/app/features/dashboard/ui/DashboardHeader.tsx)
+- **Effect:** label displayed centered in the dashboard header — used to identify which project the kiosk is monitoring.
+
 ### `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY`
 
 - **Supported values:** `true`, `false`

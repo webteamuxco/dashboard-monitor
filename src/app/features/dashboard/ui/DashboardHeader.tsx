@@ -29,12 +29,15 @@ export function DashboardHeader({ projectId, limit, intervalMs }: DashboardHeade
   return (
     <>
     <header className="sticky top-0 z-50 flex h-13 items-center justify-between border-b border-border bg-card px-5">
+      <span className="pointer-events-none absolute left-1/2 -translate-x-1/2 font-mono text-sm font-semibold">
+        {process.env.NEXT_PUBLIC_PROJECT_TITLE}
+      </span>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2 font-mono text-sm font-semibold">
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
             <ShieldCheck className="h-4 w-4 text-primary-foreground" />
           </span>
-          UXCO dashboard monitor
+          MonitorFlow
         </div>
 
         <div className="flex items-center gap-1.5 rounded border border-status-live/25 bg-status-live-bg px-2 py-0.5 font-mono text-[0.6875rem] text-status-live">
