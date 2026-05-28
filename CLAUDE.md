@@ -1,10 +1,15 @@
 # dashboard-monitor — Claude guide
 
-Next.js 16 / React 19 / TypeScript kiosk dashboard. Aggregates monitoring data (errors, logs, visitor analytics) behind a Strategy/Factory layer so providers (GlitchTip, PostHog, …) are swappable via env vars.
+pnpm + Turbo monorepo with two apps:
+
+- **[`apps/dashboard/`](apps/dashboard/)** — the Next.js 16 / React 19 / TypeScript kiosk dashboard. Aggregates monitoring data (errors, logs, visitor analytics) behind a Strategy/Factory layer so providers (GlitchTip, PostHog, …) are swappable via env vars. **This file mostly describes that app.**
+- **[`apps/admin/`](apps/admin/)** — Strapi 5 admin backend (SQLite for now). Runs independently on its own port (1337 by default).
 
 Read this file first. Then load the nearest sub-`CLAUDE.md` for the area you're editing.
 
-## Stack
+All paths below (`src/...`, `tests/...`) are relative to `apps/dashboard/` unless otherwise prefixed.
+
+## Stack (dashboard)
 
 - **Next.js 16** App Router, React 19, all dashboard pages `force-dynamic`
 - **TanStack Query 5** — server state, polling, cache
@@ -12,18 +17,27 @@ Read this file first. Then load the nearest sub-`CLAUDE.md` for the area you're 
 - **Recharts** — time-series charts
 - **Tailwind 4 + shadcn / Base UI** — styling
 - **Vitest** — unit tests (node env)
-- **pnpm** workspace, **husky** for hooks
+- **pnpm** workspace, **Turbo** orchestrator, **husky** for hooks
 
 ## Scripts
 
+Run from the repo root (Turbo fans out to each app):
+
 ```bash
-pnpm dev            # Next dev server
-pnpm build          # Production build
-pnpm typecheck      # tsc --noEmit
-pnpm lint           # ESLint
-pnpm test           # Vitest one-shot
+pnpm dev            # both apps in parallel (Next + Strapi)
+pnpm build          # both
+pnpm typecheck      # both (Strapi: tsc --noEmit)
+pnpm lint           # dashboard only (admin has no lint task)
+pnpm test           # dashboard only (admin has no test task)
 pnpm test:watch
 pnpm test:coverage
+```
+
+Target a single app:
+
+```bash
+pnpm --filter dashboard dev
+pnpm --filter admin dev
 ```
 
 Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky enforces this.
@@ -39,10 +53,10 @@ Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky enforces t
 
 | When editing… | Read |
 |---|---|
-| `src/lib/{errorMonitor,logMonitor,trackerMonitor}/**` | [src/lib/CLAUDE.md](src/lib/CLAUDE.md) |
-| `src/app/api/**` | [src/app/api/CLAUDE.md](src/app/api/CLAUDE.md) |
-| `src/app/features/**` | [src/app/features/CLAUDE.md](src/app/features/CLAUDE.md) |
-| `tests/**` | [tests/CLAUDE.md](tests/CLAUDE.md) |
+| `apps/dashboard/src/lib/{errorMonitor,logMonitor,trackerMonitor}/**` | [apps/dashboard/src/lib/CLAUDE.md](apps/dashboard/src/lib/CLAUDE.md) |
+| `apps/dashboard/src/app/api/**` | [apps/dashboard/src/app/api/CLAUDE.md](apps/dashboard/src/app/api/CLAUDE.md) |
+| `apps/dashboard/src/app/features/**` | [apps/dashboard/src/app/features/CLAUDE.md](apps/dashboard/src/app/features/CLAUDE.md) |
+| `apps/dashboard/tests/**` | [apps/dashboard/tests/CLAUDE.md](apps/dashboard/tests/CLAUDE.md) |
 
 ## Cross-cutting conventions
 
@@ -78,7 +92,7 @@ Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky enforces t
 
 ## Environment
 
-See [`.env.example`](.env.example) for the full list. Three driver vars decide which adapter loads:
+See [`apps/dashboard/.env.example`](apps/dashboard/.env.example) for the full dashboard env list. Three driver vars decide which adapter loads:
 
 - `NEXT_PUBLIC_ERROR_MONITOR_DRIVER` (e.g. `glitchtip`)
 - `NEXT_PUBLIC_LOG_MONITOR_DRIVER`   (e.g. `glitchtip`)

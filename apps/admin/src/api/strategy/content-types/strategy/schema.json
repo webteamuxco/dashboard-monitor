@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "strategies",
+  "info": {
+    "singularName": "strategy",
+    "pluralName": "strategies",
+    "displayName": "Strategy"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "mapped_tool": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::mapped-tool.mapped-tool",
+      "inversedBy": "strategies"
+    },
+    "tool": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::tool.tool",
+      "inversedBy": "strategies"
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "mapped_tools",
+  "info": {
+    "singularName": "mapped-tool",
+    "pluralName": "mapped-tools",
+    "displayName": "MappedTool"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
+    "strategies": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::strategy.strategy",
+      "mappedBy": "mapped_tool"
+    },
+    "projects": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::project.project",
+      "inversedBy": "mapped_tools"
+    }
+  }
+}

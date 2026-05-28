@@ -1,0 +1,44 @@
+{
+  "kind": "collectionType",
+  "collectionName": "projects",
+  "info": {
+    "singularName": "project",
+    "pluralName": "projects",
+    "displayName": "Project"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "title": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "mapped_tools": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::mapped-tool.mapped-tool",
+      "mappedBy": "projects"
+    },
+    "default_config": {
+      "type": "component",
+      "component": "config.project-default-config",
+      "repeatable": false
+    },
+    "tool_configuration": {
+      "type": "dynamiczone",
+      "components": [
+        "config.posthog-configuration",
+        "config.glitchtip-configuration"
+      ],
+      "required": false
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_config_project_default_configs",
+  "info": {
+    "displayName": "ProjectDefaultConfig",
+    "icon": "layout"
+  },
+  "options": {},
+  "attributes": {
+    "DefautltRefreshIntervalMS": {
+      "type": "biginteger",
+      "required": true
+    },
+    "DefaultPollingIntervalSeconds": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}

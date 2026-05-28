@@ -1,0 +1,25 @@
+{
+  "kind": "singleType",
+  "collectionName": "default_config_values",
+  "info": {
+    "singularName": "default-config-value",
+    "pluralName": "default-config-values",
+    "displayName": "DefaultConfigValue"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "project": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::project.project"
+    },
+    "DashboardInteractivity": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    }
+  }
+}
