@@ -16,6 +16,11 @@
       "required": true,
       "unique": true
     },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
     "strategies": {
       "type": "relation",
       "relation": "oneToMany",

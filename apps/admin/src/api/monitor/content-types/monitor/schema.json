@@ -1,0 +1,35 @@
+{
+  "kind": "collectionType",
+  "collectionName": "monitors",
+  "info": {
+    "singularName": "monitor",
+    "pluralName": "monitors",
+    "displayName": "Monitor"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "monitor_name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "monitor_name",
+      "required": true
+    },
+    "project": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::project.project"
+    },
+    "is_interactive": {
+      "type": "boolean",
+      "required": true,
+      "default": false
+    }
+  }
+}

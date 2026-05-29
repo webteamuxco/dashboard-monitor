@@ -440,38 +440,6 @@ export interface AdminUser extends Struct.CollectionTypeSchema {
   };
 }
 
-export interface ApiDefaultConfigValueDefaultConfigValue
-  extends Struct.SingleTypeSchema {
-  collectionName: 'default_config_values';
-  info: {
-    displayName: 'DefaultConfigValue';
-    pluralName: 'default-config-values';
-    singularName: 'default-config-value';
-  };
-  options: {
-    draftAndPublish: true;
-  };
-  attributes: {
-    createdAt: Schema.Attribute.DateTime;
-    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-    DashboardInteractivity: Schema.Attribute.Boolean &
-      Schema.Attribute.Required &
-      Schema.Attribute.DefaultTo<false>;
-    locale: Schema.Attribute.String & Schema.Attribute.Private;
-    localizations: Schema.Attribute.Relation<
-      'oneToMany',
-      'api::default-config-value.default-config-value'
-    > &
-      Schema.Attribute.Private;
-    project: Schema.Attribute.Relation<'oneToOne', 'api::project.project'>;
-    publishedAt: Schema.Attribute.DateTime;
-    updatedAt: Schema.Attribute.DateTime;
-    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
-      Schema.Attribute.Private;
-  };
-}
-
 export interface ApiMappedToolMappedTool extends Struct.CollectionTypeSchema {
   collectionName: 'mapped_tools';
   info: {
@@ -500,6 +468,41 @@ export interface ApiMappedToolMappedTool extends Struct.CollectionTypeSchema {
       'oneToMany',
       'api::strategy.strategy'
     >;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+  };
+}
+
+export interface ApiMonitorMonitor extends Struct.CollectionTypeSchema {
+  collectionName: 'monitors';
+  info: {
+    displayName: 'Monitor';
+    pluralName: 'monitors';
+    singularName: 'monitor';
+  };
+  options: {
+    draftAndPublish: true;
+  };
+  attributes: {
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    is_interactive: Schema.Attribute.Boolean &
+      Schema.Attribute.Required &
+      Schema.Attribute.DefaultTo<false>;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'api::monitor.monitor'
+    > &
+      Schema.Attribute.Private;
+    monitor_name: Schema.Attribute.String &
+      Schema.Attribute.Required &
+      Schema.Attribute.Unique;
+    project: Schema.Attribute.Relation<'oneToOne', 'api::project.project'>;
+    publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.UID<'monitor_name'> & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -574,6 +577,7 @@ export interface ApiStrategyStrategy extends Struct.CollectionTypeSchema {
     >;
     name: Schema.Attribute.String & Schema.Attribute.Required;
     publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.UID<'name'> & Schema.Attribute.Required;
     tool: Schema.Attribute.Relation<'manyToOne', 'api::tool.tool'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
@@ -602,6 +606,7 @@ export interface ApiToolTool extends Struct.CollectionTypeSchema {
       Schema.Attribute.Required &
       Schema.Attribute.Unique;
     publishedAt: Schema.Attribute.DateTime;
+    slug: Schema.Attribute.UID<'name'> & Schema.Attribute.Required;
     strategies: Schema.Attribute.Relation<
       'oneToMany',
       'api::strategy.strategy'
@@ -1123,8 +1128,8 @@ declare module '@strapi/strapi' {
       'admin::transfer-token': AdminTransferToken;
       'admin::transfer-token-permission': AdminTransferTokenPermission;
       'admin::user': AdminUser;
-      'api::default-config-value.default-config-value': ApiDefaultConfigValueDefaultConfigValue;
       'api::mapped-tool.mapped-tool': ApiMappedToolMappedTool;
+      'api::monitor.monitor': ApiMonitorMonitor;
       'api::project.project': ApiProjectProject;
       'api::strategy.strategy': ApiStrategyStrategy;
       'api::tool.tool': ApiToolTool;
