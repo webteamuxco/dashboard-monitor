@@ -15,6 +15,21 @@ import { mapGlitchTipStatsV2 } from "./mappers/statsV2Mapper";
 import { mapGlitchTipEvent } from "./mappers/EventMapper";
 import { mapGlitchTipComment } from "./mappers/CommentMapper";
 
+// GlitchTip's stats_v2 endpoint is a raw ingestion-volume counter: it ignores
+// `environment` (as a param and as a `query` token). To scope the error rate to
+// an environment we reconstruct the hourly series from issue events, which carry
+// the environment in their `tags`. Bounded to keep the request fan-out sane.
+const HOUR_MS = 3_600_000;
+const ISSUES_SCAN_LIMIT = 100;
+const EVENTS_PER_ISSUE_LIMIT = 100;
+const ENVIRONMENT_TAG = "environment";
+
+interface GlitchTipRawEventDto {
+  dateCreated?: string | null;
+  date_created?: string | null;
+  tags?: Array<{ key: string; value: string }> | null;
+}
+
 function buildIssueQuery(filters?: IssueFilters): string | undefined {
   if (!filters) return undefined;
   const parts: string[] = [];
@@ -26,6 +41,16 @@ function buildIssueQuery(filters?: IssueFilters): string | undefined {
 
 function isNotFound(err: unknown): boolean {
   return err instanceof Error && /\b404\b/.test(err.message);
+}
+
+function floorToHour(ms: number): number {
+  return Math.floor(ms / HOUR_MS) * HOUR_MS;
+}
+
+function buildHourlyBuckets(fromMs: number, toMs: number): Map<number, number> {
+  const buckets = new Map<number, number>();
+  for (let t = floorToHour(fromMs); t <= toMs; t += HOUR_MS) buckets.set(t, 0);
+  return buckets;
 }
 
 export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
@@ -52,6 +77,10 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
     period: Period,
     environment?: string,
   ): Promise<TimeSeriesPoint[]> {
+    if (environment) {
+      return this.getErrorStatsForEnvironment(projectId, period, environment);
+    }
+
     const dto = await this.client.get<GlitchTipStatsV2Dto>(
       `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
       {
@@ -61,10 +90,51 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
         project: projectId,
         start: period.from,
         end: period.to,
-        environment,
       },
     );
     return mapGlitchTipStatsV2(dto);
+  }
+
+  private async getErrorStatsForEnvironment(
+    projectId: string,
+    period: Period,
+    environment: string,
+  ): Promise<TimeSeriesPoint[]> {
+    const issues = await this.client.get<GlitchTipIssueDto[]>(
+      `/api/0/organizations/${this.organizationSlug}/issues/`,
+      { project: projectId, environment, limit: ISSUES_SCAN_LIMIT },
+    );
+
+    const eventPages = await Promise.all(
+      issues.map((issue) =>
+        this.client.get<GlitchTipRawEventDto[]>(`/api/0/issues/${issue.id}/events/`, {
+          limit: EVENTS_PER_ISSUE_LIMIT,
+        }),
+      ),
+    );
+
+    const fromMs = Date.parse(period.from);
+    const toMs = Date.parse(period.to);
+    const buckets = buildHourlyBuckets(fromMs, toMs);
+
+    for (const events of eventPages) {
+      for (const event of events) {
+        const envTag = event.tags?.find((t) => t.key === ENVIRONMENT_TAG)?.value;
+        if (envTag !== environment) continue;
+
+        const iso = event.dateCreated ?? event.date_created;
+        const at = iso ? Date.parse(iso) : NaN;
+        if (Number.isNaN(at) || at < fromMs || at > toMs) continue;
+
+        const hour = floorToHour(at);
+        buckets.set(hour, (buckets.get(hour) ?? 0) + 1);
+      }
+    }
+
+    return Array.from(buckets, ([epoch, count]) => ({
+      timestamp: new Date(epoch).toISOString(),
+      count,
+    }));
   }
 
   async getIssue(issueId: string): Promise<Issue> {

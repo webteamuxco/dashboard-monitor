@@ -122,16 +122,51 @@ describe("GlitchTipStrategy", () => {
       expect(out).toEqual([{ timestamp: "2026-05-28T00:00:00Z", count: 3 }]);
     });
 
-    it("forwards the environment to stats_v2 when provided", async () => {
+    it("does not send the environment to stats_v2 (it is ignored there)", async () => {
       get.mockResolvedValue({ intervals: [], groups: [] });
 
-      await strategy.getErrorStats(
+      await strategy.getErrorStats("p", {
+        from: "2026-05-28T00:00:00Z",
+        to: "2026-05-29T00:00:00Z",
+        interval: "1h",
+      });
+
+      expect(get.mock.calls[0][1]).not.toHaveProperty("environment");
+    });
+
+    it("reconstructs the series from environment-tagged events when an environment is given", async () => {
+      get.mockImplementation((path: string) => {
+        if (path.includes("/events/")) {
+          return Promise.resolve([
+            {
+              date_created: "2026-07-03T09:15:00Z",
+              tags: [{ key: "environment", value: "production" }],
+            },
+            {
+              date_created: "2026-07-03T09:45:00Z",
+              tags: [{ key: "environment", value: "production" }],
+            },
+            {
+              date_created: "2026-07-03T09:50:00Z",
+              tags: [{ key: "environment", value: "staging" }],
+            },
+          ]);
+        }
+        if (path.includes("/issues/")) {
+          return Promise.resolve([buildIssueDto({ id: "1" })]);
+        }
+        return Promise.resolve([]);
+      });
+
+      const out = await strategy.getErrorStats(
         "p",
-        { from: "2026-05-28T00:00:00Z", to: "2026-05-29T00:00:00Z", interval: "1h" },
-        "staging",
+        { from: "2026-07-03T08:00:00Z", to: "2026-07-03T10:00:00Z", interval: "1h" },
+        "production",
       );
 
-      expect(get.mock.calls[0][1]).toMatchObject({ environment: "staging" });
+      const at = (iso: string) => out.find((p) => p.timestamp === iso)?.count;
+      expect(at("2026-07-03T09:00:00.000Z")).toBe(2); // two production events
+      expect(at("2026-07-03T08:00:00.000Z")).toBe(0); // empty hour → 0, staging excluded
     });
   });
 
