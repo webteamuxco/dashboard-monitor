@@ -44,7 +44,11 @@ function aggregateByMinute(logs: Log[], series: ReservationPoint[]): Reservation
 }
 
 const fetchSeries = cache(
-  async (projectId: string, windowMinutes: number): Promise<ReservationPoint[]> => {
+  async (
+    projectId: string,
+    windowMinutes: number,
+    environment: string | null,
+  ): Promise<ReservationPoint[]> => {
     const now = new Date();
     const period: Period = {
       from: new Date(now.getTime() - windowMinutes * MINUTE_MS).toISOString(),
@@ -52,14 +56,19 @@ const fetchSeries = cache(
       interval: "1m",
     };
 
-    const logs = await getLogMonitor().getLogs(projectId, { query: RESERVATION_TAG }, period);
+    const query = environment ? `${RESERVATION_TAG}.${environment}` : RESERVATION_TAG;
+    const logs = await getLogMonitor().getLogs(projectId, { query }, period);
     return aggregateByMinute(logs, buildEmptySeries(now, windowMinutes));
   },
 );
 
 export class ReservationsDataAccess {
-  getSeries(projectId: string, windowMinutes: number): Promise<ReservationPoint[]> {
-    return fetchSeries(projectId, windowMinutes);
+  getSeries(
+    projectId: string,
+    windowMinutes: number,
+    environment: string | null = null,
+  ): Promise<ReservationPoint[]> {
+    return fetchSeries(projectId, windowMinutes, environment);
   }
 }
 

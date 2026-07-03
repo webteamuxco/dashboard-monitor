@@ -21,8 +21,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const environment = request.nextUrl.searchParams.get("environment");
+
   try {
-    const data = await reservationsDataAccess.getSeries(projectId, windowMinutes);
+    const data = await reservationsDataAccess.getSeries(projectId, windowMinutes, environment);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

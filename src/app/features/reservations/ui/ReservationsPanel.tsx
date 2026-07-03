@@ -17,6 +17,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useDashboardWindow } from "@/app/features/dashboard/state/useDashboardWindow";
+import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 import { useReservations } from "../hooks/useReservations";
 
 interface ReservationsPanelProps {
@@ -30,9 +31,11 @@ const config = {
 
 export function ReservationsPanel({ projectId, intervalMs }: ReservationsPanelProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
+  const environment = useEnvironment((s) => s.environment);
   const { data, isPending, isError, error, isFetching } = useReservations(
     projectId,
     windowMinutes,
+    environment,
     intervalMs,
   );
 
