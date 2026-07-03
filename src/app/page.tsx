@@ -13,6 +13,7 @@ import { visitorsTimelineDataAccess } from "./features/visitors/data-access/Visi
 import { visitorsKeys } from "./features/visitors/queryKeys";
 import { DashboardHeader } from "./features/dashboard/ui/DashboardHeader";
 import { IssuesKpiRow } from "./features/dashboard/ui/IssuesKpiRow";
+import { resolveDefaultEnvironment } from "./features/dashboard/state/environments";
 
 export const dynamic = "force-dynamic";
 
@@ -37,6 +38,7 @@ export default async function Home() {
   const projectId = process.env.DASHBOARD_DEFAULT_PROJECT_ID;
   const intervalMs = getRefreshIntervalMs();
   const reservationsWindow = getReservationsWindowMinutes();
+  const environment = resolveDefaultEnvironment();
 
   if (!projectId) {
     return (
@@ -52,16 +54,17 @@ export default async function Home() {
   const queryClient = new QueryClient();
   await Promise.all([
     queryClient.prefetchQuery({
-      queryKey: issuesKeys.recent(projectId, DEFAULT_LIMIT),
-      queryFn: () => issuesDataAccess.getRecentUnresolved(projectId, DEFAULT_LIMIT),
+      queryKey: issuesKeys.recent(projectId, DEFAULT_LIMIT, environment),
+      queryFn: () =>
+        issuesDataAccess.getRecentUnresolved(projectId, DEFAULT_LIMIT, environment),
     }),
     queryClient.prefetchQuery({
       queryKey: reservationsKeys.series(projectId, reservationsWindow),
       queryFn: () => reservationsDataAccess.getSeries(projectId, reservationsWindow),
     }),
     queryClient.prefetchQuery({
-      queryKey: errorRateKeys.series(projectId),
-      queryFn: () => errorRateDataAccess.getSeries(projectId),
+      queryKey: errorRateKeys.series(projectId, environment),
+      queryFn: () => errorRateDataAccess.getSeries(projectId, environment),
     }),
     queryClient.prefetchQuery({
       queryKey: visitorsKeys.timeline(projectId, reservationsWindow),

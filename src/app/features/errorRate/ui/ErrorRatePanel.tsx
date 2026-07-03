@@ -12,6 +12,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { useErrorRate } from "../hooks/useErrorRate";
+import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 
 interface ErrorRatePanelProps {
   projectId: string;
@@ -23,7 +24,12 @@ const config = {
 } satisfies ChartConfig;
 
 export function ErrorRatePanel({ projectId, intervalMs }: ErrorRatePanelProps) {
-  const { data, isPending, isError, error, isFetching } = useErrorRate(projectId, intervalMs);
+  const environment = useEnvironment((s) => s.environment);
+  const { data, isPending, isError, error, isFetching } = useErrorRate(
+    projectId,
+    environment,
+    intervalMs,
+  );
 
   const showBackgroundDot = isFetching && !isPending;
 

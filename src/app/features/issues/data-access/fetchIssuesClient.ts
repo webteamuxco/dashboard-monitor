@@ -3,8 +3,10 @@ import type { IssueRow } from "../domain/IssueRow";
 export async function fetchIssuesClient(
   projectId: string,
   limit: number,
+  environment: string | null = null,
 ): Promise<IssueRow[]> {
   const params = new URLSearchParams({ projectId, limit: String(limit) });
+  if (environment) params.set("environment", environment);
   const res = await fetch(`/api/issues?${params.toString()}`, {
     cache: "no-store",
   });

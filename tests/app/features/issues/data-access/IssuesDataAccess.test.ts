@@ -69,6 +69,18 @@ describe("IssuesDataAccess", () => {
       expect(getIssuesMock).toHaveBeenCalledWith("p1", { resolved: false, limit: 20 });
     });
 
+    it("forwards the environment into the issue filters", async () => {
+      getIssuesMock.mockResolvedValue([]);
+
+      await new IssuesDataAccess().getRecentUnresolved("p1", 20, "production");
+
+      expect(getIssuesMock).toHaveBeenCalledWith("p1", {
+        resolved: false,
+        limit: 20,
+        environment: "production",
+      });
+    });
+
     it("maps each Issue into an IssueRow with a relative lastSeen label", async () => {
       getIssuesMock.mockResolvedValue([
         buildIssue({ id: "i1", lastSeen: "2026-05-28T08:29:00Z" }),

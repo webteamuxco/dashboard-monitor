@@ -8,6 +8,7 @@ import {
   formatWindowLabel,
   useDashboardWindow,
 } from "../state/useDashboardWindow";
+import { useEnvironment } from "../state/useEnvironment";
 
 interface IssuesKpiRowProps {
   projectId: string;
@@ -17,7 +18,13 @@ interface IssuesKpiRowProps {
 
 export function IssuesKpiRow({ projectId, limit, intervalMs }: IssuesKpiRowProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
-  const { data, isPending, dataUpdatedAt } = useIssues(projectId, limit, intervalMs);
+  const environment = useEnvironment((s) => s.environment);
+  const { data, isPending, dataUpdatedAt } = useIssues(
+    projectId,
+    limit,
+    environment,
+    intervalMs,
+  );
 
   const total = data?.length ?? 0;
   const windowStart = (dataUpdatedAt || 0) - windowMinutes * 60_000;

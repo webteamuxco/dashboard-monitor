@@ -35,6 +35,14 @@ describe("ErrorRateDataAccess.getSeries", () => {
     expect(span).toBe(24 * 60 * 60 * 1000);
   });
 
+  it("forwards the environment to getErrorStats when provided", async () => {
+    getErrorStatsMock.mockResolvedValue([]);
+
+    await new ErrorRateDataAccess().getSeries("proj-1", "staging");
+
+    expect(getErrorStatsMock.mock.calls[0][2]).toBe("staging");
+  });
+
   it("maps each TimeSeriesPoint to ErrorRatePoint with bucketEpoch + French hour label", async () => {
     getErrorStatsMock.mockResolvedValue([
       { timestamp: "2026-05-28T08:00:00Z", count: 5 },

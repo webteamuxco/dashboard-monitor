@@ -16,4 +16,5 @@ export interface IssueFilters {
   level?: ErrorLevel;
   resolved?: boolean;
   limit?: number;
+  environment?: string;
 }

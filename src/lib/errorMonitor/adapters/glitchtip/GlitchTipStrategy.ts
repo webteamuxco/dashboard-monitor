@@ -41,12 +41,17 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
         project: projectId,
         query: buildIssueQuery(filters),
         limit: filters?.limit,
+        environment: filters?.environment,
       },
     );
     return dto.map(mapGlitchTipIssue);
   }
 
-  async getErrorStats(projectId: string, period: Period): Promise<TimeSeriesPoint[]> {
+  async getErrorStats(
+    projectId: string,
+    period: Period,
+    environment?: string,
+  ): Promise<TimeSeriesPoint[]> {
     const dto = await this.client.get<GlitchTipStatsV2Dto>(
       `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
       {
@@ -56,6 +61,7 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
         project: projectId,
         start: period.from,
         end: period.to,
+        environment,
       },
     );
     return mapGlitchTipStatsV2(dto);

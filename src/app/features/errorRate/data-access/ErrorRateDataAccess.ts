@@ -30,21 +30,27 @@ function toPoint(timestamp: string | Date, count: number | null): ErrorRatePoint
   };
 }
 
-const fetchSeries = cache(async (projectId: string): Promise<ErrorRatePoint[]> => {
-  const now = new Date();
-  const period: Period = {
-    from: new Date(now.getTime() - PAST_HOURS * HOUR_MS).toISOString(),
-    to: now.toISOString(),
-    interval: "1h",
-  };
+const fetchSeries = cache(
+  async (projectId: string, environment: string | null): Promise<ErrorRatePoint[]> => {
+    const now = new Date();
+    const period: Period = {
+      from: new Date(now.getTime() - PAST_HOURS * HOUR_MS).toISOString(),
+      to: now.toISOString(),
+      interval: "1h",
+    };
 
-  const points = await getErrorMonitor().getErrorStats(projectId, period);
-  return points.map((p) => toPoint(p.timestamp, p.count));
-});
+    const points = await getErrorMonitor().getErrorStats(
+      projectId,
+      period,
+      environment ?? undefined,
+    );
+    return points.map((p) => toPoint(p.timestamp, p.count));
+  },
+);
 
 export class ErrorRateDataAccess {
-  getSeries(projectId: string): Promise<ErrorRatePoint[]> {
-    return fetchSeries(projectId);
+  getSeries(projectId: string, environment: string | null = null): Promise<ErrorRatePoint[]> {
+    return fetchSeries(projectId, environment);
   }
 }
 

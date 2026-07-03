@@ -9,6 +9,7 @@ import { useIssues } from "../hooks/useIssues";
 import { ErrorLevel } from "@/lib/errorMonitor/domain/ErrorLevel";
 import { IssueDetailSheet } from "./IssueDetailSheet";
 import { isDashboardInteractive } from "../../dashboard/state/useDashboardWindow";
+import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 
 interface IssuesPanelProps {
   projectId: string;
@@ -33,9 +34,11 @@ const LEVEL_ROW_CLASS: Record<ErrorLevel, string> = {
 };
 
 export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) {
+  const environment = useEnvironment((s) => s.environment);
   const { data, isPending, isFetching, isError, error } = useIssues(
     projectId,
     limit,
+    environment,
     intervalMs,
   );
   const [selectedIssueId, setSelectedIssueId] = useState<string | null>(null);

@@ -85,6 +85,14 @@ describe("GlitchTipStrategy", () => {
 
       expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: undefined });
     });
+
+    it("forwards the environment as a dedicated query param", async () => {
+      get.mockResolvedValue([]);
+
+      await strategy.getIssues("p", { resolved: false, environment: "production" });
+
+      expect(get.mock.calls[0][1]).toMatchObject({ environment: "production" });
+    });
   });
 
   describe("getErrorStats", () => {
@@ -112,6 +120,18 @@ describe("GlitchTipStrategy", () => {
         }),
       );
       expect(out).toEqual([{ timestamp: "2026-05-28T00:00:00Z", count: 3 }]);
+    });
+
+    it("forwards the environment to stats_v2 when provided", async () => {
+      get.mockResolvedValue({ intervals: [], groups: [] });
+
+      await strategy.getErrorStats(
+        "p",
+        { from: "2026-05-28T00:00:00Z", to: "2026-05-29T00:00:00Z", interval: "1h" },
+        "staging",
+      );
+
+      expect(get.mock.calls[0][1]).toMatchObject({ environment: "staging" });
     });
   });
 

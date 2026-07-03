@@ -6,7 +6,11 @@ import type { IssueComment } from "../domain/IssueComment";
 
 export interface ErrorMonitorStrategyInterface {
   getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]>;
-  getErrorStats(projectId: string, period: Period): Promise<TimeSeriesPoint[]>;
+  getErrorStats(
+    projectId: string,
+    period: Period,
+    environment?: string,
+  ): Promise<TimeSeriesPoint[]>;
   getIssue(issueId: string): Promise<Issue>;
   getIssueLatestEvent(issueId: string): Promise<IssueEvent | null>;
   getIssueEvents(issueId: string, limit?: number): Promise<IssueEvent[]>;

@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 import { useIssues } from "@/app/features/issues/hooks/useIssues";
 import { ConfigPanel } from "@/app/features/config/shared/ui/ConfigPanel";
 import { WindowSelector } from "./WindowSelector";
+import { EnvironmentSelector } from "./EnvironmentSelector";
 import { isDashboardInteractive } from "../state/useDashboardWindow";
+import { useEnvironment } from "../state/useEnvironment";
 
 interface DashboardHeaderProps {
   projectId: string;
@@ -16,7 +18,8 @@ interface DashboardHeaderProps {
 
 export function DashboardHeader({ projectId, limit, intervalMs }: DashboardHeaderProps) {
   const queryClient = useQueryClient();
-  const { dataUpdatedAt } = useIssues(projectId, limit, intervalMs);
+  const environment = useEnvironment((s) => s.environment);
+  const { dataUpdatedAt } = useIssues(projectId, limit, environment, intervalMs);
   const isFetching = useIsFetching() > 0;
 
   const intervalSeconds = Math.round(intervalMs / 1000);
@@ -60,6 +63,7 @@ export function DashboardHeader({ projectId, limit, intervalMs }: DashboardHeade
         <div className="flex items-center gap-2">
           {isInteractive && (
             <>
+              <EnvironmentSelector />
               <WindowSelector />
             </>
           )}
