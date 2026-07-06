@@ -80,13 +80,22 @@ export default async function Home() {
           <IssuesKpiRow projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
 
           <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
-            <IssuesPanel projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
-            <ErrorRatePanel projectId={projectId} intervalMs={intervalMs} />
-          </div>
-
-          <div className="grid min-h-0 flex-1 grid-cols-2 gap-3">
-            <ReservationsPanel projectId={projectId} intervalMs={intervalMs} />
-            <VisitorsPanel projectId={projectId} intervalMs={intervalMs} />
+            <div className="flex min-h-0 flex-col gap-3">
+              <div className="min-h-0 flex-1">
+                <IssuesPanel projectId={projectId} limit={DEFAULT_LIMIT} intervalMs={intervalMs} />
+              </div>
+              {/* <div className="min-h-0 flex-1">
+                <VisitorsPanel projectId={projectId} intervalMs={intervalMs} />
+              </div> */}
+            </div>
+            <div className="flex min-h-0 flex-col gap-3">
+              <div className="min-h-0 flex-1">
+                <ErrorRatePanel projectId={projectId} intervalMs={intervalMs} />
+              </div>
+              <div className="min-h-0 flex-1">
+                <ReservationsPanel projectId={projectId} intervalMs={intervalMs} />
+              </div>
+            </div>
           </div>
         </main>
       </div>
