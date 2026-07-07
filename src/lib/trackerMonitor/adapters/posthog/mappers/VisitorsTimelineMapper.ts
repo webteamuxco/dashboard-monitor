@@ -2,13 +2,17 @@ import type { VisitorsTimeSeriesPoint } from "../../../domain/VisitorsTimeSeries
 import type { PostHogQueryResponseDto } from "../dto/PostHogQueryResponse";
 
 const MINUTE_MS = 60_000;
+const DISPLAY_TIMEZONE = "Europe/Paris";
+
+const minuteLabelFormatter = new Intl.DateTimeFormat("fr-FR", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: DISPLAY_TIMEZONE,
+});
 
 function formatHourMinute(date: Date): string {
-  return date.toLocaleTimeString("fr-FR", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return minuteLabelFormatter.format(date);
 }
 
 function buildEmptySeries(now: Date, windowMinutes: number): VisitorsTimeSeriesPoint[] {
