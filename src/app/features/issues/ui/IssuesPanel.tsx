@@ -78,7 +78,7 @@ export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) 
             Erreur de chargement{error instanceof Error ? ` : ${error.message}` : ""}.
           </EmptyState>
         ) : rows.length === 0 ? (
-          <EmptyState>Aucune issue non résolue</EmptyState>
+          <EmptyState>Aucune issue</EmptyState>
         ) : (
           <ul>
             {rows.map((row) => (
@@ -125,9 +125,12 @@ function EmptyState({
 }
 
 function IssueLine({ row, onSelect }: { row: IssueRow; onSelect: () => void }) {
+  const rowClass = row.isResolved
+    ? "opacity-60 hover:bg-muted/40"
+    : LEVEL_ROW_CLASS[row.level];
   return (
     <li
-      className={`border-b border-border last:border-b-0 ${LEVEL_ROW_CLASS[row.level]}`}
+      className={`border-b border-border last:border-b-0 ${rowClass}`}
     >
       <button
         type="button"
@@ -140,6 +143,7 @@ function IssueLine({ row, onSelect }: { row: IssueRow; onSelect: () => void }) {
             <div className="mb-1 truncate font-mono text-[0.71875rem] text-foreground">{row.title}</div>
             <div className="flex flex-wrap items-center gap-1.5">
               <Badge variant={LEVEL_VARIANT[row.level]}>{row.level}</Badge>
+              {row.isResolved && <Badge variant="resolved">résolu</Badge>}
               {row.type && <Badge variant="warning">{row.type}</Badge>}
               <ProjectPill projectId={row.projectId} />
               <span className="font-mono text-[0.625rem] text-muted-foreground/60">

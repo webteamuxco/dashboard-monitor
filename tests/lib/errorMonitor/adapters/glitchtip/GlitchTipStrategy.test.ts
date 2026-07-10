@@ -70,20 +70,20 @@ describe("GlitchTipStrategy", () => {
       expect(get.mock.calls[0][1]).toMatchObject({ query: "is:unresolved level:fatal" });
     });
 
-    it("omits the query param when filters yield no parts", async () => {
+    it("sends an empty query when filters yield no parts, to include resolved issues", async () => {
       get.mockResolvedValue([]);
 
       await strategy.getIssues("p", {});
 
-      expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: undefined });
+      expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
     });
 
-    it("omits the query param when filters is undefined", async () => {
+    it("sends an empty query when filters is undefined, to include resolved issues", async () => {
       get.mockResolvedValue([]);
 
       await strategy.getIssues("p");
 
-      expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: undefined });
+      expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
     });
 
     it("forwards the environment as a dedicated query param", async () => {

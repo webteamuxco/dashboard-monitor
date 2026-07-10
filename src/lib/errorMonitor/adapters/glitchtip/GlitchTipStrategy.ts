@@ -30,13 +30,14 @@ interface GlitchTipRawEventDto {
   tags?: Array<{ key: string; value: string }> | null;
 }
 
-function buildIssueQuery(filters?: IssueFilters): string | undefined {
-  if (!filters) return undefined;
+function buildIssueQuery(filters?: IssueFilters): string {
   const parts: string[] = [];
-  if (filters.resolved === false) parts.push("is:unresolved");
-  if (filters.resolved === true) parts.push("is:resolved");
-  if (filters.level) parts.push(`level:${filters.level}`);
-  return parts.length ? parts.join(" ") : undefined;
+  if (filters?.resolved === false) parts.push("is:unresolved");
+  if (filters?.resolved === true) parts.push("is:resolved");
+  if (filters?.level) parts.push(`level:${filters.level}`);
+  // An empty query overrides GlitchTip's implicit `is:unresolved` default, so
+  // resolved issues show up in the feed unless a status filter is set explicitly.
+  return parts.join(" ");
 }
 
 function isNotFound(err: unknown): boolean {
@@ -69,6 +70,7 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
         environment: filters?.environment,
       },
     );
+
     return dto.map(mapGlitchTipIssue);
   }
 

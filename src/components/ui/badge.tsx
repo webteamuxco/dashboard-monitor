@@ -13,6 +13,7 @@ const badgeVariants = cva(
         info: "border border-level-info-border bg-level-info-bg text-level-info",
         debug: "border border-level-debug-border bg-level-debug-bg text-level-debug",
         new: "border-0 bg-level-error-bg text-level-fatal text-[0.5625rem]",
+        resolved: "border border-status-live/30 bg-status-live-bg text-status-live",
         muted: "border border-border bg-muted text-muted-foreground",
       },
     },

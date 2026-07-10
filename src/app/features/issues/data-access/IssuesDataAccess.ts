@@ -32,6 +32,20 @@ function toRow(issue: Issue): IssueRow {
   };
 }
 
+const fetchRecent = cache(
+  async (
+    projectId: string,
+    limit: number,
+    environment: string | null,
+  ): Promise<IssueRow[]> => {
+    const issues = await getErrorMonitor().getIssues(projectId, {
+      limit,
+      environment: environment ?? undefined,
+    });
+    return issues.map(toRow);
+  },
+);
+
 const fetchRecentUnresolved = cache(
   async (
     projectId: string,
@@ -69,6 +83,15 @@ const fetchDetail = cache(async (issueId: string): Promise<IssueDetailView> => {
 });
 
 export class IssuesDataAccess {
+
+  getRecent(
+    projectId: string,
+    limit = 20,
+    environment: string | null = null,
+  ): Promise<IssueRow[]> {
+    return fetchRecent(projectId, limit, environment);
+  }
+
   getRecentUnresolved(
     projectId: string,
     limit = 20,
