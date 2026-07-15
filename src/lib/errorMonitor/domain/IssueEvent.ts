@@ -37,16 +37,34 @@ export interface EventRequest {
   query: Array<[string, string]>;
 }
 
+export interface EventSdk {
+  name: string | null;
+  version: string | null;
+}
+
+export interface ProcessingError {
+  type: string | null;
+  message: string | null;
+  data: Record<string, unknown> | null;
+}
+
 export interface IssueEvent {
   id: string;
   eventID: string;
   dateCreated: string;
   message: string | null;
   platform: string | null;
+  culprit: string | null;
   tags: Array<{ key: string; value: string }>;
   user: EventUser | null;
   request: EventRequest | null;
   contexts: Record<string, Record<string, unknown>>;
+  // Free-form `extra` data ("Additional Data" in GlitchTip), distinct from structured `contexts`.
+  context: Record<string, unknown>;
+  metadata: Record<string, unknown>;
+  packages: Record<string, string>;
+  sdk: EventSdk | null;
+  errors: ProcessingError[];
   exceptions: ExceptionEntry[];
   breadcrumbs: Breadcrumb[];
 }

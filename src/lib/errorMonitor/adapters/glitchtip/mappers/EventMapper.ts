@@ -4,6 +4,8 @@ import type {
   Breadcrumb,
   EventRequest,
   EventUser,
+  EventSdk,
+  ProcessingError,
   StackFrame,
 } from "../../../domain/IssueEvent";
 import type {
@@ -14,6 +16,8 @@ import type {
   GlitchTipBreadcrumbDto,
   GlitchTipRequestDto,
   GlitchTipEventUserDto,
+  GlitchTipSdkDto,
+  GlitchTipProcessingErrorDto,
 } from "../dto/GlitchTipEvent";
 
 function mapFrame(dto: GlitchTipStackFrameDto): StackFrame {
@@ -66,6 +70,31 @@ function mapUser(dto: GlitchTipEventUserDto | null | undefined): EventUser | nul
   };
 }
 
+function mapSdk(dto: GlitchTipSdkDto | null | undefined): EventSdk | null {
+  if (!dto) return null;
+  return { name: dto.name ?? null, version: dto.version ?? null };
+}
+
+function mapPackages(
+  dto: Record<string, string | null> | null | undefined,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [name, version] of Object.entries(dto ?? {})) {
+    if (version != null) out[name] = version;
+  }
+  return out;
+}
+
+function mapErrors(
+  dto: GlitchTipProcessingErrorDto[] | null | undefined,
+): ProcessingError[] {
+  return (dto ?? []).map((e) => ({
+    type: e.type ?? null,
+    message: e.message ?? null,
+    data: e.data ?? null,
+  }));
+}
+
 function pickExceptions(entries: GlitchTipEntryDto[]): ExceptionEntry[] {
   const entry = entries.find((e) => e.type === "exception");
   if (!entry) return [];
@@ -94,10 +123,16 @@ export function mapGlitchTipEvent(dto: GlitchTipEventDto): IssueEvent {
     dateCreated: dto.dateCreated,
     message: dto.message ?? null,
     platform: dto.platform ?? null,
+    culprit: dto.culprit ?? null,
     tags: dto.tags ?? [],
     user: mapUser(dto.user),
     request: pickRequest(entries),
     contexts: dto.contexts ?? {},
+    context: dto.context ?? {},
+    metadata: dto.metadata ?? {},
+    packages: mapPackages(dto.packages),
+    sdk: mapSdk(dto.sdk),
+    errors: mapErrors(dto.errors),
     exceptions: pickExceptions(entries),
     breadcrumbs: pickBreadcrumbs(entries),
   };

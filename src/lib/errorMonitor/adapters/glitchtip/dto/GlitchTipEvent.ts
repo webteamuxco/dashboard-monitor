@@ -57,14 +57,33 @@ export interface GlitchTipEventUserDto {
   ip_address?: string | null;
 }
 
+export interface GlitchTipSdkDto {
+  name?: string | null;
+  version?: string | null;
+}
+
+export interface GlitchTipProcessingErrorDto {
+  type?: string | null;
+  message?: string | null;
+  data?: Record<string, unknown> | null;
+}
+
 export interface GlitchTipEventDto {
   id: string;
   eventID: string;
   dateCreated: string;
   message?: string | null;
   platform?: string | null;
+  culprit?: string | null;
   tags?: Array<{ key: string; value: string }>;
   user?: GlitchTipEventUserDto | null;
   contexts?: Record<string, Record<string, unknown>>;
+  // `context` (singular) is the free-form `extra` dict — GlitchTip's "Additional Data" panel.
+  // Distinct from `contexts` (plural), which holds structured device/os/runtime data.
+  context?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  packages?: Record<string, string | null> | null;
+  sdk?: GlitchTipSdkDto | null;
+  errors?: GlitchTipProcessingErrorDto[] | null;
   entries?: GlitchTipEntryDto[];
 }

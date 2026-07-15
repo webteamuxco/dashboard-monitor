@@ -25,6 +25,12 @@ describe("mapGlitchTipEvent", () => {
       user: null,
       request: null,
       contexts: {},
+      culprit: null,
+      context: {},
+      metadata: {},
+      packages: {},
+      sdk: null,
+      errors: [],
       exceptions: [],
       breadcrumbs: [],
     });
@@ -227,5 +233,45 @@ describe("mapGlitchTipEvent", () => {
 
     expect(out.tags).toEqual([{ key: "env", value: "prod" }]);
     expect(out.contexts).toEqual({ runtime: { name: "node" } });
+  });
+
+  it("maps the additional data (context), culprit, metadata and sdk", () => {
+    const out = mapGlitchTipEvent(
+      baseDto({
+        culprit: "GET /orders",
+        context: { orderId: 42, retryable: false },
+        metadata: { type: "TypeError", value: "x is undefined" },
+        sdk: { name: "sentry.javascript.node", version: "7.1.0" },
+      }),
+    );
+
+    expect(out.culprit).toBe("GET /orders");
+    expect(out.context).toEqual({ orderId: 42, retryable: false });
+    expect(out.metadata).toEqual({ type: "TypeError", value: "x is undefined" });
+    expect(out.sdk).toEqual({ name: "sentry.javascript.node", version: "7.1.0" });
+  });
+
+  it("drops null package versions and maps the rest", () => {
+    const out = mapGlitchTipEvent(
+      baseDto({ packages: { react: "19.0.0", missing: null } }),
+    );
+
+    expect(out.packages).toEqual({ react: "19.0.0" });
+  });
+
+  it("maps processing errors, defaulting missing fields", () => {
+    const out = mapGlitchTipEvent(
+      baseDto({
+        errors: [
+          { type: "js_no_source", message: "Source not found", data: { url: "/a.js" } },
+          {},
+        ],
+      }),
+    );
+
+    expect(out.errors).toEqual([
+      { type: "js_no_source", message: "Source not found", data: { url: "/a.js" } },
+      { type: null, message: null, data: null },
+    ]);
   });
 });

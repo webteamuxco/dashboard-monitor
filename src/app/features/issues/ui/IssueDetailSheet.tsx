@@ -15,6 +15,7 @@ import type {
   Breadcrumb,
   ExceptionEntry,
   IssueEvent,
+  ProcessingError,
 } from "@/lib/errorMonitor/domain/IssueEvent";
 import type { IssueComment } from "@/lib/errorMonitor/domain/IssueComment";
 import { useIssueDetail } from "../hooks/useIssueDetail";
@@ -119,9 +120,15 @@ function DetailBody({ detail }: { detail: NonNullable<ReturnType<typeof useIssue
           isResolved={issue.isResolved}
         />
 
+        {latestEvent && latestEvent.errors.length > 0 && (
+          <ProcessingErrorsSection errors={latestEvent.errors} />
+        )}
+
         {latestEvent && <StacktraceSection event={latestEvent} />}
         {latestEvent && latestEvent.tags.length > 0 && <TagsSection event={latestEvent} />}
         {latestEvent && <ContextSection event={latestEvent} />}
+        {latestEvent && <AdditionalDataSection event={latestEvent} />}
+        {latestEvent && <EventInfoSection event={latestEvent} />}
         {latestEvent && latestEvent.breadcrumbs.length > 0 && (
           <BreadcrumbsSection breadcrumbs={latestEvent.breadcrumbs} />
         )}
@@ -340,6 +347,124 @@ function KV({ k, v }: { k: string; v: string }) {
       <dt className="text-muted-foreground/70">{k}</dt>
       <dd className="break-all text-foreground">{v}</dd>
     </>
+  );
+}
+
+function AdditionalDataSection({ event }: { event: IssueEvent }) {
+  const entries = Object.entries(event.context ?? {});
+  if (entries.length === 0) return null;
+  return (
+    <section>
+      <SectionTitle>Additional data</SectionTitle>
+      <div className="rounded border border-border bg-muted/30 p-2">
+        <dl className="grid grid-cols-[max-content_1fr] gap-x-2 gap-y-0.5 font-mono text-[0.625rem]">
+          {entries.map(([k, v]) => (
+            <KV key={k} k={k} v={formatContextValue(v)} />
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function EventInfoSection({ event }: { event: IssueEvent }) {
+  const { sdk, culprit, packages, metadata } = event;
+  const metadataEntries = Object.entries(metadata ?? {});
+  const packageEntries = Object.entries(packages ?? {});
+  const sdkLabel = sdk
+    ? [sdk.name, sdk.version].filter(Boolean).join("@")
+    : "";
+  const hasInfo =
+    !!culprit || !!sdkLabel || metadataEntries.length > 0 || packageEntries.length > 0;
+
+  if (!hasInfo) return null;
+
+  return (
+    <section>
+      <SectionTitle>Info événement</SectionTitle>
+      <div className="space-y-2">
+        {(culprit || sdkLabel) && (
+          <ContextBlock title="event">
+            {culprit && <KV k="culprit" v={culprit} />}
+            {sdkLabel && <KV k="sdk" v={sdkLabel} />}
+          </ContextBlock>
+        )}
+        {metadataEntries.length > 0 && (
+          <ContextBlock title="metadata">
+            {metadataEntries.map(([k, v]) => (
+              <KV key={k} k={k} v={formatContextValue(v)} />
+            ))}
+          </ContextBlock>
+        )}
+        {packageEntries.length > 0 && (
+          <CollapsibleContextBlock title={`packages (${packageEntries.length})`}>
+            {packageEntries.map(([k, v]) => (
+              <KV key={k} k={k} v={v} />
+            ))}
+          </CollapsibleContextBlock>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function CollapsibleContextBlock({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded border border-border bg-muted/30 p-2">
+      <button
+        type="button"
+        className="flex w-full items-center gap-1.5 text-left"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        {open ? (
+          <ChevronDown className="h-3 w-3 text-muted-foreground/70" />
+        ) : (
+          <ChevronRight className="h-3 w-3 text-muted-foreground/70" />
+        )}
+        <span className="font-mono text-[0.625rem] uppercase tracking-wider text-muted-foreground/70">
+          {title}
+        </span>
+      </button>
+      {open && (
+        <dl className="mt-1 grid grid-cols-[max-content_1fr] gap-x-2 gap-y-0.5 font-mono text-[0.625rem]">
+          {children}
+        </dl>
+      )}
+    </div>
+  );
+}
+
+function ProcessingErrorsSection({ errors }: { errors: ProcessingError[] }) {
+  return (
+    <section>
+      <SectionTitle>Erreurs de traitement ({errors.length})</SectionTitle>
+      <ul className="space-y-1.5">
+        {errors.map((e, i) => (
+          <li
+            key={i}
+            className="rounded border border-level-warning-border bg-level-warning-bg/30 px-2 py-1.5 font-mono text-[0.625rem]"
+          >
+            <div className="text-level-warning">{e.type ?? "error"}</div>
+            {e.message && <div className="text-foreground">{e.message}</div>}
+            {e.data && Object.keys(e.data).length > 0 && (
+              <dl className="mt-1 grid grid-cols-[max-content_1fr] gap-x-2 gap-y-0.5 text-muted-foreground/80">
+                {Object.entries(e.data).map(([k, v]) => (
+                  <KV key={k} k={k} v={formatContextValue(v)} />
+                ))}
+              </dl>
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
