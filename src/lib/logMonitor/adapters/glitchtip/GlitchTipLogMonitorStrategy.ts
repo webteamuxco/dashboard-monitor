@@ -13,7 +13,7 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
   ) {}
 
   async getLogs(projectId: string, filters?: LogFilters, period?: Period): Promise<Log[]> {
-    const dto = await this.client.get<GlitchTipLogDto[]>(
+    const dto = await this.client.getPaginated<GlitchTipLogDto>(
       `/api/0/organizations/${this.organizationSlug}/logs/`,
       {
         project: projectId,

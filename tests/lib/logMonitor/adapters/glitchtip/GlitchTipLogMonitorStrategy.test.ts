@@ -3,25 +3,25 @@ import { GlitchTipLogMonitorStrategy } from "@/lib/logMonitor/adapters/glitchtip
 import type { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
 
 describe("GlitchTipLogMonitorStrategy.getLogs", () => {
-  let get: ReturnType<typeof vi.fn>;
+  let getPaginated: ReturnType<typeof vi.fn>;
   let strategy: GlitchTipLogMonitorStrategy;
 
   beforeEach(() => {
-    get = vi.fn().mockResolvedValue([]);
+    getPaginated = vi.fn().mockResolvedValue([]);
     strategy = new GlitchTipLogMonitorStrategy(
-      { get } as unknown as GlitchTipClient,
+      { getPaginated } as unknown as GlitchTipClient,
       "my-org",
     );
   });
 
-  it("calls the org logs endpoint with project + filters + period", async () => {
+  it("fetches all pages from the org logs endpoint with project + filters + period", async () => {
     await strategy.getLogs(
       "p1",
       { query: "reservation.sent" },
       { from: "2026-05-28T00:00:00Z", to: "2026-05-28T01:00:00Z", interval: "1m" },
     );
 
-    expect(get).toHaveBeenCalledWith(
+    expect(getPaginated).toHaveBeenCalledWith(
       "/api/0/organizations/my-org/logs/",
       {
         project: "p1",
@@ -35,7 +35,7 @@ describe("GlitchTipLogMonitorStrategy.getLogs", () => {
   it("leaves period fields undefined when no period is passed", async () => {
     await strategy.getLogs("p1");
 
-    expect(get.mock.calls[0][1]).toMatchObject({
+    expect(getPaginated.mock.calls[0][1]).toMatchObject({
       project: "p1",
       start: undefined,
       end: undefined,
@@ -44,7 +44,7 @@ describe("GlitchTipLogMonitorStrategy.getLogs", () => {
   });
 
   it("maps the response through mapGlitchTipLog (fatal collapses to error)", async () => {
-    get.mockResolvedValue([
+    getPaginated.mockResolvedValue([
       { id: "l1", body: "boom", level: "fatal", timestamp: "2026-05-28T00:00:00Z" },
     ]);
 

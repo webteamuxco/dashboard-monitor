@@ -20,78 +20,82 @@ function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIss
 
 describe("GlitchTipStrategy", () => {
   let get: ReturnType<typeof vi.fn>;
+  let getPaginated: ReturnType<typeof vi.fn>;
   let client: GlitchTipClient;
   let strategy: GlitchTipStrategy;
 
   beforeEach(() => {
     get = vi.fn();
-    client = { get } as unknown as GlitchTipClient;
+    getPaginated = vi.fn();
+    client = { get, getPaginated } as unknown as GlitchTipClient;
     strategy = new GlitchTipStrategy(client, "my-org");
   });
 
   describe("getIssues", () => {
-    it("calls the org issues endpoint and maps the response", async () => {
-      get.mockResolvedValue([buildIssueDto({ id: "x" })]);
+    it("fetches all pages from the org issues endpoint and maps the response", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "x" })]);
 
       const out = await strategy.getIssues("proj-1");
 
-      expect(get).toHaveBeenCalledWith(
+      expect(getPaginated).toHaveBeenCalledWith(
         "/api/0/organizations/my-org/issues/",
         expect.objectContaining({ project: "proj-1" }),
+        expect.any(Object),
       );
       expect(out[0].id).toBe("x");
     });
 
-    it("builds an unresolved query when filters.resolved === false", async () => {
-      get.mockResolvedValue([]);
+    it("caps the result set at the requested limit", async () => {
+      getPaginated.mockResolvedValue([]);
 
       await strategy.getIssues("proj", { resolved: false, limit: 10 });
 
-      expect(get.mock.calls[0][1]).toMatchObject({
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({
         project: "proj",
         query: "is:unresolved",
         limit: 10,
       });
+      expect(getPaginated.mock.calls[0][2]).toEqual({ maxItems: 10 });
     });
 
     it("builds a resolved query when filters.resolved === true", async () => {
-      get.mockResolvedValue([]);
+      getPaginated.mockResolvedValue([]);
 
       await strategy.getIssues("p", { resolved: true });
 
-      expect(get.mock.calls[0][1]).toMatchObject({ query: "is:resolved" });
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({ query: "is:resolved" });
     });
 
     it("combines resolved + level filters", async () => {
-      get.mockResolvedValue([]);
+      getPaginated.mockResolvedValue([]);
 
       await strategy.getIssues("p", { resolved: false, level: "fatal" });
 
-      expect(get.mock.calls[0][1]).toMatchObject({ query: "is:unresolved level:fatal" });
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({ query: "is:unresolved level:fatal" });
     });
 
     it("sends an empty query when filters yield no parts, to include resolved issues", async () => {
-      get.mockResolvedValue([]);
+      getPaginated.mockResolvedValue([]);
 
       await strategy.getIssues("p", {});
 
-      expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
     });
 
     it("sends an empty query when filters is undefined, to include resolved issues", async () => {
-      get.mockResolvedValue([]);
+      getPaginated.mockResolvedValue([]);
 
       await strategy.getIssues("p");
 
-      expect(get.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
     });
 
     it("forwards the environment as a dedicated query param", async () => {
-      get.mockResolvedValue([]);
+      getPaginated.mockResolvedValue([]);
 
       await strategy.getIssues("p", { resolved: false, environment: "production" });
 
-      expect(get.mock.calls[0][1]).toMatchObject({ environment: "production" });
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({ environment: "production" });
     });
   });
 
@@ -236,14 +240,14 @@ describe("GlitchTipStrategy", () => {
   });
 
   describe("getIssueComments", () => {
-    it("calls the comments endpoint and maps the response", async () => {
-      get.mockResolvedValue([
+    it("fetches all pages from the comments endpoint and maps the response", async () => {
+      getPaginated.mockResolvedValue([
         { id: "c1", dateCreated: "2026-05-28T00:00:00Z", data: { text: "hi" } },
       ]);
 
       const out = await strategy.getIssueComments("i1");
 
-      expect(get).toHaveBeenCalledWith("/api/0/issues/i1/comments/");
+      expect(getPaginated).toHaveBeenCalledWith("/api/0/issues/i1/comments/");
       expect(out[0]).toMatchObject({ id: "c1", text: "hi" });
     });
   });

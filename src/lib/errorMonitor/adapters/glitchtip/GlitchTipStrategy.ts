@@ -61,7 +61,7 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
   ) {}
 
   async getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]> {
-    const dto = await this.client.get<GlitchTipIssueDto[]>(
+    const dto = await this.client.getPaginated<GlitchTipIssueDto>(
       `/api/0/organizations/${this.organizationSlug}/issues/`,
       {
         project: projectId,
@@ -69,6 +69,7 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
         limit: filters?.limit,
         environment: filters?.environment,
       },
+      { maxItems: filters?.limit },
     );
 
     return dto.map(mapGlitchTipIssue);
@@ -167,7 +168,7 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
   }
 
   async getIssueComments(issueId: string): Promise<IssueComment[]> {
-    const dto = await this.client.get<GlitchTipCommentDto[]>(
+    const dto = await this.client.getPaginated<GlitchTipCommentDto>(
       `/api/0/issues/${issueId}/comments/`,
     );
     return dto.map(mapGlitchTipComment);

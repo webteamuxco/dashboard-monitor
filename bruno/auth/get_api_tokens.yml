@@ -1,0 +1,15 @@
+info:
+  name: GET API Tokens
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{url}}/api/0/api-tokens/"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

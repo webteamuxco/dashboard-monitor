@@ -96,3 +96,80 @@ describe("GlitchTipClient.get", () => {
     await expect(client.get("/x")).rejects.toThrow(/500 on \/x/);
   });
 });
+
+describe("GlitchTipClient.getPaginated", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function okJson(data: unknown, link: string | null = null): Response {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => data,
+      headers: { get: (name: string) => (name === "Link" ? link : null) },
+    } as unknown as Response;
+  }
+
+  function nextLink(cursor: string, results = "true"): string {
+    return `<https://gt.example.com/next>; rel="next"; results="${results}"; cursor="${cursor}"`;
+  }
+
+  it("returns a single page unchanged when there is no next link", async () => {
+    fetchMock.mockResolvedValue(okJson([{ id: 1 }, { id: 2 }]));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "t" });
+
+    expect(await client.getPaginated("/api/0/x/")).toEqual([{ id: 1 }, { id: 2 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the Link cursor and concatenates every page", async () => {
+    fetchMock
+      .mockResolvedValueOnce(okJson([{ id: 1 }], nextLink("cur-2")))
+      .mockResolvedValueOnce(okJson([{ id: 2 }], nextLink("cur-3")))
+      .mockResolvedValueOnce(okJson([{ id: 3 }]));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "t" });
+
+    expect(await client.getPaginated("/api/0/x/")).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect((fetchMock.mock.calls[1][0] as URL).searchParams.get("cursor")).toBe("cur-2");
+    expect((fetchMock.mock.calls[2][0] as URL).searchParams.get("cursor")).toBe("cur-3");
+  });
+
+  it("stops paginating when the next link advertises results=false", async () => {
+    fetchMock.mockResolvedValue(okJson([{ id: 1 }], nextLink("cur", "false")));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "t" });
+
+    expect(await client.getPaginated("/api/0/x/")).toEqual([{ id: 1 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops and truncates once maxItems is reached", async () => {
+    fetchMock
+      .mockResolvedValueOnce(okJson([{ id: 1 }, { id: 2 }], nextLink("cur-2")))
+      .mockResolvedValueOnce(okJson([{ id: 3 }, { id: 4 }], nextLink("cur-3")));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "t" });
+
+    const out = await client.getPaginated("/api/0/x/", undefined, { maxItems: 3 });
+
+    expect(out).toEqual([{ id: 1 }, { id: 2 }, { id: 3 }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("honours the maxPages backstop against an endless next link", async () => {
+    fetchMock.mockResolvedValue(okJson([{ id: 1 }], nextLink("same-cursor")));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "t" });
+
+    const out = await client.getPaginated("/api/0/x/", undefined, { maxPages: 3 });
+
+    expect(out).toHaveLength(3);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+  });
+});

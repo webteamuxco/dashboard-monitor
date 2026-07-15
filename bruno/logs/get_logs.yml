@@ -1,0 +1,15 @@
+info:
+  name: GET logs
+  type: http
+  seq: 1
+
+http:
+  method: DELETE
+  url: "{{url}}/api/0/organizations/{{organizationSlug}}/logs/019f4c6e-31ca-73d4-902f-aa0ac0cbaed0/"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
