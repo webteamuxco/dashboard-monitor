@@ -345,9 +345,20 @@ function KV({ k, v }: { k: string; v: string }) {
   return (
     <>
       <dt className="text-muted-foreground/70">{k}</dt>
-      <dd className="break-all text-foreground">{v}</dd>
+      <dd className="whitespace-pre-wrap break-all text-foreground">{v}</dd>
     </>
   );
+}
+
+function prettifyJson(v: unknown): string {
+  if (typeof v === "string") {
+    try {
+      return JSON.stringify(JSON.parse(v), null, 2);
+    } catch {
+      return v;
+    }
+  }
+  return JSON.stringify(v, null, 2);
 }
 
 function AdditionalDataSection({ event }: { event: IssueEvent }) {
@@ -359,7 +370,7 @@ function AdditionalDataSection({ event }: { event: IssueEvent }) {
       <div className="rounded border border-border bg-muted/30 p-2">
         <dl className="grid grid-cols-[max-content_1fr] gap-x-2 gap-y-0.5 font-mono text-[0.625rem]">
           {entries.map(([k, v]) => (
-            <KV key={k} k={k} v={formatContextValue(v)} />
+            <KV key={k} k={k} v={prettifyJson(v)} />
           ))}
         </dl>
       </div>
