@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { PostHogStrategy } from "@/lib/trackerMonitor/adapters/posthog/PostHogStrategy";
-import type { PostHogClient } from "@/lib/posthog/PostHogClient";
+import type { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 import type { PostHogQueryResponseDto } from "@/lib/trackerMonitor/adapters/posthog/dto/PostHogQueryResponse";
 
 function makeClient(response: PostHogQueryResponseDto = { results: [] }) {

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GlitchTipLogMonitorStrategy } from "@/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorStrategy";
-import type { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
+import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 
 describe("GlitchTipLogMonitorStrategy.getLogs", () => {
   let getPaginated: ReturnType<typeof vi.fn>;

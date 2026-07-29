@@ -2,7 +2,7 @@ import "server-only";
 import type { LogMonitorStrategyInterface } from "../../strategy/LogMonitorStrategyInterface";
 import type { Log, LogFilters } from "../../domain/Log";
 import type { Period } from "@/lib/shared/domain/Period";
-import type { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
+import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipLogDto } from "./dto/GlitchTipLogs";
 import { mapGlitchTipLog } from "./mappers/logsMapper";
 

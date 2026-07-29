@@ -1,7 +1,7 @@
 import "server-only";
 import type { TrackerMonitorStrategyInterface } from "../../strategy/TrackerMonitorStrategyInterface";
 import type { VisitorsTimeSeriesPoint } from "../../domain/VisitorsTimeSeriesPoint";
-import type { PostHogClient } from "@/lib/posthog/PostHogClient";
+import type { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 import type { PostHogQueryResponseDto } from "./dto/PostHogQueryResponse";
 import { mapPostHogVisitorsTimeline } from "./mappers/VisitorsTimelineMapper";
 

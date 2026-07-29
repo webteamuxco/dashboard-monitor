@@ -1,7 +1,7 @@
 import "server-only";
 import type { TrackerMonitorFactoryInterface } from "../../factory/TrackerMonitorFactoryInterface";
 import type { TrackerMonitorStrategyInterface } from "../../strategy/TrackerMonitorStrategyInterface";
-import { PostHogClient } from "@/lib/posthog/PostHogClient";
+import { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 import { PostHogStrategy } from "./PostHogStrategy";
 import { POSTHOG } from "../../TrackerMonitorTypeEnums";
 

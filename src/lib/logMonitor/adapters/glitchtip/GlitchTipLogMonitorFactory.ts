@@ -1,7 +1,7 @@
 import "server-only";
 import type { LogMonitorFactoryInterface } from "../../factory/LogMonitorFactoryInterface";
 import type { LogMonitorStrategyInterface } from "../../strategy/LogMonitorStrategyInterface";
-import { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
+import { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import { GlitchTipLogMonitorStrategy } from "./GlitchTipLogMonitorStrategy";
 import { GLITCHTIP } from "../../LogMonitorTypeEnums";
 

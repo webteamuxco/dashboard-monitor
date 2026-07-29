@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { PostHogClient } from "@/lib/posthog/PostHogClient";
+import { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 
 describe("PostHogClient.query", () => {
   let fetchMock: ReturnType<typeof vi.fn>;

@@ -1,5 +1,5 @@
 import { LogLevel } from "@/lib/logMonitor/domain/LogLevel";
-import { GlitchTipLevel } from "@/lib/glitchtip/dto/GlitchTipType";
+import { GlitchTipLevel } from "@/lib/tool/glitchtip/dto/GlitchTipType";
 import { GlitchTipLogDto } from "../dto/GlitchTipLogs";
 import { Log } from "@/lib/logMonitor/domain/Log";
 

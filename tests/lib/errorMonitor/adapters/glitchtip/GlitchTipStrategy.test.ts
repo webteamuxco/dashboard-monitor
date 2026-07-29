@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GlitchTipStrategy } from "@/lib/errorMonitor/adapters/glitchtip/GlitchTipStrategy";
-import type { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
+import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "@/lib/errorMonitor/adapters/glitchtip/dto/GlitchTipIssue";
 
 function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIssueDto {

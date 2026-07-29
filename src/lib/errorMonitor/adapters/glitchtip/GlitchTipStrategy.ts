@@ -5,7 +5,7 @@ import type { Period } from "@/lib/shared/domain/Period";
 import type { TimeSeriesPoint } from "../../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../../domain/IssueEvent";
 import type { IssueComment } from "../../domain/IssueComment";
-import type { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
+import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "./dto/GlitchTipIssue";
 import type { GlitchTipStatsV2Dto } from "./dto/GlitchTipStatsV2";
 import type { GlitchTipEventDto } from "./dto/GlitchTipEvent";

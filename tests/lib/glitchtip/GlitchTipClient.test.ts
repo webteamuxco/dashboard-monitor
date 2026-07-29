@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { GlitchTipClient } from "@/lib/glitchtip/GlitchTipClient";
+import { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 
 describe("GlitchTipClient.get", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
