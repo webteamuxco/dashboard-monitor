@@ -1,4 +1,4 @@
-import { GlitchtipConfiguration } from "./GlitchtipConfiguration";
-import { PosthogConfiguration } from "./PosthogConfiguration";
+import { GlitchtipConfiguration } from "./GlitchtipConfigurationStrategy";
+import { PosthogConfiguration } from "./PosthogConfigurationStrategy";
 
 export type ToolConfiguration = GlitchtipConfiguration | PosthogConfiguration;

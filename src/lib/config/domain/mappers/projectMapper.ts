@@ -55,6 +55,7 @@ export function mapProject(dto: ProjectDto): Project {
         defaultConfig: dto.default_config
             ? mapDefaultConfig(dto.default_config)
             : undefined,
+        timeInterval: dto.timeInterval
     };
 }
 

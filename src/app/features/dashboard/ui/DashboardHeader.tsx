@@ -20,7 +20,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ projectId, documentId, limit, intervalMs }: DashboardHeaderProps) {
   const queryClient = useQueryClient();
   const environment = useEnvironment((s) => s.environment);
-  const { dataUpdatedAt } = useIssues(projectId, limit, environment, intervalMs);
+  const { dataUpdatedAt } = useIssues(documentId, limit, environment, intervalMs);
   const isFetching = useIsFetching() > 0;
 
   const intervalSeconds = Math.round(intervalMs / 1000);

@@ -7,6 +7,7 @@ import type { GlitchTipLogDto } from "./dto/GlitchTipLogs";
 import { mapGlitchTipLog } from "./mappers/logsMapper";
 
 export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface {
+  
   constructor(
     private readonly client: GlitchTipClient,
     private readonly organizationSlug: string,

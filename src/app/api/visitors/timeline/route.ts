@@ -4,25 +4,25 @@ import { visitorsTimelineDataAccess } from "@/app/features/visitors/data-access/
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const projectId = request.nextUrl.searchParams.get("projectId");
-  if (!projectId) {
+  const documentId = request.nextUrl.searchParams.get("documentId");
+  if (!documentId) {
     return NextResponse.json(
-      { error: "Query param 'projectId' is required." },
+      { error: "Query param 'documentId' is required." },
       { status: 400 },
     );
   }
 
   const raw = request.nextUrl.searchParams.get("windowMinutes");
   const windowMinutes = raw ? Number(raw) : 30;
-  if (!Number.isInteger(windowMinutes) || windowMinutes <= 0 || windowMinutes > 1440) {
+  if (!Number.isInteger(windowMinutes) || windowMinutes <= 0) {
     return NextResponse.json(
-      { error: "Query param 'windowMinutes' must be an integer between 1 and 1440." },
+      { error: "Query param 'windowMinutes' must be a positive integer." },
       { status: 400 },
     );
   }
 
   try {
-    const data = await visitorsTimelineDataAccess.getSeries(projectId, windowMinutes);
+    const data = await visitorsTimelineDataAccess.getSeries(documentId, windowMinutes);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

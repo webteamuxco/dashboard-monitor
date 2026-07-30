@@ -1,28 +1,22 @@
 import "server-only";
-import type { LogMonitorFactoryInterface } from "../../factory/LogMonitorFactoryInterface";
-import type { LogMonitorStrategyInterface } from "../../strategy/LogMonitorStrategyInterface";
-import { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
-import { GlitchTipLogMonitorStrategy } from "./GlitchTipLogMonitorStrategy";
-import { GLITCHTIP } from "../../LogMonitorTypeEnums";
+import type {
+  LogMonitorFactoryInterface,
+} from "../../factory/LogMonitorFactoryInterface";
+import { AbstractGlitchTipFactory } from "@/lib/shared/factory/AbstractGlitchtipFactory";
+import { LogMonitorStrategyInterface } from "../../strategy/LogMonitorStrategyInterface";
+import { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
+import { GlitchTipLogMonitorStrategy } from "@/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorStrategy";
 
-export class GlitchTipLogMonitorFactory implements LogMonitorFactoryInterface {
-  support(logMonitorType: string): boolean {
-    return logMonitorType === GLITCHTIP;
-  }
+export class GlitchTipLogMonitorFactory extends AbstractGlitchTipFactory implements LogMonitorFactoryInterface<LogMonitorStrategyInterface> {
 
-  create(): LogMonitorStrategyInterface {
-    const baseUrl = process.env.GLITCHTIP_URL;
-    const token = process.env.GLITCHTIP_TOKEN;
-    const organizationSlug = process.env.GLITCHTIP_ORGANIZATION_SLUG;
-
-    if (!baseUrl || !token || !organizationSlug) {
-      throw new Error(
-        "GlitchTip env vars missing: GLITCHTIP_URL, GLITCHTIP_TOKEN, " +
-          "GLITCHTIP_ORGANIZATION_SLUG are all required.",
-      );
+  createStrategy(connection: ToolConnection): GlitchTipLogMonitorStrategy { 
+    
+    if (!this.isGlitchtipConnection(connection)) {
+      throw new Error("Expected a GlitchtipConnection.");
     }
 
-    const client = new GlitchTipClient({ baseUrl, token });
-    return new GlitchTipLogMonitorStrategy(client, organizationSlug);
+    const client = this.createGlithtipClient(connection)
+    
+    return new GlitchTipLogMonitorStrategy(client, connection.organizationSlug);
   }
 }

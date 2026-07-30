@@ -1,6 +1,11 @@
-import type { LogMonitorStrategyInterface } from "../strategy/LogMonitorStrategyInterface";
+import { FactoryInterface } from "@/lib/shared/factory/FactoryInterface";
 
-export interface LogMonitorFactoryInterface {
-  support(logMonitorType: string): boolean;
-  create(): LogMonitorStrategyInterface;
+
+export interface LogMonitorConnection {
+  baseUrl: string;
+  organizationSlug: string;
+  projectId: string;
+}
+
+export interface LogMonitorFactoryInterface<TStrategy> extends FactoryInterface<TStrategy> {
 }

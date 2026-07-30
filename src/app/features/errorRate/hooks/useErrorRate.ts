@@ -5,13 +5,13 @@ import { fetchErrorRateClient } from "../data-access/fetchErrorRateClient";
 import { errorRateKeys } from "../queryKeys";
 
 export function useErrorRate(
-  projectId: string,
+  documentId: string,
   environment: string | null,
   intervalMs: number,
 ) {
   return useQuery({
-    queryKey: errorRateKeys.series(projectId, environment),
-    queryFn: () => fetchErrorRateClient(projectId, environment),
+    queryKey: errorRateKeys.series(documentId, environment),
+    queryFn: () => fetchErrorRateClient(documentId, environment),
     refetchInterval: intervalMs > 0 ? intervalMs : false,
   });
 }

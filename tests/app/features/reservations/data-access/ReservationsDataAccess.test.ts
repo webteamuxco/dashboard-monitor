@@ -6,6 +6,14 @@ vi.mock("@/lib/logMonitor/GetLogMonitor", () => ({
   getLogMonitor: () => ({ getLogs: getLogsMock }),
 }));
 
+vi.mock("@/lib/shared/services/GlitchtipConfig", () => ({
+  resolveGlitchtipConnection: vi.fn(async () => ({
+    baseUrl: "https://gt",
+    organizationSlug: "org",
+    projectId: "gt-project",
+  })),
+}));
+
 import { ReservationsDataAccess } from "@/app/features/reservations/data-access/ReservationsDataAccess";
 
 const FIXED_NOW = new Date("2026-05-28T08:30:45.000Z");
@@ -29,7 +37,7 @@ describe("ReservationsDataAccess.getSeries", () => {
 
     expect(getLogsMock).toHaveBeenCalledTimes(1);
     const [projectId, filters, period] = getLogsMock.mock.calls[0];
-    expect(projectId).toBe("p1");
+    expect(projectId).toBe("gt-project");
     expect(filters).toEqual({ query: "reservation.sent" });
     expect(period.interval).toBe("1m");
 

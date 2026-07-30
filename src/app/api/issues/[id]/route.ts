@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { issuesDataAccess } from "@/app/features/issues/data-access/IssuesDataAccess";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  _request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
@@ -15,8 +15,16 @@ export async function GET(
     );
   }
 
+  const documentId = request.nextUrl.searchParams.get("documentId");
+  if (!documentId) {
+    return NextResponse.json(
+      { error: "Query param 'documentId' is required." },
+      { status: 400 },
+    );
+  }
+
   try {
-    const data = await issuesDataAccess.getDetail(id);
+    const data = await issuesDataAccess.getDetail(documentId, id);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

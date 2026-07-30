@@ -5,14 +5,14 @@ import { fetchReservationsClient } from "../data-access/fetchReservationsClient"
 import { reservationsKeys } from "../queryKeys";
 
 export function useReservations(
-  projectId: string,
+  documentId: string,
   windowMinutes: number,
   environment: string | null,
   intervalMs: number,
 ) {
   return useQuery({
-    queryKey: reservationsKeys.series(projectId, windowMinutes, environment),
-    queryFn: () => fetchReservationsClient(projectId, windowMinutes, environment),
+    queryKey: reservationsKeys.series(documentId, windowMinutes, environment),
+    queryFn: () => fetchReservationsClient(documentId, windowMinutes, environment),
     refetchInterval: intervalMs > 0 ? intervalMs : false,
   });
 }

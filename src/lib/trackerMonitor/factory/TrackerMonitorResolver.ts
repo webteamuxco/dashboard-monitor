@@ -1,11 +1,17 @@
 import "server-only";
-import type { TrackerMonitorFactoryInterface } from "./TrackerMonitorFactoryInterface";
+import type {
+  TrackerMonitorConnection,
+  TrackerMonitorFactoryInterface,
+} from "./TrackerMonitorFactoryInterface";
 import type { TrackerMonitorStrategyInterface } from "../strategy/TrackerMonitorStrategyInterface";
 
 export class TrackerMonitorResolver {
   constructor(private readonly factories: TrackerMonitorFactoryInterface[]) {}
 
-  resolve(type: string): TrackerMonitorStrategyInterface {
+  resolve(
+    type: string,
+    connection: TrackerMonitorConnection,
+  ): TrackerMonitorStrategyInterface {
     const factory = this.factories.find((f) => f.support(type));
     if (!factory) {
       throw new Error(
@@ -13,6 +19,6 @@ export class TrackerMonitorResolver {
           `Registered: ${this.factories.length}.`,
       );
     }
-    return factory.create();
+    return factory.create(connection);
   }
 }

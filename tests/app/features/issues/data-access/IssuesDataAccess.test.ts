@@ -17,6 +17,14 @@ vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
   }),
 }));
 
+vi.mock("@/lib/shared/services/GlitchtipConfig", () => ({
+  resolveGlitchtipConnection: vi.fn(async () => ({
+    baseUrl: "https://gt",
+    organizationSlug: "org",
+    projectId: "gt-project",
+  })),
+}));
+
 import { IssuesDataAccess } from "@/app/features/issues/data-access/IssuesDataAccess";
 import type { Issue } from "@/lib/errorMonitor/domain/Issue";
 
@@ -56,25 +64,25 @@ describe("IssuesDataAccess", () => {
     it("queries unresolved issues with the provided limit", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecentUnresolved("p1", 50);
+      await new IssuesDataAccess().getRecentUnresolved("doc1", 50);
 
-      expect(getIssuesMock).toHaveBeenCalledWith("p1", { resolved: false, limit: 50 });
+      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { resolved: false, limit: 50 });
     });
 
     it("defaults limit to 20 when omitted", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecentUnresolved("p1");
+      await new IssuesDataAccess().getRecentUnresolved("doc1");
 
-      expect(getIssuesMock).toHaveBeenCalledWith("p1", { resolved: false, limit: 20 });
+      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { resolved: false, limit: 20 });
     });
 
     it("forwards the environment into the issue filters", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecentUnresolved("p1", 20, "production");
+      await new IssuesDataAccess().getRecentUnresolved("doc1", 20, "production");
 
-      expect(getIssuesMock).toHaveBeenCalledWith("p1", {
+      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", {
         resolved: false,
         limit: 20,
         environment: "production",
@@ -86,7 +94,7 @@ describe("IssuesDataAccess", () => {
         buildIssue({ id: "i1", lastSeen: "2026-05-28T08:29:00Z" }),
       ]);
 
-      const out = await new IssuesDataAccess().getRecentUnresolved("p", 10);
+      const out = await new IssuesDataAccess().getRecentUnresolved("doc1", 10);
 
       expect(out[0]).toMatchObject({
         id: "i1",
@@ -107,7 +115,7 @@ describe("IssuesDataAccess", () => {
       getIssueEventsMock.mockResolvedValue([]);
       getIssueCommentsMock.mockResolvedValue([]);
 
-      const out = await new IssuesDataAccess().getDetail("i42");
+      const out = await new IssuesDataAccess().getDetail("doc1", "i42");
 
       expect(getIssueMock).toHaveBeenCalledWith("i42");
       expect(getIssueLatestEventMock).toHaveBeenCalledWith("i42");
@@ -131,7 +139,7 @@ describe("IssuesDataAccess", () => {
       getIssueEventsMock.mockResolvedValue([evt, evt]);
       getIssueCommentsMock.mockResolvedValue([{ id: "c1" }]);
 
-      const out = await new IssuesDataAccess().getDetail("i");
+      const out = await new IssuesDataAccess().getDetail("doc1", "i");
 
       expect(out.latestEvent).toEqual(evt);
       expect(out.events).toHaveLength(2);

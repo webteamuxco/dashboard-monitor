@@ -1,6 +1,6 @@
 import "server-only";
 import { cache } from "react";
-import { getErrorMonitor } from "@/lib/errorMonitor/GetErrorMonitor";
+import { getErrorMonitorFactory } from "@/lib/errorMonitor/GetErrorMonitor";
 import type { Period } from "@/lib/shared/domain/Period";
 import type { ErrorRatePoint } from "../domain/ErrorRatePoint";
 
@@ -31,7 +31,7 @@ function toPoint(timestamp: string | Date, count: number | null): ErrorRatePoint
 }
 
 const fetchSeries = cache(
-  async (projectId: string, environment: string | null): Promise<ErrorRatePoint[]> => {
+  async (documentId: string, environment: string | null): Promise<ErrorRatePoint[]> => {
     const now = new Date();
     const period: Period = {
       from: new Date(now.getTime() - PAST_HOURS * HOUR_MS).toISOString(),
@@ -39,18 +39,24 @@ const fetchSeries = cache(
       interval: "1h",
     };
 
-    const points = await getErrorMonitor().getErrorStats(
-      projectId,
+
+    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
+    const connection = await errorMonitorFactory.createConnection(documentId)
+    const strategy =  errorMonitorFactory.createStrategy(connection)
+
+    const points = await strategy.getErrorStats(
+      connection.projectId,
       period,
       environment ?? undefined,
     );
+
     return points.map((p) => toPoint(p.timestamp, p.count));
   },
 );
 
 export class ErrorRateDataAccess {
-  getSeries(projectId: string, environment: string | null = null): Promise<ErrorRatePoint[]> {
-    return fetchSeries(projectId, environment);
+  getSeries(documentId: string, environment: string | null = null): Promise<ErrorRatePoint[]> {
+    return fetchSeries(documentId, environment);
   }
 }
 

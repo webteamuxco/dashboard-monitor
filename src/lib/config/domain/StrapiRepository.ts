@@ -1,12 +1,13 @@
 import "server-only";
 import { GraphQlQuery } from "@/lib/shared/domain/GraphqlQuery";
-import { getProjectsQuery } from "./gql/GetProjects";
+import { getProjectsQuery } from "./gql/projects/GetProjects";
 import { StrapiClient } from "./StrapiClient";
-import { getProjectByIdQuery } from "./gql/GetProjectById";
+import { getProjectByIdQuery } from "./gql/projects/GetProjectById";
 import { ProjectDto, ProjectSummaryDto } from "./dto/StrapiProject";
 import { mapProject, mapProjectSummary } from "./mappers/projectMapper";
 import { Project } from "./Project";
 import { ProjectSummary } from "./ProjectSummary";
+import { getSpecificStrategyByDocumentIdQuery } from "./gql/strategies/GetSpecificStrategyByDocumentId";
 
 interface GraphQlResponse<T> {
     data?: T;
@@ -28,6 +29,25 @@ export class StrapiRepository {
             getProjectByIdQuery(projectId),
         );
         return body.project ? mapProject(body.project) : null;
+    }
+
+    async isProjectHasStrategy(            
+        documentId: string,
+        strategyName: string,
+        toolSlug: string,
+        limit?: number
+    ): Promise<boolean> {
+
+        const response = await this.execute<boolean>(
+            getSpecificStrategyByDocumentIdQuery(
+                documentId,
+                strategyName,
+                toolSlug,
+                limit
+            ),
+        );
+        
+        return response ? response : false;
     }
 
     private async execute<T>(gql: GraphQlQuery): Promise<T> {

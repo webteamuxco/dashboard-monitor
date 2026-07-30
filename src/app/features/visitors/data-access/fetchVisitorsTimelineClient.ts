@@ -1,11 +1,11 @@
 import type { VisitorPoint } from "../domain/VisitorPoint";
 
 export async function fetchVisitorsTimelineClient(
-  projectId: string,
+  documentId: string,
   windowMinutes: number,
 ): Promise<VisitorPoint[]> {
   const params = new URLSearchParams({
-    projectId,
+    documentId,
     windowMinutes: String(windowMinutes),
   });
   const res = await fetch(`/api/visitors/timeline?${params.toString()}`, {

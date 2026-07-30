@@ -1,12 +1,10 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import {
-  WINDOW_PRESETS,
-  useDashboardWindow,
-} from "../state/useDashboardWindow";
+import { useDashboardWindow } from "../state/useDashboardWindow";
 
 export function WindowSelector() {
+  const presets = useDashboardWindow((s) => s.presets);
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
   const setWindowMinutes = useDashboardWindow((s) => s.setWindowMinutes);
 
@@ -16,7 +14,7 @@ export function WindowSelector() {
       aria-label="Fenêtre temporelle"
       className="flex items-center gap-0.5 rounded-md border border-border bg-muted p-0.5 font-mono text-[0.6875rem]"
     >
-      {WINDOW_PRESETS.map((preset) => {
+      {presets.map((preset) => {
         const active = preset.minutes === windowMinutes;
         return (
           <button

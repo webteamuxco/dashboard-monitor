@@ -14,7 +14,7 @@ import { useDashboardWindow } from "@/app/features/dashboard/state/useDashboardW
 import { useVisitorsTimeline } from "../hooks/useVisitorsTimeline";
 
 interface VisitorsPanelProps {
-  projectId: string;
+  documentId: string;
   intervalMs: number;
 }
 
@@ -23,10 +23,10 @@ const config = {
   returningCount: { label: "De retour", color: "#388bfd" },
 } satisfies ChartConfig;
 
-export function VisitorsPanel({ projectId, intervalMs }: VisitorsPanelProps) {
+export function VisitorsPanel({ documentId, intervalMs }: VisitorsPanelProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
   const { data, isPending, isError, error, isFetching } = useVisitorsTimeline(
-    projectId,
+    documentId,
     windowMinutes,
     intervalMs,
   );

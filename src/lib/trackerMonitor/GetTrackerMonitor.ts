@@ -1,6 +1,9 @@
 import "server-only";
 import { TrackerMonitorResolver } from "./factory/TrackerMonitorResolver";
-import type { TrackerMonitorFactoryInterface } from "./factory/TrackerMonitorFactoryInterface";
+import type {
+  TrackerMonitorConnection,
+  TrackerMonitorFactoryInterface,
+} from "./factory/TrackerMonitorFactoryInterface";
 import type { TrackerMonitorStrategyInterface } from "./strategy/TrackerMonitorStrategyInterface";
 import { PostHogFactory } from "./adapters/posthog/PostHogFactory";
 
@@ -10,7 +13,9 @@ const factories: TrackerMonitorFactoryInterface[] = [
 
 const resolver = new TrackerMonitorResolver(factories);
 
-export function getTrackerMonitor(): TrackerMonitorStrategyInterface {
+export function getTrackerMonitor(
+  connection: TrackerMonitorConnection,
+): TrackerMonitorStrategyInterface {
   const driver = process.env.NEXT_PUBLIC_TRACKER_MONITOR_DRIVER;
 
   if (!driver) {
@@ -19,5 +24,5 @@ export function getTrackerMonitor(): TrackerMonitorStrategyInterface {
     );
   }
 
-  return resolver.resolve(driver);
+  return resolver.resolve(driver, connection);
 }

@@ -1,9 +1,9 @@
 import "server-only";
 import { cache } from "react";
-import { getErrorMonitor } from "@/lib/errorMonitor/GetErrorMonitor";
 import type { Issue } from "@/lib/errorMonitor/domain/Issue";
 import type { IssueRow } from "../domain/IssueRow";
 import type { IssueDetailView } from "../domain/IssueDetailView";
+import { getErrorMonitorFactory } from "@/lib/errorMonitor/GetErrorMonitor";
 
 const EVENTS_PAGE_SIZE = 25;
 
@@ -34,25 +34,33 @@ function toRow(issue: Issue): IssueRow {
 
 const fetchRecent = cache(
   async (
-    projectId: string,
+    documentId: string,
     limit: number,
     environment: string | null,
   ): Promise<IssueRow[]> => {
-    const issues = await getErrorMonitor().getIssues(projectId, {
-      limit,
-      environment: environment ?? undefined,
-    });
-    return issues.map(toRow);
+    
+      const errorMonitorFactory = await getErrorMonitorFactory(documentId)
+      const connection = await errorMonitorFactory.createConnection(documentId)
+      const strategy =  errorMonitorFactory.createStrategy(connection)
+      const issues = await strategy.getIssues(connection.projectId, {
+        limit,
+        environment: environment ?? undefined,
+      });
+      
+      return issues.map(toRow);
   },
 );
 
 const fetchRecentUnresolved = cache(
   async (
-    projectId: string,
+    documentId: string,
     limit: number,
     environment: string | null,
   ): Promise<IssueRow[]> => {
-    const issues = await getErrorMonitor().getIssues(projectId, {
+    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
+    const connection = await errorMonitorFactory.createConnection(documentId)
+    const strategy =  errorMonitorFactory.createStrategy(connection)
+    const issues = await strategy.getIssues(connection.projectId, {
       resolved: false,
       limit,
       environment: environment ?? undefined,
@@ -61,47 +69,52 @@ const fetchRecentUnresolved = cache(
   },
 );
 
-const fetchDetail = cache(async (issueId: string): Promise<IssueDetailView> => {
-  const monitor = getErrorMonitor();
-  const [issue, latestEvent, events, comments] = await Promise.all([
-    monitor.getIssue(issueId),
-    monitor.getIssueLatestEvent(issueId),
-    monitor.getIssueEvents(issueId, EVENTS_PAGE_SIZE),
-    monitor.getIssueComments(issueId),
-  ]);
+const fetchDetail = cache(
+  async (documentId: string, issueId: string): Promise<IssueDetailView> => {
+    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
+    const connection = await errorMonitorFactory.createConnection(documentId)
+    const monitor =  errorMonitorFactory.createStrategy(connection)
 
-  return {
-    issue: {
-      ...toRow(issue),
-      firstSeenIso: issue.firstSeen,
-      firstSeenLabel: formatRelative(issue.firstSeen),
-    },
-    latestEvent,
-    events,
-    comments,
-  };
-});
+    const [issue, latestEvent, events, comments] = await Promise.all([
+      monitor.getIssue(issueId),
+      monitor.getIssueLatestEvent(issueId),
+      monitor.getIssueEvents(issueId, EVENTS_PAGE_SIZE),
+      monitor.getIssueComments(issueId),
+    ]);
+
+    return {
+      issue: {
+        ...toRow(issue),
+        firstSeenIso: issue.firstSeen,
+        firstSeenLabel: formatRelative(issue.firstSeen),
+      },
+      latestEvent,
+      events,
+      comments,
+    };
+  },
+);
 
 export class IssuesDataAccess {
 
   getRecent(
-    projectId: string,
+    documentId: string,
     limit = 20,
     environment: string | null = null,
   ): Promise<IssueRow[]> {
-    return fetchRecent(projectId, limit, environment);
+    return fetchRecent(documentId, limit, environment);
   }
 
   getRecentUnresolved(
-    projectId: string,
+    documentId: string,
     limit = 20,
     environment: string | null = null,
   ): Promise<IssueRow[]> {
-    return fetchRecentUnresolved(projectId, limit, environment);
+    return fetchRecentUnresolved(documentId, limit, environment);
   }
 
-  getDetail(issueId: string): Promise<IssueDetailView> {
-    return fetchDetail(issueId);
+  getDetail(documentId: string, issueId: string): Promise<IssueDetailView> {
+    return fetchDetail(documentId, issueId);
   }
 }
 

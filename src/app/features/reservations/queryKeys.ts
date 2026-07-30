@@ -1,4 +1,4 @@
 export const reservationsKeys = {
-  series: (projectId: string, windowMinutes: number, environment: string | null = null) =>
-    ["reservations", "series", projectId, windowMinutes, environment] as const,
+  series: (documentId: string, windowMinutes: number, environment: string | null = null) =>
+    ["reservations", "series", documentId, windowMinutes, environment] as const,
 };

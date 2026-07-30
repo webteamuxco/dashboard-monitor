@@ -13,6 +13,14 @@ vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
   }),
 }));
 
+vi.mock("@/lib/shared/services/GlitchtipConfig", () => ({
+  resolveGlitchtipConnection: vi.fn(async () => ({
+    baseUrl: "https://gt",
+    organizationSlug: "org",
+    projectId: "gt-project",
+  })),
+}));
+
 import { ErrorRateDataAccess } from "@/app/features/errorRate/data-access/ErrorRateDataAccess";
 
 describe("ErrorRateDataAccess.getSeries", () => {
@@ -28,7 +36,7 @@ describe("ErrorRateDataAccess.getSeries", () => {
 
     expect(getErrorStatsMock).toHaveBeenCalledTimes(1);
     const [projectId, period] = getErrorStatsMock.mock.calls[0];
-    expect(projectId).toBe("proj-1");
+    expect(projectId).toBe("gt-project");
     expect(period.interval).toBe("1h");
 
     const span = new Date(period.to).getTime() - new Date(period.from).getTime();

@@ -21,7 +21,7 @@ import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 import { useReservations } from "../hooks/useReservations";
 
 interface ReservationsPanelProps {
-  projectId: string;
+  documentId: string;
   intervalMs: number;
 }
 
@@ -29,11 +29,11 @@ const config = {
   count: { label: "Réservations", color: "var(--primary)" },
 } satisfies ChartConfig;
 
-export function ReservationsPanel({ projectId, intervalMs }: ReservationsPanelProps) {
+export function ReservationsPanel({ documentId, intervalMs }: ReservationsPanelProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
   const environment = useEnvironment((s) => s.environment);
   const { data, isPending, isError, error, isFetching } = useReservations(
-    projectId,
+    documentId,
     windowMinutes,
     environment,
     intervalMs,

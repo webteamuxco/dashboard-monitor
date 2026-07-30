@@ -14,6 +14,8 @@ function fakeFactory(type: string, strategy = fakeStrategy()): TrackerMonitorFac
   };
 }
 
+const CONNECTION = { baseUrl: "https://x", projectId: "1" };
+
 describe("TrackerMonitorResolver", () => {
   it("returns the strategy from the first matching factory", () => {
     const strat = fakeStrategy();
@@ -22,19 +24,21 @@ describe("TrackerMonitorResolver", () => {
       fakeFactory("mixpanel"),
     ]);
 
-    expect(resolver.resolve("posthog")).toBe(strat);
+    expect(resolver.resolve("posthog", CONNECTION)).toBe(strat);
   });
 
   it("throws with the type and registered count when no factory supports it", () => {
     const resolver = new TrackerMonitorResolver([fakeFactory("posthog")]);
 
-    expect(() => resolver.resolve("nope")).toThrow(/No TrackerMonitorFactory supports type "nope"/);
-    expect(() => resolver.resolve("nope")).toThrow(/Registered: 1/);
+    expect(() => resolver.resolve("nope", CONNECTION)).toThrow(
+      /No TrackerMonitorFactory supports type "nope"/,
+    );
+    expect(() => resolver.resolve("nope", CONNECTION)).toThrow(/Registered: 1/);
   });
 
   it("throws when no factories are registered", () => {
     const resolver = new TrackerMonitorResolver([]);
 
-    expect(() => resolver.resolve("posthog")).toThrow(/Registered: 0/);
+    expect(() => resolver.resolve("posthog", CONNECTION)).toThrow(/Registered: 0/);
   });
 });

@@ -4,10 +4,10 @@ import { issuesDataAccess } from "@/app/features/issues/data-access/IssuesDataAc
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-  const projectId = request.nextUrl.searchParams.get("projectId");
-  if (!projectId) {
+  const documentId = request.nextUrl.searchParams.get("documentId");
+  if (!documentId) {
     return NextResponse.json(
-      { error: "Query param 'projectId' is required." },
+      { error: "Query param 'documentId' is required." },
       { status: 400 },
     );
   }
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const environment = request.nextUrl.searchParams.get("environment");
 
   try {
-    const data = await issuesDataAccess.getRecent(projectId, limit, environment);
+    const data = await issuesDataAccess.getRecent(documentId, limit, environment);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

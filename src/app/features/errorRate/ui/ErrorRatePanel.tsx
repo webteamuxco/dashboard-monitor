@@ -15,7 +15,7 @@ import { useErrorRate } from "../hooks/useErrorRate";
 import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 
 interface ErrorRatePanelProps {
-  projectId: string;
+  documentId: string;
   intervalMs: number;
 }
 
@@ -23,10 +23,10 @@ const config = {
   count: { label: "Erreurs", color: "var(--level-fatal)" },
 } satisfies ChartConfig;
 
-export function ErrorRatePanel({ projectId, intervalMs }: ErrorRatePanelProps) {
+export function ErrorRatePanel({ documentId, intervalMs }: ErrorRatePanelProps) {
   const environment = useEnvironment((s) => s.environment);
   const { data, isPending, isError, error, isFetching } = useErrorRate(
-    projectId,
+    documentId,
     environment,
     intervalMs,
   );

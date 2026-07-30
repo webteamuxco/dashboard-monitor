@@ -14,6 +14,8 @@ function fakeFactory(type: string, strategy = fakeStrategy()): LogMonitorFactory
   };
 }
 
+const CONNECTION = { baseUrl: "https://x", organizationSlug: "org", projectId: "p" };
+
 describe("LogMonitorResolver", () => {
   it("returns the strategy from the first matching factory", () => {
     const strat = fakeStrategy();
@@ -22,18 +24,18 @@ describe("LogMonitorResolver", () => {
       fakeFactory("loki"),
     ]);
 
-    expect(resolver.resolve("glitchtip")).toBe(strat);
+    expect(resolver.resolve("glitchtip", CONNECTION)).toBe(strat);
   });
 
   it("throws with the type and registered count when no factory supports it", () => {
     const resolver = new LogMonitorResolver([fakeFactory("glitchtip")]);
 
-    expect(() => resolver.resolve("foo")).toThrow(
+    expect(() => resolver.resolve("foo", CONNECTION)).toThrow(
       /No LogMonitorFactory supports type "foo".*Registered: 1/,
     );
   });
 
   it("throws when no factories are registered", () => {
-    expect(() => new LogMonitorResolver([]).resolve("x")).toThrow(/Registered: 0/);
+    expect(() => new LogMonitorResolver([]).resolve("x", CONNECTION)).toThrow(/Registered: 0/);
   });
 });

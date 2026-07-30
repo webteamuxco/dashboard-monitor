@@ -19,4 +19,18 @@ export class StrapiClientStrategy {
       getProjectById(projectId: string): Promise<Project | null> {
         return this.getRepository().getProjectById(projectId)
       }
+
+      isProjectHasStrategy(
+        documentId: string,
+        strategyName: string,
+        toolSlug: string,
+        limit?: number
+      ): Promise<boolean> {
+        return this.getRepository().isProjectHasStrategy(
+          documentId,
+          strategyName,
+          toolSlug,
+          limit
+        )
+      }
 }

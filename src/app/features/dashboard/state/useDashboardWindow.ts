@@ -1,47 +1,38 @@
 "use client";
 
 import { create } from "zustand";
+import {
+  DEFAULT_WINDOW_PRESETS,
+  WindowPreset,
+  readDefaultWindowMinutesFromEnv,
+} from "./windowPresets";
 
-export const WINDOW_PRESETS = [
-  { minutes: 30, label: "30m" },
-  { minutes: 60, label: "1h" },
-  { minutes: 720, label: "12h" },
-  { minutes: 1440, label: "24h" },
-] as const;
-
-export type WindowPreset = (typeof WINDOW_PRESETS)[number];
-
-export function formatWindowLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes}m`;
-  if (minutes % 60 === 0) return `${minutes / 60}h`;
-  return `${minutes}m`;
-}
+export { formatWindowLabel } from "./windowPresets";
+export type { WindowPreset } from "./windowPresets";
 
 export type Interactivity = boolean;
 
-function readDefaultFromEnv(): number {
-  const raw = process.env.NEXT_PUBLIC_DASHBOARD_RESERVATIONS_WINDOW_MINUTES;
-  const parsed = raw ? Number(raw) : NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : 30;
-}
-
 interface DashboardWindowStore {
+  presets: WindowPreset[];
   windowMinutes: number;
   setWindowMinutes: (minutes: number) => void;
+  hydrateFromStrapi: (presets: WindowPreset[], windowMinutes: number) => void;
 }
 
 export const useDashboardWindow = create<DashboardWindowStore>((set) => ({
-  windowMinutes: readDefaultFromEnv(),
+  presets: [...DEFAULT_WINDOW_PRESETS],
+  windowMinutes: readDefaultWindowMinutesFromEnv(),
   setWindowMinutes: (minutes) => set({ windowMinutes: minutes }),
+  hydrateFromStrapi: (presets, windowMinutes) => set({ presets, windowMinutes }),
 }));
 
 export function isDashboardInteractive(): boolean {
-    const envVar = process.env.NEXT_PUBLIC_DASHBOARD_INTERACTIVITY
-    const isBoolean = Boolean(envVar)
+  const envVar = process.env.NEXT_PUBLIC_DASHBOARD_INTERACTIVITY;
+  const isBoolean = Boolean(envVar);
 
-    if (!isBoolean) {
-      return false
-    }
+  if (!isBoolean) {
+    return false;
+  }
 
-    return envVar === 'true' ? true : false
+  return envVar === "true" ? true : false;
 }

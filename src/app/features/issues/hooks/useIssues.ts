@@ -5,14 +5,14 @@ import { fetchIssuesClient } from "../data-access/fetchIssuesClient";
 import { issuesKeys } from "../queryKeys";
 
 export function useIssues(
-  projectId: string,
+  documentId: string,
   limit: number,
   environment: string | null,
   intervalMs: number,
 ) {
   return useQuery({
-    queryKey: issuesKeys.recent(projectId, limit, environment),
-    queryFn: () => fetchIssuesClient(projectId, limit, environment),
+    queryKey: issuesKeys.recent(documentId, limit, environment),
+    queryFn: () => fetchIssuesClient(documentId, limit, environment),
     refetchInterval: intervalMs > 0 ? intervalMs : false,
   });
 }

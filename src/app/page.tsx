@@ -11,6 +11,7 @@ import { configDataAccess } from "./features/config/data-access/ConfigDataAccess
 import { configKeys } from "./features/config/queryKeys";
 import { DashboardContent } from "./features/dashboard/ui/DashboardContent";
 import { resolveDefaultEnvironment } from "./features/dashboard/state/environments";
+import { presetsFromTimeInterval } from "./features/dashboard/state/windowPresets";
 
 export const dynamic = "force-dynamic";
 
@@ -38,6 +39,7 @@ export default async function Home() {
   const environment = resolveDefaultEnvironment();
 
   const projects = await configDataAccess.getProjectsList();
+
   if (projects.length === 0) {
     return (
       <ConfigMessage>
@@ -49,6 +51,8 @@ export default async function Home() {
 
   const initialDocumentId = projects[0].documentId;
   const initialConfig = await configDataAccess.getProjectConfig(initialDocumentId);
+  const { presets: initialWindowPresets, initialWindowMinutes } =
+    presetsFromTimeInterval(initialConfig?.timeInterval);
   const glitchtip = initialConfig?.toolConfigurations.find(
     (configuration) => configuration.kind === "glitchtip",
   );
@@ -69,21 +73,21 @@ export default async function Home() {
 
   await Promise.all([
     queryClient.prefetchQuery({
-      queryKey: issuesKeys.recent(initialProjectId, DEFAULT_LIMIT, environment),
+      queryKey: issuesKeys.recent(initialDocumentId, DEFAULT_LIMIT, environment),
       queryFn: () =>
-        issuesDataAccess.getRecentUnresolved(initialProjectId, DEFAULT_LIMIT, environment),
+        issuesDataAccess.getRecentUnresolved(initialDocumentId, DEFAULT_LIMIT, environment),
     }),
     queryClient.prefetchQuery({
-      queryKey: reservationsKeys.series(initialProjectId, reservationsWindow),
-      queryFn: () => reservationsDataAccess.getSeries(initialProjectId, reservationsWindow),
+      queryKey: reservationsKeys.series(initialDocumentId, reservationsWindow),
+      queryFn: () => reservationsDataAccess.getSeries(initialDocumentId, reservationsWindow),
     }),
     queryClient.prefetchQuery({
-      queryKey: errorRateKeys.series(initialProjectId, environment),
-      queryFn: () => errorRateDataAccess.getSeries(initialProjectId, environment),
+      queryKey: errorRateKeys.series(initialDocumentId, environment),
+      queryFn: () => errorRateDataAccess.getSeries(initialDocumentId, environment),
     }),
     queryClient.prefetchQuery({
-      queryKey: visitorsKeys.timeline(initialProjectId, reservationsWindow),
-      queryFn: () => visitorsTimelineDataAccess.getSeries(initialProjectId, reservationsWindow),
+      queryKey: visitorsKeys.timeline(initialDocumentId, reservationsWindow),
+      queryFn: () => visitorsTimelineDataAccess.getSeries(initialDocumentId, reservationsWindow),
     }),
   ]);
 
@@ -92,6 +96,8 @@ export default async function Home() {
       <DashboardContent
         initialDocumentId={initialDocumentId}
         initialProjectId={initialProjectId}
+        initialWindowPresets={initialWindowPresets}
+        initialWindowMinutes={initialWindowMinutes}
         limit={DEFAULT_LIMIT}
         fallbackRefreshIntervalMs={fallbackRefreshIntervalMs}
       />

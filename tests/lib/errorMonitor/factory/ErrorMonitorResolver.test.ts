@@ -21,6 +21,8 @@ function fakeFactory(type: string, strategy = fakeStrategy()): ErrorMonitorFacto
   };
 }
 
+const CONNECTION = { baseUrl: "https://x", organizationSlug: "org", projectId: "p" };
+
 describe("ErrorMonitorResolver", () => {
   it("returns the strategy from the first matching factory", () => {
     const strat = fakeStrategy();
@@ -29,18 +31,20 @@ describe("ErrorMonitorResolver", () => {
       fakeFactory("sentry"),
     ]);
 
-    expect(resolver.resolve("glitchtip")).toBe(strat);
+    expect(resolver.resolve("glitchtip", CONNECTION)).toBe(strat);
   });
 
   it("throws with the type and registered count when no factory supports it", () => {
     const resolver = new ErrorMonitorResolver([fakeFactory("glitchtip")]);
 
-    expect(() => resolver.resolve("unknown")).toThrow(
+    expect(() => resolver.resolve("unknown", CONNECTION)).toThrow(
       /No ErrorMonitorFactory supports type "unknown".*Registered: 1/,
     );
   });
 
   it("throws when no factories are registered", () => {
-    expect(() => new ErrorMonitorResolver([]).resolve("anything")).toThrow(/Registered: 0/);
+    expect(() => new ErrorMonitorResolver([]).resolve("anything", CONNECTION)).toThrow(
+      /Registered: 0/,
+    );
   });
 });

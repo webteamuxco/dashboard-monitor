@@ -2,13 +2,17 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   useDashboardWindow,
   isDashboardInteractive,
-  WINDOW_PRESETS,
   formatWindowLabel,
 } from "@/app/features/dashboard/state/useDashboardWindow";
+import {
+  DEFAULT_WINDOW_PRESETS,
+  presetsFromTimeInterval,
+} from "@/app/features/dashboard/state/windowPresets";
 
 describe("useDashboardWindow store", () => {
   beforeEach(() => {
     useDashboardWindow.setState({
+      presets: [...DEFAULT_WINDOW_PRESETS],
       windowMinutes: 30,
     });
   });
@@ -24,9 +28,61 @@ describe("useDashboardWindow store", () => {
     expect(useDashboardWindow.getState().windowMinutes).toBe(60);
   });
 
-  it("exposes the canonical preset list (30m, 1h, 12h, 24h)", () => {
-    expect(WINDOW_PRESETS.map((p) => p.minutes)).toEqual([30, 60, 720, 1440]);
-    expect(WINDOW_PRESETS.map((p) => p.label)).toEqual(["30m", "1h", "12h", "24h"]);
+  it("defaults to the canonical preset list (30m, 1h, 12h, 24h)", () => {
+    const presets = useDashboardWindow.getState().presets;
+    expect(presets.map((p) => p.minutes)).toEqual([30, 60, 720, 1440]);
+    expect(presets.map((p) => p.label)).toEqual(["30m", "1h", "12h", "24h"]);
+  });
+
+  it("replaces presets and window via hydrateFromStrapi", () => {
+    useDashboardWindow.getState().hydrateFromStrapi(
+      [{ minutes: 15, label: "15m" }],
+      15,
+    );
+
+    const state = useDashboardWindow.getState();
+    expect(state.presets).toEqual([{ minutes: 15, label: "15m" }]);
+    expect(state.windowMinutes).toBe(15);
+  });
+});
+
+describe("presetsFromTimeInterval", () => {
+  it("converts every interval unit to minutes", () => {
+    const { presets } = presetsFromTimeInterval([
+      { duration: 120, interval: "seconds" },
+      { duration: 45, interval: "minutes" },
+      { duration: 2, interval: "hours" },
+      { duration: 1, interval: "days" },
+    ]);
+
+    expect(presets.map((p) => p.minutes)).toEqual([2, 45, 120, 1440]);
+    expect(presets.map((p) => p.label)).toEqual(["2m", "45m", "2h", "24h"]);
+  });
+
+  it("initial window is the first resolved preset", () => {
+    const { initialWindowMinutes } = presetsFromTimeInterval([
+      { duration: 3, interval: "hours" },
+      { duration: 30, interval: "minutes" },
+    ]);
+
+    expect(initialWindowMinutes).toBe(180);
+  });
+
+  it("drops intervals that round down to zero minutes", () => {
+    const { presets } = presetsFromTimeInterval([
+      { duration: 20, interval: "seconds" },
+      { duration: 10, interval: "minutes" },
+    ]);
+
+    expect(presets.map((p) => p.minutes)).toEqual([10]);
+  });
+
+  it("falls back to default presets when no interval is provided", () => {
+    const fromNull = presetsFromTimeInterval(null);
+    const fromEmpty = presetsFromTimeInterval([]);
+
+    expect(fromNull.presets).toEqual([...DEFAULT_WINDOW_PRESETS]);
+    expect(fromEmpty.presets).toEqual([...DEFAULT_WINDOW_PRESETS]);
   });
 });
 
@@ -39,6 +95,16 @@ describe("formatWindowLabel", () => {
     expect(formatWindowLabel(60)).toBe("1h");
     expect(formatWindowLabel(720)).toBe("12h");
     expect(formatWindowLabel(1440)).toBe("24h");
+  });
+
+  it("formats whole-day multiples above 24h in days", () => {
+    expect(formatWindowLabel(2880)).toBe("2d");
+    expect(formatWindowLabel(10080)).toBe("7d");
+  });
+
+  it("keeps 24h in hours and non-day multiples in hours", () => {
+    expect(formatWindowLabel(1440)).toBe("24h");
+    expect(formatWindowLabel(2160)).toBe("36h");
   });
 
   it("falls back to minutes for non-hour multiples", () => {

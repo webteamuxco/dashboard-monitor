@@ -1,5 +1,8 @@
 import "server-only";
-import type { TrackerMonitorFactoryInterface } from "../../factory/TrackerMonitorFactoryInterface";
+import type {
+  TrackerMonitorConnection,
+  TrackerMonitorFactoryInterface,
+} from "../../factory/TrackerMonitorFactoryInterface";
 import type { TrackerMonitorStrategyInterface } from "../../strategy/TrackerMonitorStrategyInterface";
 import { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 import { PostHogStrategy } from "./PostHogStrategy";
@@ -10,19 +13,20 @@ export class PostHogFactory implements TrackerMonitorFactoryInterface {
     return trackerMonitorType === POSTHOG;
   }
 
-  create(): TrackerMonitorStrategyInterface {
-    const baseUrl = process.env.POSTHOG_HOST;
+  create(connection: TrackerMonitorConnection): TrackerMonitorStrategyInterface {
     const token = process.env.POSTHOG_PERSONAL_API_KEY;
-    const projectId = process.env.POSTHOG_PROJECT_ID;
 
-    if (!baseUrl || !token || !projectId) {
+    if (!token) {
       throw new Error(
-        "PostHog env vars missing: POSTHOG_HOST, POSTHOG_PERSONAL_API_KEY, " +
-          "POSTHOG_PROJECT_ID are all required.",
+        "PostHog env var missing: POSTHOG_PERSONAL_API_KEY is required.",
       );
     }
 
-    const client = new PostHogClient({ baseUrl, token, projectId });
+    const client = new PostHogClient({
+      baseUrl: connection.baseUrl,
+      token,
+      projectId: connection.projectId,
+    });
     return new PostHogStrategy(client);
   }
 }

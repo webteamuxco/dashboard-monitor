@@ -54,7 +54,7 @@ function buildHourlyBuckets(fromMs: number, toMs: number): Map<number, number> {
   return buckets;
 }
 
-export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
+export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterface {
   constructor(
     private readonly client: GlitchTipClient,
     private readonly organizationSlug: string,
@@ -80,9 +80,11 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
     period: Period,
     environment?: string,
   ): Promise<TimeSeriesPoint[]> {
+    
     if (environment) {
       return this.getErrorStatsForEnvironment(projectId, period, environment);
     }
+
 
     const dto = await this.client.get<GlitchTipStatsV2Dto>(
       `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
@@ -103,6 +105,7 @@ export class GlitchTipStrategy implements ErrorMonitorStrategyInterface {
     period: Period,
     environment: string,
   ): Promise<TimeSeriesPoint[]> {
+    
     const issues = await this.client.get<GlitchTipIssueDto[]>(
       `/api/0/organizations/${this.organizationSlug}/issues/`,
       { project: projectId, environment, limit: ISSUES_SCAN_LIMIT },

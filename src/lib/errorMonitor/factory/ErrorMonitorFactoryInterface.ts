@@ -1,6 +1,11 @@
-import type { ErrorMonitorStrategyInterface } from "../strategy/ErrorMonitorStrategyInterface";
+import { FactoryInterface } from "@/lib/shared/factory/FactoryInterface";
 
-export interface ErrorMonitorFactoryInterface {
-  support(errorMonitorType: string): boolean;
-  create(): ErrorMonitorStrategyInterface;
+export interface ErrorMonitorConnection {
+  baseUrl: string;
+  organizationSlug: string;
+  projectId: string;
+}
+
+export interface ErrorMonitorFactoryInterface<TStrategy> extends FactoryInterface<TStrategy> {
+
 }

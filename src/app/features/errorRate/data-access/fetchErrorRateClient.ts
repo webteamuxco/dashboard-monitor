@@ -1,11 +1,14 @@
 import type { ErrorRatePoint } from "../domain/ErrorRatePoint";
 
 export async function fetchErrorRateClient(
-  projectId: string,
+  documentId: string,
   environment: string | null = null,
 ): Promise<ErrorRatePoint[]> {
-  const params = new URLSearchParams({ projectId });
+
+  const params = new URLSearchParams({ documentId });
+  
   if (environment) params.set("environment", environment);
+  
   const res = await fetch(`/api/error-rate?${params.toString()}`, {
     cache: "no-store",
   });

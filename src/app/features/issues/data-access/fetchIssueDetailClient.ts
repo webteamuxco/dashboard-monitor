@@ -1,11 +1,14 @@
 import type { IssueDetailView } from "../domain/IssueDetailView";
 
 export async function fetchIssueDetailClient(
+  documentId: string,
   issueId: string,
 ): Promise<IssueDetailView> {
-  const res = await fetch(`/api/issues/${encodeURIComponent(issueId)}`, {
-    cache: "no-store",
-  });
+  const params = new URLSearchParams({ documentId });
+  const res = await fetch(
+    `/api/issues/${encodeURIComponent(issueId)}?${params.toString()}`,
+    { cache: "no-store" },
+  );
 
   if (!res.ok) {
     const payload = (await res.json().catch(() => null)) as { error?: string } | null;

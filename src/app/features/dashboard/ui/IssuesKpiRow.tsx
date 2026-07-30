@@ -11,16 +11,16 @@ import {
 import { useEnvironment } from "../state/useEnvironment";
 
 interface IssuesKpiRowProps {
-  projectId: string;
+  documentId: string;
   limit: number;
   intervalMs: number;
 }
 
-export function IssuesKpiRow({ projectId, limit, intervalMs }: IssuesKpiRowProps) {
+export function IssuesKpiRow({ documentId, limit, intervalMs }: IssuesKpiRowProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
   const environment = useEnvironment((s) => s.environment);
   const { data, isPending, dataUpdatedAt } = useIssues(
-    projectId,
+    documentId,
     limit,
     environment,
     intervalMs,
@@ -49,16 +49,16 @@ export function IssuesKpiRow({ projectId, limit, intervalMs }: IssuesKpiRowProps
         accent="orange"
       />
       <VisitorsKpiCard
-        projectId={projectId}
+        documentId={documentId}
         intervalMs={intervalMs}
         variant="new"
       />
       <VisitorsKpiCard
-        projectId={projectId}
+        documentId={documentId}
         intervalMs={intervalMs}
         variant="returning"
       />
-      <ReservationsKpiCard projectId={projectId} intervalMs={intervalMs} />
+      <ReservationsKpiCard documentId={documentId} intervalMs={intervalMs} />
     </div>
   );
 }

@@ -2,6 +2,12 @@ export interface StrategyDto {
     name: string;
 }
 
+export type ALLOWED_INTERVAL = "seconds" | "minutes" | "days" | "hours"
+export interface TimeIntervalDto {
+    duration: number;
+    interval: ALLOWED_INTERVAL
+}
+
 export interface MappedToolDto {
     documentId: string;
     name: string;
@@ -38,6 +44,7 @@ export interface ProjectDto {
     mapped_tools: MappedToolDto[];
     tool_configuration: ToolConfigurationDto[];
     default_config: DefaultConfigDto | null;
+    timeInterval: TimeIntervalDto[]
 }
 
 export interface ProjectSummaryDto {

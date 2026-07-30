@@ -2,14 +2,14 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { PostHogFactory } from "@/lib/trackerMonitor/adapters/posthog/PostHogFactory";
 import { PostHogStrategy } from "@/lib/trackerMonitor/adapters/posthog/PostHogStrategy";
 
+const CONNECTION = { baseUrl: "https://x", projectId: "1" };
+
 describe("PostHogFactory", () => {
   let factory: PostHogFactory;
 
   beforeEach(() => {
     factory = new PostHogFactory();
-    delete process.env.POSTHOG_HOST;
     delete process.env.POSTHOG_PERSONAL_API_KEY;
-    delete process.env.POSTHOG_PROJECT_ID;
   });
 
   describe("support", () => {
@@ -24,33 +24,14 @@ describe("PostHogFactory", () => {
   });
 
   describe("create", () => {
-    it("throws when POSTHOG_HOST is missing", () => {
-      process.env.POSTHOG_PERSONAL_API_KEY = "tok";
-      process.env.POSTHOG_PROJECT_ID = "1";
-
-      expect(() => factory.create()).toThrow(/PostHog env vars missing/);
-    });
-
     it("throws when POSTHOG_PERSONAL_API_KEY is missing", () => {
-      process.env.POSTHOG_HOST = "https://x";
-      process.env.POSTHOG_PROJECT_ID = "1";
-
-      expect(() => factory.create()).toThrow(/PostHog env vars missing/);
+      expect(() => factory.create(CONNECTION)).toThrow(/POSTHOG_PERSONAL_API_KEY is required/);
     });
 
-    it("throws when POSTHOG_PROJECT_ID is missing", () => {
-      process.env.POSTHOG_HOST = "https://x";
+    it("returns a PostHogStrategy when the api key is set", () => {
       process.env.POSTHOG_PERSONAL_API_KEY = "tok";
 
-      expect(() => factory.create()).toThrow(/PostHog env vars missing/);
-    });
-
-    it("returns a PostHogStrategy when all env vars are set", () => {
-      process.env.POSTHOG_HOST = "https://x";
-      process.env.POSTHOG_PERSONAL_API_KEY = "tok";
-      process.env.POSTHOG_PROJECT_ID = "1";
-
-      expect(factory.create()).toBeInstanceOf(PostHogStrategy);
+      expect(factory.create(CONNECTION)).toBeInstanceOf(PostHogStrategy);
     });
   });
 });

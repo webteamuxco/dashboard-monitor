@@ -10,7 +10,7 @@ import { useVisitorsTimeline } from "../hooks/useVisitorsTimeline";
 type Variant = "new" | "returning";
 
 interface VisitorsKpiCardProps {
-  projectId: string;
+  documentId: string;
   intervalMs: number;
   variant: Variant;
 }
@@ -26,12 +26,12 @@ const ACCENT: Record<Variant, "green" | "blue"> = {
 };
 
 export function VisitorsKpiCard({
-  projectId,
+  documentId,
   intervalMs,
   variant,
 }: VisitorsKpiCardProps) {
   const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
-  const { data } = useVisitorsTimeline(projectId, windowMinutes, intervalMs);
+  const { data } = useVisitorsTimeline(documentId, windowMinutes, intervalMs);
 
   const sum = data?.reduce(
     (acc, p) => acc + (variant === "new" ? p.newCount : p.returningCount),

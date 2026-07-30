@@ -30,13 +30,14 @@ const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" |
 };
 
 interface IssueDetailSheetProps {
+  documentId: string;
   issueId: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
-export function IssueDetailSheet({ issueId, onOpenChange }: IssueDetailSheetProps) {
+export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDetailSheetProps) {
   const open = !!issueId;
-  const { data, isPending, isError, error } = useIssueDetail(issueId);
+  const { data, isPending, isError, error } = useIssueDetail(documentId, issueId);
   
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>

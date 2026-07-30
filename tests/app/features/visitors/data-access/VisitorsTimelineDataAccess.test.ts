@@ -6,6 +6,13 @@ vi.mock("@/lib/trackerMonitor/GetTrackerMonitor", () => ({
   getTrackerMonitor: () => ({ getActiveUsersTimeline: getActiveUsersTimelineMock }),
 }));
 
+vi.mock("@/lib/shared/services/PosthogConfig", () => ({
+  resolvePosthogConnection: vi.fn(async () => ({
+    baseUrl: "https://ph",
+    projectId: "ph-project",
+  })),
+}));
+
 import { VisitorsTimelineDataAccess } from "@/app/features/visitors/data-access/VisitorsTimelineDataAccess";
 
 describe("VisitorsTimelineDataAccess.getSeries", () => {
@@ -13,12 +20,12 @@ describe("VisitorsTimelineDataAccess.getSeries", () => {
     getActiveUsersTimelineMock.mockReset();
   });
 
-  it("forwards projectId and windowMinutes to the tracker monitor", async () => {
+  it("forwards the resolved projectId and windowMinutes to the tracker monitor", async () => {
     getActiveUsersTimelineMock.mockResolvedValue([]);
 
-    await new VisitorsTimelineDataAccess().getSeries("p1", 60);
+    await new VisitorsTimelineDataAccess().getSeries("doc1", 60);
 
-    expect(getActiveUsersTimelineMock).toHaveBeenCalledWith("p1", 60);
+    expect(getActiveUsersTimelineMock).toHaveBeenCalledWith("ph-project", 60);
   });
 
   it("maps each VisitorsTimeSeriesPoint to a VisitorPoint", async () => {

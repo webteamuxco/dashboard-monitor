@@ -12,7 +12,7 @@ import { isDashboardInteractive } from "../../dashboard/state/useDashboardWindow
 import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 
 interface IssuesPanelProps {
-  projectId: string;
+  documentId: string;
   limit: number;
   intervalMs: number;
 }
@@ -33,10 +33,10 @@ const LEVEL_ROW_CLASS: Record<ErrorLevel, string> = {
   debug: "hover:bg-muted/40",
 };
 
-export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) {
+export function IssuesPanel({ documentId, limit, intervalMs }: IssuesPanelProps) {
   const environment = useEnvironment((s) => s.environment);
   const { data, isPending, isFetching, isError, error } = useIssues(
-    projectId,
+    documentId,
     limit,
     environment,
     intervalMs,
@@ -95,6 +95,7 @@ export function IssuesPanel({ projectId, limit, intervalMs }: IssuesPanelProps) 
       {isInteractive && (
           <>
           <IssueDetailSheet
+            documentId={documentId}
             issueId={selectedIssueId}
             onOpenChange={(open) => {
               if (!open) setSelectedIssueId(null);
