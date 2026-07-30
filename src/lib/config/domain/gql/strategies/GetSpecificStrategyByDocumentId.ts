@@ -12,38 +12,39 @@ export function getSpecificStrategyByDocumentIdQuery(
     return {
         query: `query GetStrategyById($projectDocumentId: ProjectFiltersInput, $strategyNameFilter: StrategyFiltersInput, $pagination: PaginationArg) {
                     strategies(filters: $strategyNameFilter, pagination: $pagination) {
-                        name
                         mapped_tool {
-                            projects(filters: $projectDocumentId) {
-                                documentId
-                            }
+                        projects(filters: $projectDocumentId) {
+                            documentId
+                        }
                         }
                         tool {
-                            slug
-                            name
+                        slug
+                        name
+                        }
+                        name
+                    }
+                }`,
+        variables: {
+                "strategyNameFilter": {
+                    "name": {
+                        "eq": strategyName
+                    },
+                    "tool": {
+                        "slug": {
+                            "eq": toolSlug
+                        }
+                    },
+                    "mapped_tool": {
+                    "projects": {
+                        "documentId": {
+                        "eq": documentId
                         }
                     }
-                }
-                    `,
-        variables: {
-            "projectDocumentId": {
-                "documentId": {
-                    "eq": documentId
-                }
-            },
-            "strategyNameFilter": {
-                "name": {
-                    "eq": strategyName
-                },
-                "tool": {
-                    "slug": {
-                        "eq": toolSlug
                     }
+                },
+                "pagination": {
+                    "limit": 1
                 }
-            },
-            "pagination": {
-                "limit": limit ?? 1
             }
-        }
     };
 }

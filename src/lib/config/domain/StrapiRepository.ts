@@ -8,6 +8,7 @@ import { mapProject, mapProjectSummary } from "./mappers/projectMapper";
 import { Project } from "./Project";
 import { ProjectSummary } from "./ProjectSummary";
 import { getSpecificStrategyByDocumentIdQuery } from "./gql/strategies/GetSpecificStrategyByDocumentId";
+import { Strategy } from "./Strategy";
 
 interface GraphQlResponse<T> {
     data?: T;
@@ -38,7 +39,7 @@ export class StrapiRepository {
         limit?: number
     ): Promise<boolean> {
 
-        const response = await this.execute<boolean>(
+        const response = await this.execute<Strategy>(
             getSpecificStrategyByDocumentIdQuery(
                 documentId,
                 strategyName,
@@ -47,7 +48,7 @@ export class StrapiRepository {
             ),
         );
         
-        return response ? response : false;
+        return response?.strategies.length > 0 ? true : false;
     }
 
     private async execute<T>(gql: GraphQlQuery): Promise<T> {

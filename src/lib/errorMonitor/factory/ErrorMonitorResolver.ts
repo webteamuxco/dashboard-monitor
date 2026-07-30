@@ -5,23 +5,23 @@ import type {
 } from "./ErrorMonitorFactoryInterface";
 import type { ErrorMonitorStrategyInterface } from "../strategy/ErrorMonitorStrategyInterface";
 
-const TOOL_RESOLVER = "glitchtip"
 const STRATEGY_RESOLVER = "error-monitor"
 
 export class ErrorMonitorResolver {
 
   constructor(private readonly factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[]) {}
 
-  resolve(
+  async resolve(
     documentId: string,
-  ): ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface> {
-    const factory = this.factories.find((f) => f.support(documentId, STRATEGY_RESOLVER));
-    if (!factory) {
-      throw new Error(
-        `No ErrorMonitorFactory supports type "${STRATEGY_RESOLVER}". ` +
-          `Registered: ${this.factories.length}.`,
-      );
+  ): Promise<ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>> {
+    for (const factory of this.factories) {
+      if (await factory.support(documentId, STRATEGY_RESOLVER)) {
+        return factory;
+      }
     }
-    return factory;
+
+    throw new Error(
+      `No ErrorMonitorFactory supports type "${STRATEGY_RESOLVER}". Please add missing Mapped tools in admin.`,
+    );
   }
 }

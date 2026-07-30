@@ -53,7 +53,7 @@ export default async function Home() {
   const initialConfig = await configDataAccess.getProjectConfig(initialDocumentId);
   const { presets: initialWindowPresets, initialWindowMinutes } =
     presetsFromTimeInterval(initialConfig?.timeInterval);
-  const glitchtip = initialConfig?.toolConfigurations.find(
+  const glitchtip = initialConfig?.toolConfigurations?.find(
     (configuration) => configuration.kind === "glitchtip",
   );
 

@@ -46,7 +46,7 @@ export function useActiveProject(
 
   const documentId = storedDocumentId ?? initialDocumentId;
   const { data: config } = useProjectConfig(documentId);
-  const glitchtip = config?.toolConfigurations.find(
+  const glitchtip = config?.toolConfigurations?.find(
     (configuration) => configuration.kind === "glitchtip",
   );
   const defaultConfig = config?.defaultConfig;

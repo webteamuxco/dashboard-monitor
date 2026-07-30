@@ -11,16 +11,18 @@ export class LogMonitorResolver {
 
   constructor(private readonly factories: LogMonitorFactoryInterface<LogMonitorStrategyInterface>[]) {}
 
-  resolve(
+  async resolve(
     documentId: string,
-  ): LogMonitorFactoryInterface<LogMonitorStrategyInterface> {
-    const factory = this.factories.find((f) => f.support(documentId, STRATEGY_RESOLVER));
-    if (!factory) {
-      throw new Error(
-        `No ErrorMonitorFactory supports type "${STRATEGY_RESOLVER}". ` +
-          `Registered: ${this.factories.length}.`,
-      );
+  ): Promise<LogMonitorFactoryInterface<LogMonitorStrategyInterface>> {
+    
+    for (const factory of this.factories) {
+      if (await factory.support(documentId, STRATEGY_RESOLVER)) {
+        return factory;
+      }
     }
-    return factory;
+
+    throw new Error(
+      `No ErrorMonitorFactory supports type "${STRATEGY_RESOLVER}". Please add missing Mapped tools in admin.`,
+    );
   }
 }

@@ -15,6 +15,6 @@ const resolver = new ErrorMonitorResolver(factories);
 
 export function getErrorMonitorFactory(
   documentId: string
-): ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface> {
+): Promise<ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>> {
   return resolver.resolve(documentId);
 }

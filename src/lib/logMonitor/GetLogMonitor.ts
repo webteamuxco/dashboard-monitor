@@ -16,6 +16,6 @@ const resolver = new LogMonitorResolver(factories);
 
 export function getLogMonitor(
   documentId: string,
-): LogMonitorFactoryInterface<LogMonitorStrategyInterface> {
+): Promise<LogMonitorFactoryInterface<LogMonitorStrategyInterface>> {
   return resolver.resolve(documentId);
 }

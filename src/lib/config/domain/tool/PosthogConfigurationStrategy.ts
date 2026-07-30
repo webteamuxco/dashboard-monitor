@@ -39,7 +39,7 @@ export class PosthogConfigurationStrategy implements ToolConfigurationStrategyIn
             throw new Error(`Strapi project "${documentId}" not found.`);
             }
 
-            const posthog = project.toolConfigurations.find(
+            const posthog = project.toolConfigurations?.find(
                 (configuration) => configuration.kind === "posthog",
             );
 

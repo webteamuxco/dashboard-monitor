@@ -4,6 +4,7 @@ import { cache } from "react";
 import { StrapiClientFactory } from "@/lib/config/domain/StrapiClientFactory";
 import { ToolConfigurationStrategyInterface } from "./ToolConfigurationStrategyInterface";
 import { ToolConnection } from "./ToolConnection";
+import { MappedTool } from "../MappedTools";
 
 export type GlitchtipConfiguration = {
     kind: "glitchtip";
@@ -17,7 +18,6 @@ export type GlitchtipConfiguration = {
 export interface GlitchtipConnection extends ToolConnection {
   organizationSlug: string;
 }
-
 
 export class GlitchtipConfigurationStrategy implements ToolConfigurationStrategyInterface {
 
@@ -44,9 +44,10 @@ export class GlitchtipConfigurationStrategy implements ToolConfigurationStrategy
         throw new Error(`Strapi project "${documentId}" not found.`);
       }
 
-      const glitchtip = project.toolConfigurations.find(
+      const glitchtip = project.toolConfigurations?.find(
         (configuration) => configuration.kind === "glitchtip",
       );
+      
       if (!glitchtip) {
         throw new Error(
           `Strapi project "${documentId}" has no GlitchTip configuration.`,
