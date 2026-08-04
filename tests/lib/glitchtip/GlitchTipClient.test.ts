@@ -55,6 +55,17 @@ describe("GlitchTipClient.get", () => {
     expect(url.searchParams.has("missing")).toBe(false);
   });
 
+  it("serializes an array param as a repeated param", async () => {
+    fetchMock.mockResolvedValue(okJson([]));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "t" });
+
+    await client.get("/api/0/x/", { groups: ["7", "29"], statsPeriod: "24h" });
+
+    const url = fetchMock.mock.calls[0][0] as URL;
+    expect(url.searchParams.getAll("groups")).toEqual(["7", "29"]);
+    expect(url.search).toBe("?groups=7&groups=29&statsPeriod=24h");
+  });
+
   it("sends Bearer auth and Accept header, cache no-store", async () => {
     fetchMock.mockResolvedValue(okJson({}));
     const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "secret" });

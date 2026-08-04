@@ -5,7 +5,9 @@ export interface GlitchTipClientConfig {
   token: string;
 }
 
-type QueryParams = Record<string, string | number | undefined>;
+// An array value is serialized as a repeated param (`groups=1&groups=2`), the
+// only form GlitchTip's list filters accept — a comma-joined value is rejected.
+type QueryParams = Record<string, string | number | Array<string | number> | undefined>;
 
 export interface PaginateOptions {
   // Stop once this many items have been collected across pages (honours an
@@ -46,9 +48,12 @@ export class GlitchTipClient {
     const url = new URL(this.baseUrl + path);
     if (query) {
       for (const [key, value] of Object.entries(query)) {
-        if (value !== undefined) {
-          url.searchParams.set(key, String(value));
+        if (value === undefined) continue;
+        if (Array.isArray(value)) {
+          for (const item of value) url.searchParams.append(key, String(item));
+          continue;
         }
+        url.searchParams.set(key, String(value));
       }
     }
 

@@ -10,24 +10,40 @@ import type { GlitchTipIssueDto } from "./dto/GlitchTipIssue";
 import type { GlitchTipStatsV2Dto } from "./dto/GlitchTipStatsV2";
 import type { GlitchTipEventDto } from "./dto/GlitchTipEvent";
 import type { GlitchTipCommentDto } from "./dto/GlitchTipComment";
+import type {
+  GlitchTipIssueStatsDto,
+  GlitchTipStatsPeriod,
+} from "./dto/GlitchTipIssueStats";
 import { mapGlitchTipIssue } from "./mappers/IssueMapper";
 import { mapGlitchTipStatsV2 } from "./mappers/statsV2Mapper";
 import { mapGlitchTipEvent } from "./mappers/EventMapper";
 import { mapGlitchTipComment } from "./mappers/CommentMapper";
+import { mapGlitchTipIssueStats } from "./mappers/issueStatsMapper";
 
 // GlitchTip's stats_v2 endpoint is a raw ingestion-volume counter: it ignores
-// `environment` (as a param and as a `query` token). To scope the error rate to
-// an environment we reconstruct the hourly series from issue events, which carry
-// the environment in their `tags`. Bounded to keep the request fan-out sane.
+// `environment` (as a param and as a `query` token). The issues list, however,
+// does honour it — so an environment-scoped series is the sum of the per-issue
+// buckets of the issues seen in that environment, read from issues-stats.
+// Consequence: the scoping is per issue, not per event. An issue reported from
+// two environments contributes all its events to both series.
 const HOUR_MS = 3_600_000;
-const ISSUES_SCAN_LIMIT = 100;
-const EVENTS_PER_ISSUE_LIMIT = 100;
-const ENVIRONMENT_TAG = "environment";
+const DAY_MS = 86_400_000;
+// The list is sorted by lastSeen descending, so the cap only ever drops issues
+// older than the ones already counted — never a bucket inside the window.
+const ISSUES_SCAN_LIMIT = 200;
+// Keeps the repeated `groups` params off the URL-length limit.
+const STATS_GROUPS_PER_REQUEST = 50;
 
-interface GlitchTipRawEventDto {
-  dateCreated?: string | null;
-  date_created?: string | null;
-  tags?: Array<{ key: string; value: string }> | null;
+function chunk<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
+  return chunks;
+}
+
+function resolveStatsPeriod(spanMs: number): { statsPeriod: GlitchTipStatsPeriod; bucketMs: number } {
+  return spanMs <= 24 * HOUR_MS
+    ? { statsPeriod: "24h", bucketMs: HOUR_MS }
+    : { statsPeriod: "14d", bucketMs: DAY_MS };
 }
 
 function buildIssueQuery(filters?: IssueFilters): string {
@@ -42,16 +58,6 @@ function buildIssueQuery(filters?: IssueFilters): string {
 
 function isNotFound(err: unknown): boolean {
   return err instanceof Error && /\b404\b/.test(err.message);
-}
-
-function floorToHour(ms: number): number {
-  return Math.floor(ms / HOUR_MS) * HOUR_MS;
-}
-
-function buildHourlyBuckets(fromMs: number, toMs: number): Map<number, number> {
-  const buckets = new Map<number, number>();
-  for (let t = floorToHour(fromMs); t <= toMs; t += HOUR_MS) buckets.set(t, 0);
-  return buckets;
 }
 
 export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterface {
@@ -80,11 +86,9 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     period: Period,
     environment?: string,
   ): Promise<TimeSeriesPoint[]> {
-    
     if (environment) {
       return this.getErrorStatsForEnvironment(projectId, period, environment);
     }
-
 
     const dto = await this.client.get<GlitchTipStatsV2Dto>(
       `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
@@ -105,42 +109,28 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     period: Period,
     environment: string,
   ): Promise<TimeSeriesPoint[]> {
-    
-    const issues = await this.client.get<GlitchTipIssueDto[]>(
+    const issues = await this.client.getPaginated<GlitchTipIssueDto>(
       `/api/0/organizations/${this.organizationSlug}/issues/`,
-      { project: projectId, environment, limit: ISSUES_SCAN_LIMIT },
-    );
-
-    const eventPages = await Promise.all(
-      issues.map((issue) =>
-        this.client.get<GlitchTipRawEventDto[]>(`/api/0/issues/${issue.id}/events/`, {
-          limit: EVENTS_PER_ISSUE_LIMIT,
-        }),
-      ),
+      { project: projectId, environment, query: "" },
+      { maxItems: ISSUES_SCAN_LIMIT },
     );
 
     const fromMs = Date.parse(period.from);
     const toMs = Date.parse(period.to);
-    const buckets = buildHourlyBuckets(fromMs, toMs);
+    const { statsPeriod, bucketMs } = resolveStatsPeriod(toMs - fromMs);
 
-    for (const events of eventPages) {
-      for (const event of events) {
-        const envTag = event.tags?.find((t) => t.key === ENVIRONMENT_TAG)?.value;
-        if (envTag !== environment) continue;
-
-        const iso = event.dateCreated ?? event.date_created;
-        const at = iso ? Date.parse(iso) : NaN;
-        if (Number.isNaN(at) || at < fromMs || at > toMs) continue;
-
-        const hour = floorToHour(at);
-        buckets.set(hour, (buckets.get(hour) ?? 0) + 1);
-      }
+    const stats: GlitchTipIssueStatsDto[] = [];
+    // Sequential on purpose: a burst of concurrent calls is what a self-hosted
+    // GlitchTip answers with 500s.
+    for (const groups of chunk(issues.map((issue) => issue.id), STATS_GROUPS_PER_REQUEST)) {
+      const page = await this.client.get<GlitchTipIssueStatsDto[]>(
+        `/api/0/organizations/${this.organizationSlug}/issues-stats/`,
+        { groups, statsPeriod },
+      );
+      stats.push(...page);
     }
 
-    return Array.from(buckets, ([epoch, count]) => ({
-      timestamp: new Date(epoch).toISOString(),
-      count,
-    }));
+    return mapGlitchTipIssueStats(stats, statsPeriod, { fromMs, toMs, bucketMs });
   }
 
   async getIssue(issueId: string): Promise<Issue> {

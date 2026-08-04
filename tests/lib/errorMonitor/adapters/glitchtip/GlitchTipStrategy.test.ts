@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GlitchTipStrategy } from "@/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorStrategy";
+import { GlitchTipErrorMonitorStrategy } from "@/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorStrategy";
 import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "@/lib/errorMonitor/adapters/glitchtip/dto/GlitchTipIssue";
 
@@ -18,17 +18,17 @@ function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIss
   };
 }
 
-describe("GlitchTipStrategy", () => {
+describe("GlitchTipErrorMonitorStrategy", () => {
   let get: ReturnType<typeof vi.fn>;
   let getPaginated: ReturnType<typeof vi.fn>;
   let client: GlitchTipClient;
-  let strategy: GlitchTipStrategy;
+  let strategy: GlitchTipErrorMonitorStrategy;
 
   beforeEach(() => {
     get = vi.fn();
     getPaginated = vi.fn();
     client = { get, getPaginated } as unknown as GlitchTipClient;
-    strategy = new GlitchTipStrategy(client, "my-org");
+    strategy = new GlitchTipErrorMonitorStrategy(client, "my-org");
   });
 
   describe("getIssues", () => {
@@ -138,29 +138,15 @@ describe("GlitchTipStrategy", () => {
       expect(get.mock.calls[0][1]).not.toHaveProperty("environment");
     });
 
-    it("reconstructs the series from environment-tagged events when an environment is given", async () => {
-      get.mockImplementation((path: string) => {
-        if (path.includes("/events/")) {
-          return Promise.resolve([
-            {
-              date_created: "2026-07-03T09:15:00Z",
-              tags: [{ key: "environment", value: "production" }],
-            },
-            {
-              date_created: "2026-07-03T09:45:00Z",
-              tags: [{ key: "environment", value: "production" }],
-            },
-            {
-              date_created: "2026-07-03T09:50:00Z",
-              tags: [{ key: "environment", value: "staging" }],
-            },
-          ]);
-        }
-        if (path.includes("/issues/")) {
-          return Promise.resolve([buildIssueDto({ id: "1" })]);
-        }
-        return Promise.resolve([]);
-      });
+    it("sums the issues-stats buckets of the issues seen in the environment", async () => {
+      getPaginated.mockResolvedValue([
+        buildIssueDto({ id: "1" }),
+        buildIssueDto({ id: "2" }),
+      ]);
+      get.mockResolvedValue([
+        { id: "1", count: "3", stats: { "24h": [[1783069200, 2]], "14d": null } },
+        { id: "2", count: "1", stats: { "24h": [[1783069200, 1]], "14d": null } },
+      ]);
 
       const out = await strategy.getErrorStats(
         "p",
@@ -168,9 +154,44 @@ describe("GlitchTipStrategy", () => {
         "production",
       );
 
-      const at = (iso: string) => out.find((p) => p.timestamp === iso)?.count;
-      expect(at("2026-07-03T09:00:00.000Z")).toBe(2); // two production events
-      expect(at("2026-07-03T08:00:00.000Z")).toBe(0); // empty hour → 0, staging excluded
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({
+        project: "p",
+        environment: "production",
+        query: "",
+      });
+      expect(get).toHaveBeenCalledWith(
+        "/api/0/organizations/my-org/issues-stats/",
+        { groups: ["1", "2"], statsPeriod: "24h" },
+      );
+      const at = (iso: string) => out.find((point) => point.timestamp === iso)?.count;
+      expect(at("2026-07-03T09:00:00.000Z")).toBe(3); // 2 + 1 on the same hour
+      expect(at("2026-07-03T08:00:00.000Z")).toBe(0); // zero-filled
+    });
+
+    it("asks for daily buckets when the period spans more than 24h", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "1" })]);
+      get.mockResolvedValue([{ id: "1", count: "0", stats: { "24h": null, "14d": [] } }]);
+
+      await strategy.getErrorStats(
+        "p",
+        { from: "2026-07-01T00:00:00Z", to: "2026-07-05T00:00:00Z", interval: "1d" },
+        "production",
+      );
+
+      expect(get.mock.calls[0][1]).toMatchObject({ statsPeriod: "14d" });
+    });
+
+    it("does not call issues-stats when no issue matches the environment", async () => {
+      getPaginated.mockResolvedValue([]);
+
+      const out = await strategy.getErrorStats(
+        "p",
+        { from: "2026-07-03T08:00:00Z", to: "2026-07-03T10:00:00Z", interval: "1h" },
+        "production",
+      );
+
+      expect(get).not.toHaveBeenCalled();
+      expect(out.map((point) => point.count)).toEqual([0, 0, 0]);
     });
   });
 
