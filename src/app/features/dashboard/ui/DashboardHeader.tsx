@@ -39,7 +39,9 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
           <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
             <ShieldCheck className="h-4 w-4 text-primary-foreground" />
           </span>
-          MonitorFlow
+          <span className="pointer-events-none font-mono text-sm font-semibold">
+            {process.env.NEXT_PUBLIC_PROJECT_TITLE}
+        </span>
         </div>
         <div className="flex items-center gap-1.5 rounded border border-status-live/25 bg-status-live-bg px-2 py-0.5 font-mono text-[0.6875rem] text-status-live">
           <span
@@ -55,9 +57,6 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
           polling {intervalSeconds}s
         </span>
 
-        <span className="pointer-events-none font-mono text-sm font-semibold">
-          {process.env.NEXT_PUBLIC_PROJECT_TITLE}
-        </span>
       </div>
 
 
