@@ -2,7 +2,7 @@
 
 import { useIssues } from "@/app/features/issues/hooks/useIssues";
 import { ReservationsKpiCard } from "@/app/features/reservations/ui/ReservationsKpiCard";
-import { VisitorsKpiCard } from "@/app/features/visitors/ui/VisitorsKpiCard";
+//import { VisitorsKpiCard } from "@/app/features/visitors/ui/VisitorsKpiCard";
 import { KpiCard } from "./KpiCard";
 import {
   formatWindowLabel,
