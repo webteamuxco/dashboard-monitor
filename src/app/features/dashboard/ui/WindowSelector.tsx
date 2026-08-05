@@ -24,7 +24,7 @@ export function WindowSelector() {
             aria-checked={active}
             onClick={() => setWindowMinutes(preset.minutes)}
             className={cn(
-              "rounded px-2 py-0.5 transition-colors",
+              "rounded px-2 py-0.5 transition-colors cursor-pointer",
               active
                 ? "bg-card text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",

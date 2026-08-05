@@ -23,7 +23,7 @@ export function EnvironmentSelector() {
         value={environment ?? ALL_VALUE}
         aria-label="Environnement"
         onChange={(e) => setEnvironment(e.target.value || null)}
-        className="bg-transparent text-foreground scheme-dark focus:outline-none [&>option]:bg-popover [&>option]:text-popover-foreground"
+        className="cursor-pointer bg-transparent text-foreground scheme-dark focus:outline-none [&>option]:bg-popover [&>option]:text-popover-foreground"
       >
         <option value={ALL_VALUE}>Tous</option>
         {ENVIRONMENT_OPTIONS.map((env) => (

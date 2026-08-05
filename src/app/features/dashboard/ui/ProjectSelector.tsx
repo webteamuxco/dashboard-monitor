@@ -26,7 +26,7 @@ export function ProjectSelector({ fallbackDocumentId }: ProjectSelectorProps) {
         value={documentId}
         aria-label="Projet"
         onChange={(e) => setDocumentId(e.target.value)}
-        className="bg-transparent text-foreground scheme-dark focus:outline-none [&>option]:bg-popover [&>option]:text-popover-foreground"
+        className="cursor-pointer bg-transparent text-foreground scheme-dark focus:outline-none [&>option]:bg-popover [&>option]:text-popover-foreground"
       >
         {projects.map((project) => (
           <option key={project.documentId} value={project.documentId}>

@@ -9,6 +9,7 @@ import { EnvironmentSelector } from "./EnvironmentSelector";
 import { ProjectSelector } from "./ProjectSelector";
 import { isDashboardInteractive } from "../state/useDashboardWindow";
 import { useEnvironment } from "../state/useEnvironment";
+import { cn } from "@/lib/utils";
 
 interface DashboardHeaderProps {
   documentId: string;
@@ -75,6 +76,7 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
           <Button
             variant="outline"
             size="sm"
+            className={isFetching ? "cursor-progress" : "cursor-pointer"}
             onClick={() => queryClient.invalidateQueries()}
             disabled={isFetching}
           >
