@@ -17,6 +17,8 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHeaderProps) {
+
+  const adminUrl = process.env.NEXT_PUBLIC_STRAPI_ADMIN_URL ?? '/admin'
   const queryClient = useQueryClient();
   const environment = useEnvironment((s) => s.environment);
   const { dataUpdatedAt } = useIssues(documentId, limit, environment, intervalMs);
@@ -80,6 +82,16 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
             <RotateCw className={isFetching ? "animate-spin" : ""} />
             Rafraîchir
           </Button>
+
+          <a href={adminUrl} target="blank"> 
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+            >
+              Admin
+            </Button>
+           </a>
            </>
           )}
         </div>

@@ -35,7 +35,7 @@ export function IssuesKpiRow({ documentId, limit, intervalMs }: IssuesKpiRowProp
   const windowLabel = formatWindowLabel(windowMinutes);
 
   return (
-    <div className="grid grid-cols-5 gap-2.5">
+    <div className="grid grid-cols-3 gap-2.5">
       <KpiCard
         label="ISSUES OUVERTES"
         value={display(total)}
@@ -48,6 +48,7 @@ export function IssuesKpiRow({ documentId, limit, intervalMs }: IssuesKpiRowProp
         subtitle={`fenêtre ${windowLabel}`}
         accent="orange"
       />
+      {/* TODO: uncoment when visitor pannel is up
       <VisitorsKpiCard
         documentId={documentId}
         intervalMs={intervalMs}
@@ -58,6 +59,7 @@ export function IssuesKpiRow({ documentId, limit, intervalMs }: IssuesKpiRowProp
         intervalMs={intervalMs}
         variant="returning"
       />
+      */}
       <ReservationsKpiCard documentId={documentId} intervalMs={intervalMs} />
     </div>
   );

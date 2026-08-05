@@ -15,7 +15,7 @@ export function EnvironmentSelector() {
 
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 font-mono text-[0.6875rem]">
-      <label htmlFor={selectId} className="text-muted-foreground">
+      <label htmlFor={selectId} className="text-muted-foreground text-[0.725rem]">
         env
       </label>
       <select
