@@ -1,0 +1,25 @@
+info:
+  name: GET Issues
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: http://localhost:3000/api/issues?documentId=f20rkqy3w59m3k5kloosbwug&limit=1&environment=development
+  params:
+    - name: documentId
+      value: f20rkqy3w59m3k5kloosbwug
+      type: query
+    - name: limit
+      value: "1"
+      type: query
+    - name: environment
+      value: development
+      type: query
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

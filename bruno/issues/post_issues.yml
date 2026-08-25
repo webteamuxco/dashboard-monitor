@@ -1,0 +1,31 @@
+info:
+  name: POST Issues
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: https://glitchtip.uxco-group.com/api/1/envelope/?sentry_version=7&sentry_key=2e9b137a1b394b3ebcfc35191d02fe30&sentry_client=sentry.javascript.react%2F9.47.1
+  params:
+    - name: sentry_version
+      value: "7"
+      type: query
+    - name: sentry_key
+      value: 2e9b137a1b394b3ebcfc35191d02fe30
+      type: query
+    - name: sentry_client
+      value: sentry.javascript.react%2F9.47.1
+      type: query
+  body:
+    type: json
+    data: |-
+      {"event_id":"11111111111111111111111111111168","sent_at":"2026-08-25T10:00:00.000Z","sdk":{"name":"test","version":"1.0"}}
+      {"type":"event"}
+      {"message":"TEST AI AGENT TAG with extra 8", "subscriptionDetails": "string", "shareId": "test" ,"type": "test" ,"level":"error","event_id":"22222222222222222222222222222268","platform":"javascript","environment":"development","release":"v1.0.0", "culprit": "test" ,"metadata": {"test": "test"}, "extra": {"test": "test"} ,"tags":{"type":"ai-agent","source":"ai-agent" }}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
