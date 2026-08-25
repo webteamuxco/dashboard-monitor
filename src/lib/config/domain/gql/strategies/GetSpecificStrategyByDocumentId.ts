@@ -16,10 +16,10 @@ export function getSpecificStrategyByDocumentIdQuery(
                         projects {
                             documentId
                         }
-                    }
-                    tool {
-                        slug
-                        name
+                        tool {
+                            slug
+                            name
+                        }
                     }
                     name
                 }
@@ -28,9 +28,9 @@ export function getSpecificStrategyByDocumentIdQuery(
         variables: {
             strategyNameFilter: {
                 name: { eq: strategyName },
-                tool: { slug: { eq: toolSlug } },
                 mapped_tool: {
                     projects: { documentId: { eq: documentId } },
+                    tool: { slug: { eq: toolSlug } },
                 },
             },
             pagination: { limit: 1 },
