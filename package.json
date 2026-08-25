@@ -1,6 +1,6 @@
 {
   "name": "dashboard-monitor",
-  "version": "1.0.0",
+  "version": "1.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -11,6 +11,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "changelog": "git-cliff -o CHANGELOG.md",
+    "changelog:preview": "git-cliff --unreleased",
+    "release": "git-cliff --bump -o CHANGELOG.md",
     "prepare": "husky"
   },
   "dependencies": {
@@ -35,6 +38,9 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.7",
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
+    "git-cliff": "^2.13.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "husky": "^9.1.7",
