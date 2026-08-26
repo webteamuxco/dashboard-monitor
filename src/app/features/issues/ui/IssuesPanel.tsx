@@ -10,6 +10,7 @@ import { ErrorLevel } from "@/lib/errorMonitor/domain/ErrorLevel";
 import { IssueDetailSheet } from "./IssueDetailSheet";
 import { isDashboardInteractive } from "../../dashboard/state/useDashboardWindow";
 import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
+import { EmptyState } from "../../dashboard/ui/EmptyState";
 
 interface IssuesPanelProps {
   documentId: string;
@@ -104,24 +105,6 @@ export function IssuesPanel({ documentId, limit, intervalMs }: IssuesPanelProps)
         </>
       )}
     </Card>
-  );
-}
-
-function EmptyState({
-  children,
-  tone = "muted",
-}: {
-  children: React.ReactNode;
-  tone?: "muted" | "error";
-}) {
-  return (
-    <div
-      className={`px-5 py-10 text-center text-xs ${
-        tone === "error" ? "text-level-fatal" : "text-muted-foreground/60"
-      }`}
-    >
-      {children}
-    </div>
   );
 }
 

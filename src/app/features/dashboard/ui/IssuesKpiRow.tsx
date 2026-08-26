@@ -1,66 +1,30 @@
 "use client";
 
-import { useIssues } from "@/app/features/issues/hooks/useIssues";
 import { ReservationsKpiCard } from "@/app/features/reservations/ui/ReservationsKpiCard";
-//import { VisitorsKpiCard } from "@/app/features/visitors/ui/VisitorsKpiCard";
-import { KpiCard } from "./KpiCard";
-import {
-  formatWindowLabel,
-  useDashboardWindow,
-} from "../state/useDashboardWindow";
-import { useEnvironment } from "../state/useEnvironment";
+import { IssueKpi } from "../../issues/ui/IssuesKpi";
+import { VisitorsKpi } from "../../visitors/ui/VisitorsKpi";
+import { ERROR_MONITOR_STRATEGY_ENUM, LOG_MONITOR_STRATEGY_ENUM, StrategiesKey, TRACKER_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 
-interface IssuesKpiRowProps {
+interface KpiRowProps {
   documentId: string;
   limit: number;
   intervalMs: number;
+  strategies?: StrategiesKey[]
 }
 
-export function IssuesKpiRow({ documentId, limit, intervalMs }: IssuesKpiRowProps) {
-  const windowMinutes = useDashboardWindow((s) => s.windowMinutes);
-  const environment = useEnvironment((s) => s.environment);
-  const { data, isPending, dataUpdatedAt } = useIssues(
-    documentId,
-    limit,
-    environment,
-    intervalMs,
-  );
-
-  const total = data?.length ?? 0;
-  const windowStart = (dataUpdatedAt || 0) - windowMinutes * 60_000;
-  const newCount =
-    data?.filter((row) => new Date(row.lastSeenIso).getTime() > windowStart).length ?? 0;
-
-  const display = (n: number) => (isPending && !data ? "—" : n);
-  const windowLabel = formatWindowLabel(windowMinutes);
+export function KpiRow({ documentId, limit, intervalMs, strategies }: KpiRowProps) {
 
   return (
-    <div className="grid grid-cols-3 gap-2.5">
-      <KpiCard
-        label="ISSUES OUVERTES"
-        value={display(total)}
-        subtitle="total non résolues"
-        accent="red"
-      />
-      <KpiCard
-        label={`NOUVELLES (${windowLabel.toUpperCase()})`}
-        value={display(newCount)}
-        subtitle={`fenêtre ${windowLabel}`}
-        accent="orange"
-      />
-      {/* TODO: uncoment when visitor pannel is up
-      <VisitorsKpiCard
-        documentId={documentId}
-        intervalMs={intervalMs}
-        variant="new"
-      />
-      <VisitorsKpiCard
-        documentId={documentId}
-        intervalMs={intervalMs}
-        variant="returning"
-      />
-      */}
-      <ReservationsKpiCard documentId={documentId} intervalMs={intervalMs} />
+    <div className="flex w-full gap-2.5">
+      {strategies?.includes(ERROR_MONITOR_STRATEGY_ENUM) && (
+        <IssueKpi documentId={documentId} limit={limit} intervalMs={intervalMs} />
+      )}
+      {strategies?.includes(TRACKER_MONITOR_STRATEGY_ENUM) && (
+        <VisitorsKpi documentId={documentId} intervalMs={intervalMs} />
+      )}
+      {strategies?.includes(LOG_MONITOR_STRATEGY_ENUM) && (
+        <ReservationsKpiCard documentId={documentId} intervalMs={intervalMs} />
+      )}
     </div>
   );
 }

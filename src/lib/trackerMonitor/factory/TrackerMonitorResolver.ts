@@ -3,8 +3,9 @@ import type {
   TrackerMonitorFactoryInterface,
 } from "./TrackerMonitorFactoryInterface";
 import type { TrackerMonitorStrategyInterface } from "../strategy/TrackerMonitorStrategyInterface";
+import { TRACKER_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 
-const STRATEGY_RESOLVER = "tracker-monitor"
+const STRATEGY_RESOLVER = TRACKER_MONITOR_STRATEGY_ENUM
 
 export class TrackerMonitorResolver {
 

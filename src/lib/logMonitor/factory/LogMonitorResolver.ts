@@ -3,9 +3,10 @@ import type {
   LogMonitorFactoryInterface,
 } from "./LogMonitorFactoryInterface";
 import { LogMonitorStrategyInterface } from "../strategy/LogMonitorStrategyInterface";
+import { LOG_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 
 
-const STRATEGY_RESOLVER = "log-monitor"
+const STRATEGY_RESOLVER = LOG_MONITOR_STRATEGY_ENUM
 
 export class LogMonitorResolver {
 

@@ -4,11 +4,13 @@ import { getProjectsQuery } from "./gql/projects/GetProjects";
 import { StrapiClient } from "./StrapiClient";
 import { getProjectByIdQuery } from "./gql/projects/GetProjectById";
 import { ProjectDto, ProjectSummaryDto } from "./dto/StrapiProject";
-import { mapProject, mapProjectSummary } from "./mappers/projectMapper";
+import { mapProject, mapProjectStrategy, mapProjectSummary } from "./mappers/projectMapper";
 import { Project } from "./Project";
 import { ProjectSummary } from "./ProjectSummary";
 import { getSpecificStrategyByDocumentIdQuery } from "./gql/strategies/GetSpecificStrategyByDocumentId";
 import { StrategyDto } from "./dto/StrapiStrategy";
+import { getStrategiesByDocumentId } from "./gql/strategies/GetStrategiesByDocumentId";
+import { Strategy } from "./Strategy";
 
 interface GraphQlResponse<T> {
     data?: T;
@@ -35,12 +37,26 @@ export class StrapiRepository {
     async isProjectHasStrategy(
         documentId: string,
         strategyName: string,
-        toolSlug: string,
+        toolSlug?: string | null,
     ): Promise<boolean> {
         const body = await this.execute<{ strategies: StrategyDto[] }>(
             getSpecificStrategyByDocumentIdQuery(documentId, strategyName, toolSlug),
         );
         return body.strategies.length > 0;
+    }
+
+    async getProjectStrategies(
+        documentId: string,
+    ): Promise<Strategy[] | null> {
+        const body = await this.execute<{ strategies: StrategyDto[] }>(
+            getStrategiesByDocumentId(documentId),
+        );
+
+        if (!body.strategies.length) {
+            return null
+        }
+
+        return body.strategies.map(mapProjectStrategy);
     }
 
     private async execute<T>(gql: GraphQlQuery): Promise<T> {

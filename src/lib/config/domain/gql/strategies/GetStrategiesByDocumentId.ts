@@ -1,17 +1,14 @@
 import { GraphQlQuery, gql } from "@/lib/shared/domain/GraphqlQuery";
 
-export function getSpecificStrategyByDocumentIdQuery(
+export function getStrategiesByDocumentId(
     documentId: string,
-    strategyName: string,
-    toolSlug?: string | null,
 ): GraphQlQuery {
     return {
         query: gql`
-            query GetStrategyById(
+            query GetStrategiesByDocumentId(
                 $strategyNameFilter: StrategyFiltersInput
-                $pagination: PaginationArg
             ) {
-                strategies(filters: $strategyNameFilter, pagination: $pagination) {
+                strategies(filters: $strategyNameFilter) {
                     mapped_tool {
                         projects {
                             documentId
@@ -27,15 +24,10 @@ export function getSpecificStrategyByDocumentIdQuery(
         `,
         variables: {
             strategyNameFilter: {
-                name: { eq: strategyName },
                 mapped_tool: {
                     projects: { documentId: { eq: documentId } },
-                    ...(toolSlug !== null && {
-                        tool: { slug: { eq: toolSlug } },
-                    }),
                 },
             },
-            pagination: { limit: 1 },
         },
     };
 }

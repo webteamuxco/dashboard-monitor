@@ -1,8 +1,9 @@
 import "server-only";
 import type { ErrorMonitorFactoryInterface } from "./ErrorMonitorFactoryInterface";
 import type { ErrorMonitorStrategyInterface } from "../strategy/ErrorMonitorStrategyInterface";
+import { ERROR_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 
-const STRATEGY_RESOLVER = "error-monitor"
+const STRATEGY_RESOLVER = ERROR_MONITOR_STRATEGY_ENUM
 
 export class ErrorMonitorResolver {
 

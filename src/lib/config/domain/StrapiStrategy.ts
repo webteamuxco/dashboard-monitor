@@ -2,6 +2,7 @@ import { StrapiClient } from "./StrapiClient";
 import { StrapiRepository } from "./StrapiRepository";
 import { Project } from "./Project";
 import { ProjectSummary } from "./ProjectSummary";
+import { Strategy } from "./Strategy";
 
 export class StrapiClientStrategy {
       constructor(
@@ -23,12 +24,20 @@ export class StrapiClientStrategy {
       isProjectHasStrategy(
         documentId: string,
         strategyName: string,
-        toolSlug: string,
+        toolSlug?: string | null,
       ): Promise<boolean> {
         return this.getRepository().isProjectHasStrategy(
           documentId,
           strategyName,
           toolSlug,
+        )
+      }
+
+      getProjectStrategies(
+        documentId: string,
+      ): Promise<Strategy[] | null> {
+        return this.getRepository().getProjectStrategies(
+          documentId
         )
       }
 }

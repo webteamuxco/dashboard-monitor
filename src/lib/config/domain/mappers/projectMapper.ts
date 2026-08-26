@@ -10,6 +10,8 @@ import {
     ProjectSummaryDto,
     ToolConfigurationDto,
 } from "../dto/StrapiProject";
+import { StrategyDto } from "../dto/StrapiStrategy";
+import { Strategy } from "../Strategy";
 
 function mapDefaultConfig(dto: DefaultConfigDto): ProjectConfiguration {
     return {
@@ -56,6 +58,12 @@ export function mapProject(dto: ProjectDto): Project {
             ? mapDefaultConfig(dto.default_config)
             : undefined,
         timeInterval: dto.timeInterval
+    };
+}
+
+export function mapProjectStrategy(dto: StrategyDto): Strategy {
+    return {
+        name: dto.name,
     };
 }
 
