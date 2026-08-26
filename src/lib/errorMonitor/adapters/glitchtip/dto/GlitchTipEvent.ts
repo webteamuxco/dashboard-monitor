@@ -71,7 +71,7 @@ export interface GlitchTipProcessingErrorDto {
 export interface GlitchTipEventDto {
   id: string;
   eventID: string;
-  dateCreated: string;
+  date_created: string;
   message?: string | null;
   platform?: string | null;
   culprit?: string | null;

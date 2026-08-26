@@ -120,7 +120,7 @@ export function mapGlitchTipEvent(dto: GlitchTipEventDto): IssueEvent {
   return {
     id: dto.id,
     eventID: dto.eventID,
-    dateCreated: dto.dateCreated,
+    dateCreated: dto.date_created,
     message: dto.message ?? null,
     platform: dto.platform ?? null,
     culprit: dto.culprit ?? null,

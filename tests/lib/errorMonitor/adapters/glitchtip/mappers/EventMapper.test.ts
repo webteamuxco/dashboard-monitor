@@ -6,7 +6,7 @@ function baseDto(overrides: Partial<GlitchTipEventDto> = {}): GlitchTipEventDto 
   return {
     id: "evt1",
     eventID: "deadbeef",
-    dateCreated: "2026-05-28T10:00:00Z",
+    date_created: "2026-05-28T10:00:00Z",
     ...overrides,
   };
 }

@@ -19,6 +19,7 @@ import type {
 } from "@/lib/errorMonitor/domain/IssueEvent";
 import type { IssueComment } from "@/lib/errorMonitor/domain/IssueComment";
 import { useIssueDetail } from "../hooks/useIssueDetail";
+import { cn } from "@/lib/utils";
 
 
 const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" | "debug"> = {
@@ -43,7 +44,7 @@ export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDet
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="gap-0 p-0 data-[side=right]:w-1/2 data-[side=right]:sm:max-w-[50vw]"
+        className="data-[side=right]:sm:w-full gap-0 p-0 data-[side=right]:w-1/2 data-[side=right]:sm:max-w-[100vw]"
       >
         {open && isPending && <SheetLoading />}
         {open && isError && (
@@ -86,6 +87,8 @@ function SheetError({ message }: { message: string }) {
 function DetailBody({ detail }: { detail: NonNullable<ReturnType<typeof useIssueDetail>["data"]> }) {
   const { issue, latestEvent, events, comments } = detail;
 
+  const [selectedEvent, setSelectedEvent] = useState<IssueEvent | null>(latestEvent)
+
   return (
     <>
       <SheetHeader className="border-b border-border">
@@ -111,7 +114,7 @@ function DetailBody({ detail }: { detail: NonNullable<ReturnType<typeof useIssue
         </div>
       </SheetHeader>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-5">
+      <div className="flex-1 min-h-0 overflow-hidden px-4 py-3 space-y-5">
         <MetaSection
           firstSeenIso={issue.firstSeenIso}
           firstSeenLabel={issue.firstSeenLabel}
@@ -121,21 +124,33 @@ function DetailBody({ detail }: { detail: NonNullable<ReturnType<typeof useIssue
           isResolved={issue.isResolved}
         />
 
-        {latestEvent && latestEvent.errors.length > 0 && (
-          <ProcessingErrorsSection errors={latestEvent.errors} />
-        )}
+        <div className="flex gap-2.5 h-full">
 
-        {latestEvent && <StacktraceSection event={latestEvent} />}
-        {latestEvent && latestEvent.tags.length > 0 && <TagsSection event={latestEvent} />}
-        {latestEvent && <ContextSection event={latestEvent} />}
-        {latestEvent && <AdditionalDataSection event={latestEvent} />}
-        {latestEvent && <EventInfoSection event={latestEvent} />}
-        {latestEvent && latestEvent.breadcrumbs.length > 0 && (
-          <BreadcrumbsSection breadcrumbs={latestEvent.breadcrumbs} />
-        )}
+          <div className="w-[25%] h-[70vh] max-h-[70vh] overflow-y-auto">
+            <EventsSection events={events} selectedEventId={selectedEvent?.id} setSelectedEvent={(event: IssueEvent) => {setSelectedEvent(event)}} />
+          </div>
 
-        <EventsSection events={events} />
-        <CommentsSection comments={comments} />
+          <div className="flex flex-col gap-2.5 w-[50%] h-[70vh] max-h-[70vh] overflow-y-auto">
+            {selectedEvent && selectedEvent.errors.length > 0 && (
+              <ProcessingErrorsSection errors={selectedEvent.errors} />
+            )}
+
+            {selectedEvent && <StacktraceTitle event={selectedEvent} isLatestEvent={selectedEvent.id === latestEvent?.id} />}
+            {selectedEvent && selectedEvent.tags.length > 0 && <TagsSection event={selectedEvent} />}
+            {selectedEvent && <ContextSection event={selectedEvent} />}
+            {selectedEvent && <AdditionalDataSection event={selectedEvent} />}
+            {selectedEvent && <EventInfoSection event={selectedEvent} />}
+            {selectedEvent && <StacktraceSection event={selectedEvent} />}
+            {selectedEvent && selectedEvent.breadcrumbs.length > 0 && (
+              <BreadcrumbsSection breadcrumbs={selectedEvent.breadcrumbs} />
+            )}
+          </div>
+
+          <div className="w-[25%] h-[70vh] max-h-[70vh] overflow-y-auto">
+            <CommentsSection comments={comments} />
+          </div>
+        </div>
+
       </div>
     </>
   );
@@ -196,7 +211,7 @@ function MetaRow({ label, value, title }: { label: string; value: string; title?
   );
 }
 
-function StacktraceSection({ event }: { event: IssueEvent }) {
+function StacktraceTitle({ event, isLatestEvent }: { event: IssueEvent, isLatestEvent: boolean }) {
   const exceptions = event.exceptions;
   if (exceptions.length === 0) {
     return (
@@ -210,7 +225,21 @@ function StacktraceSection({ event }: { event: IssueEvent }) {
   }
   return (
     <section>
-      <SectionTitle>Stacktrace (dernier événement)</SectionTitle>
+      <SectionTitle>Stacktrace | {isLatestEvent ? `${event.id} (dernier événement)` : `${event.id}`}
+      </SectionTitle>
+    </section>
+  );
+}
+
+function StacktraceSection({ event }: { event: IssueEvent }) {
+  const exceptions = event.exceptions;
+  if (exceptions.length === 0) {
+    return (
+      null
+    );
+  }
+  return (
+    <section>
       <div className="space-y-3">
         {exceptions.map((exc, i) => (
           <ExceptionBlock key={i} exc={exc} />
@@ -427,7 +456,7 @@ function CollapsibleContextBlock({
   title: string;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   return (
     <div className="rounded border border-border bg-muted/30 p-2">
       <button
@@ -481,7 +510,7 @@ function ProcessingErrorsSection({ errors }: { errors: ProcessingError[] }) {
 }
 
 function BreadcrumbsSection({ breadcrumbs }: { breadcrumbs: Breadcrumb[] }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const last = breadcrumbs.slice(-20);
   return (
     <section>
@@ -518,8 +547,11 @@ function BreadcrumbsSection({ breadcrumbs }: { breadcrumbs: Breadcrumb[] }) {
   );
 }
 
-function EventsSection({ events }: { events: IssueEvent[] }) {
+function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: IssueEvent[], selectedEventId?: string, setSelectedEvent: (event: IssueEvent) => void; }) {
+
   if (events.length === 0) return null;
+
+  console.log(events)
   return (
     <section>
       <SectionTitle>Événements récents ({events.length})</SectionTitle>
@@ -527,15 +559,24 @@ function EventsSection({ events }: { events: IssueEvent[] }) {
         {events.map((e) => (
           <li
             key={e.id}
-            className="px-2.5 py-1.5 font-mono text-[0.625rem]"
-            title={e.dateCreated}
+            className={cn("px-2.5 py-1.5 font-mono text-[0.625rem] cursor-pointer", selectedEventId === e.id ? 'bg-level-error-bg hover:bg-level-error-bg/80' : 'hover:bg-level-error-bg/60' )}
+            title={new Intl.DateTimeFormat("fr-FR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }).format(new Date(e.dateCreated))}
+            onClick={() => setSelectedEvent(e)}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="truncate text-foreground">{e.eventID}</span>
-              <span className="shrink-0 text-muted-foreground/70">{e.dateCreated}</span>
+              <span className="truncate text-foreground">{e.message}</span>
+              <span className="shrink-0 text-muted-foreground/70">
+                  {new Intl.DateTimeFormat("fr-FR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }).format(new Date(e.dateCreated))}
+              </span>
             </div>
             {e.message && (
-              <div className="truncate text-muted-foreground/80">{e.message}</div>
+              <div className="truncate text-muted-foreground/80">{e.id}</div>
             )}
           </li>
         ))}
@@ -569,7 +610,17 @@ function CommentItem({ comment }: { comment: IssueComment }) {
     <li className="rounded border border-border bg-muted/30 p-2 font-mono text-[0.6875rem]">
       <div className="mb-1 flex items-center gap-2 text-[0.625rem] text-muted-foreground/70">
         <span className="text-foreground">{author}</span>
-        <span title={comment.dateCreated}>{comment.dateCreated}</span>
+        <span title={new Intl.DateTimeFormat("fr-FR", {
+          dateStyle: "short",
+          timeStyle: "short",
+        }).format(new Date(comment.dateCreated))}>
+
+          {new Intl.DateTimeFormat("fr-FR", {
+            dateStyle: "short",
+            timeStyle: "short",
+          }).format(new Date(comment.dateCreated))}
+
+        </span>
       </div>
       <p className="whitespace-pre-wrap text-foreground">{comment.text}</p>
     </li>
