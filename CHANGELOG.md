@@ -5,6 +5,16 @@ Toutes les évolutions notables de la plateforme UXCO Booking sont documentées 
 Format basé sur [Keep a Changelog](https://keepachangelog.com/) et
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [1.3.0] - 2026-08-26
+
+### 📚 Documentation
+
+- **(release)** Update CHANGELOG.md [skip ci]
+
+### 🚀 Nouveautés
+
+- **(dashboard)** Add dynamic display for configuration
+
 ## [1.2.1] - 2026-08-25
 
 ### ⚙️ CI/CD
