@@ -3,6 +3,7 @@
 import { useId } from "react";
 import { ENVIRONMENT_OPTIONS } from "../state/environments";
 import { useEnvironment } from "../state/useEnvironment";
+import { Target } from "lucide-react";
 
 const ALL_VALUE = "";
 
@@ -16,7 +17,7 @@ export function EnvironmentSelector() {
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-border bg-muted px-2 py-0.5 font-mono text-[0.6875rem]">
       <label htmlFor={selectId} className="text-muted-foreground text-[0.725rem]">
-        env
+        <Target className="w-4 h-4" />
       </label>
       <select
         id={selectId}

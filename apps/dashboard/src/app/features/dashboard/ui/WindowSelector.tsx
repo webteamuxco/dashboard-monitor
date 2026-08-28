@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { useDashboardWindow } from "../state/useDashboardWindow";
+import { Clock } from "lucide-react";
 
 export function WindowSelector() {
   const presets = useDashboardWindow((s) => s.presets);
@@ -14,6 +15,7 @@ export function WindowSelector() {
       aria-label="Fenêtre temporelle"
       className="flex items-center gap-0.5 rounded-md border border-border bg-muted p-0.5 font-mono text-[0.6875rem]"
     >
+      <Clock className="opacity-70 w-4 h-4"/>
       {presets.map((preset) => {
         const active = preset.minutes === windowMinutes;
         return (

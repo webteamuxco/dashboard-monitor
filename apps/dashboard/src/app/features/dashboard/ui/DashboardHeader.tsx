@@ -1,7 +1,7 @@
 "use client";
 
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
-import { RotateCw, ShieldCheck } from "lucide-react";
+import { BookOpenText, LayoutDashboard, ListRestart, RotateCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useIssues } from "@/app/features/issues/hooks/useIssues";
 import { WindowSelector } from "./WindowSelector";
@@ -19,6 +19,7 @@ interface DashboardHeaderProps {
 export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHeaderProps) {
 
   const adminUrl = process.env.NEXT_PUBLIC_STRAPI_ADMIN_URL ?? '/admin'
+  const docsSiteUrl = process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? '/docs'
   const queryClient = useQueryClient();
   const environment = useEnvironment((s) => s.environment);
   const { dataUpdatedAt } = useIssues(documentId, limit, environment, intervalMs);
@@ -53,8 +54,8 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
           EN DIRECT
         </div>
 
-        <span className="rounded border border-border bg-muted px-2 py-0.5 font-mono text-[0.6875rem] text-muted-foreground">
-          polling {intervalSeconds}s
+        <span className="flex rounded border gap-2.5 border-border bg-muted px-2 py-0.5 font-mono text-[0.6875rem] text-muted-foreground">
+          <ListRestart className="w-4 h-4"/> polling {intervalSeconds}s
         </span>
 
       </div>
@@ -89,9 +90,19 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
               size="sm"
               className="cursor-pointer"
             >
-              Admin
+              <LayoutDashboard /> Admin
             </Button>
            </a>
+
+          <a href={docsSiteUrl} target="blank"> 
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer"
+            >
+              <BookOpenText /> Documentation
+            </Button>
+          </a>
            </>
           )}
         </div>
