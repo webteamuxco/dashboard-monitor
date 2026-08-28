@@ -59,7 +59,7 @@ Open [http://localhost:3000](http://localhost:3000).
 - [Data Flow](docs/data-flow.md) — end-to-end sequence diagrams (UI → external API → render)
 - [State Management](docs/state-management.md) — TanStack Query vs Zustand, query keys, conventions
 - [Configuration](docs/configuration.md) — the Strapi / env split, all variables, where they are consumed
-- [Diagram source](docs/diagram/architecture.drawio) — draw.io overview + UML detail
+- [Diagram source](diagram/architecture.drawio) — draw.io overview + UML detail
 
 ## Project structure (top level)
 

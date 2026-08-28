@@ -1,7 +1,9 @@
-allowBuilds:
-  msw: set this to true or false
-  sharp: false
-  unrs-resolver: false
+packages:
+  - "apps/*"
+
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+
+onlyBuiltDependencies:
+  - better-sqlite3

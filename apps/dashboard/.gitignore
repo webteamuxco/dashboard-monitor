@@ -10,10 +10,10 @@
 !.yarn/releases
 !.yarn/versions
 
+/.turbo
+
 # testing
 /coverage
-
-/.turbo
 
 # next.js
 /.next/

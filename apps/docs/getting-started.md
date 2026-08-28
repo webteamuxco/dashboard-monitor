@@ -68,7 +68,7 @@ A strategy left unmapped means the matching panel fails loudly with `No <X>Facto
 pnpm dev
 ```
 
-Open <http://localhost:3000>. Hot reload is on; saving any `src/**` file reloads the page.
+Open [http://localhost:3000](http://localhost:3000). Hot reload is on; saving any `src/**` file reloads the page.
 
 ### Production build
 
