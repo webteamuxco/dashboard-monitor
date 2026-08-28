@@ -21,13 +21,15 @@ interface KpiCardProps {
   value: React.ReactNode;
   subtitle: string;
   accent: KpiAccent;
+  icon?: React.ReactNode;
 }
 
-export function KpiCard({ label, value, subtitle, accent }: KpiCardProps) {
+export function KpiCard({ label, value, subtitle, accent, icon }: KpiCardProps) {
   return (
     <div className="relative overflow-hidden rounded-lg border border-border bg-card px-4 py-3.5 w-[stretch]">
       <div className={cn("absolute inset-x-0 top-0 h-0.5", ACCENT_BAR[accent])} aria-hidden />
-      <div className="mb-1.5 font-bold font-mono text-[0.8rem] tracking-wider text-muted-foreground">
+      <div className="flex gap-2.5 mb-1.5 font-bold font-mono text-[0.8rem] tracking-wider text-muted-foreground">
+        {icon}
         {label}
       </div>
       <div className={cn("font-mono text-3xl font-semibold leading-none", ACCENT_VALUE[accent])}>

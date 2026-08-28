@@ -1,3 +1,4 @@
+import { CircleAlert, TrendingUp } from "lucide-react";
 import { useDashboardWindow } from "../../dashboard/state/useDashboardWindow";
 import { useEnvironment } from "../../dashboard/state/useEnvironment";
 import { formatWindowLabel } from "../../dashboard/state/windowPresets";
@@ -38,12 +39,14 @@ export function IssueKpi({ documentId, limit, intervalMs }: IssueKpiProps) {
             value={display(total)}
             subtitle="total non résolues"
             accent="red"
+            icon={<CircleAlert className="h-4.5 w-4.5 text-level-fatal" />}
         />
         <KpiCard
             label={`NOUVELLES (${windowLabel.toUpperCase()})`}
             value={display(newCount)}
             subtitle={`fenêtre ${windowLabel}`}
             accent="orange"
+            icon={<TrendingUp className="h-4.5 w-4.5 text-level-warning" />}
         />
         </>
     )

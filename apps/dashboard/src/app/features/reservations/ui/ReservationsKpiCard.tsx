@@ -7,6 +7,7 @@ import {
 } from "@/app/features/dashboard/state/useDashboardWindow";
 import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 import { useReservations } from "../hooks/useReservations";
+import { CalendarCheck } from "lucide-react";
 
 interface ReservationsKpiCardProps {
   documentId: string;
@@ -27,6 +28,7 @@ export function ReservationsKpiCard({ documentId, intervalMs }: ReservationsKpiC
       value={value}
       subtitle={`fenêtre ${formatWindowLabel(windowMinutes)}`}
       accent="blue"
+      icon={<CalendarCheck className="text-primary h-4.5 w-4.5" />}
     />
   );
 }
