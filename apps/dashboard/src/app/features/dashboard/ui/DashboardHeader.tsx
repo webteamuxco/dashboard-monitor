@@ -84,7 +84,7 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
             Rafraîchir
           </Button>
 
-          <a href={adminUrl} target="blank"> 
+          <a href={adminUrl} target="_blank"> 
             <Button
               variant="outline"
               size="sm"
@@ -94,7 +94,7 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
             </Button>
            </a>
 
-          <a href={docsSiteUrl} target="blank"> 
+          <a href={docsSiteUrl} target="_blank"> 
             <Button
               variant="outline"
               size="sm"
