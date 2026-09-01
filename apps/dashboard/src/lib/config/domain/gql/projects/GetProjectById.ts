@@ -6,38 +6,39 @@ export function getProjectByIdQuery(projectId: string): GraphQlQuery {
             query GetProjectById($documentId: ID!) {
                 project(documentId: $documentId) {
                     documentId
-                    slug
-                    mapped_tools {
-                        documentId
-                        name
-                        strategies {
-                            name
-                        }
-                    }
-                    tool_configuration {
-                        __typename
-                        ... on ComponentConfigGlitchtipConfiguration {
-                            id
+                        slug
+                        title
+                        createdAt
+                        updatedAt
+                        publishedAt
+                        dashboard_panels {
+                        tool_configuration {
+                            ... on ComponentConfigGlitchtipConfiguration {
+                            tool {
+                                slug
+                            }
                             url
                             projectId
                             organization
-                            tool {
-                                name
-                            }
-                        }
-                        ... on ComponentConfigPosthogConfiguration {
                             id
+                            }
+                            ... on ComponentConfigPosthogConfiguration {
                             url
                             projectId
+                            id
+                            }
                         }
-                    }
-                    default_config {
+                        mapped_tools {
+                            documentId
+                            name
+                            strategies {
+                            name
+                            }
+                        }
+                        }
+                        default_config {
                         DefaultRefreshIntervalMS
-                    }
-                    timeInterval {
-                        duration
-                        interval
-                    }
+                        }
                 }
             }
         `,

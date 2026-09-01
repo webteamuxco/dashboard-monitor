@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { configDataAccess } from "@/app/features/config/data-access/ConfigDataAccess";
 
 export const dynamic = "force-dynamic";
 
 
 export async function GET(
-  _request: NextRequest,
+  _request: Request,
   { params }: { params: Promise<{ projectId: string }> },
 ) {
   
@@ -18,10 +18,8 @@ export async function GET(
     );
   }
 
-  const selectedPanel = _request.nextUrl.searchParams.get("selectedPanel");
-
   try {
-    const data = await configDataAccess.getProjectStrategies(projectId, selectedPanel);
+    const data = await configDataAccess.getProjectPanels(projectId);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

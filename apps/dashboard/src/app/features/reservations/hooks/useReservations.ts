@@ -11,8 +11,8 @@ export function useReservations(
   intervalMs: number,
 ) {
   return useQuery({
-    queryKey: reservationsKeys.series(documentId, windowMinutes, environment),
-    queryFn: () => fetchReservationsClient(documentId, windowMinutes, environment),
+    queryKey: reservationsKeys.series(documentId,  windowMinutes, environment),
+    queryFn: () => fetchReservationsClient(documentId,  windowMinutes, environment),
     refetchInterval: intervalMs > 0 ? intervalMs : false,
   });
 }

@@ -1,13 +1,11 @@
 import { ProjectConfiguration } from "./ProjectConfiguration";
-import { MappedTool } from "./MappedTools";
-import { ToolConfiguration } from "./tool/ToolConfiguration";
 import { TimeInterval } from "./TimeInterval";
+import { DashboardPanel } from "./DashboardPanels";
 
 export type Project = {
     documentId: string;
     slug: string;
-    mappedTools?: MappedTool[];
-    toolConfigurations?: ToolConfiguration[];
+    dashboardPanels: DashboardPanel[];
     defaultConfig?: ProjectConfiguration;
     timeInterval?: TimeInterval[]
 };

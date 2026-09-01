@@ -20,7 +20,7 @@ export class PosthogConfigurationStrategy implements ToolConfigurationStrategyIn
             strategyName: string, 
             toolSlug: string
         ): Promise<boolean> => {
-            return await new StrapiClientFactory().create().isProjectHasStrategy(documentId, strategyName, toolSlug);
+            return await new StrapiClientFactory().create().isPanelHasStrategy(documentId, strategyName, toolSlug);
         }
     )
 
@@ -31,24 +31,24 @@ export class PosthogConfigurationStrategy implements ToolConfigurationStrategyIn
      */
     resolveConnection = cache(
         async (documentId: string): Promise<ToolConnection> => {
-            const project = await new StrapiClientFactory().create().getProjectById(documentId);
-            if (!project) {
+            const panel = await new StrapiClientFactory().create().getPanelById(documentId);
+            if (!panel) {
             throw new Error(`Strapi project "${documentId}" not found.`);
             }
 
-            const posthog = project.toolConfigurations?.find(
+            const posthog = panel.toolConfigurations?.find(
                 (configuration) => configuration.kind === "posthog",
             );
 
             if (!posthog) {
                 throw new Error(
-                    `Strapi project "${documentId}" has no PostHog configuration.`,
+                    `Strapi panel "${documentId}" has no PostHog configuration.`,
                 );
             }
 
             if (!posthog.url || !posthog.projectId) {
             throw new Error(
-                `PostHog configuration of Strapi project "${documentId}" is incomplete ` +
+                `PostHog configuration of Strapi panel "${documentId}" is incomplete ` +
                 "(url and projectId are both required).",
             );
             }

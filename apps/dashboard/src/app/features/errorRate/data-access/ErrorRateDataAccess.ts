@@ -55,8 +55,8 @@ const fetchSeries = cache(
 );
 
 export class ErrorRateDataAccess {
-  getSeries(documentId: string, environment: string | null = null): Promise<ErrorRatePoint[]> {
-    return fetchSeries(documentId, environment);
+  getSeries(documentId: string,  environment: string | null = null): Promise<ErrorRatePoint[]> {
+    return fetchSeries(documentId,  environment);
   }
 }
 

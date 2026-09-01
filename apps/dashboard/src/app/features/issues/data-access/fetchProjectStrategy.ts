@@ -1,11 +1,13 @@
 import { Strategy } from "@/lib/config/domain/Strategy";
 
 export async function fetchProjectStrategy(
-  documentId: string
+  documentId: string,
+  selectedPanel: string,
 ): Promise<Strategy[]> {
+
+  const params = new URLSearchParams({ selectedPanel });
   
-  
-  const res = await fetch(`/api/config/projects/${documentId}/strategies`, {
+  const res = await fetch(`/api/config/projects/${documentId}/strategies?${params.toString()}`, {
     cache: "no-store",
   });
 

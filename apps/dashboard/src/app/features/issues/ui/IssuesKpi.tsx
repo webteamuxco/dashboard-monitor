@@ -18,6 +18,7 @@ export function IssueKpi({ documentId, limit, intervalMs }: IssueKpiProps) {
     const windowLabel = formatWindowLabel(windowMinutes);
 
     const environment = useEnvironment((s) => s.environment);
+
     const { data, isPending, dataUpdatedAt } = useIssues(
         documentId,
         limit,

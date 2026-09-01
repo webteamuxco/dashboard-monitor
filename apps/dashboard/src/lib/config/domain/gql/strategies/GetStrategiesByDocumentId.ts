@@ -2,20 +2,25 @@ import { GraphQlQuery, gql } from "@/lib/shared/domain/GraphqlQuery";
 
 export function getStrategiesByDocumentId(
     documentId: string,
+    pannelSlug?: string | null,
 ): GraphQlQuery {
     return {
         query: gql`
             query GetStrategiesByDocumentId(
-                $strategyNameFilter: StrategyFiltersInput
+                $filters: StrategyFiltersInput
             ) {
-                strategies(filters: $strategyNameFilter) {
+                strategies(filters: $filters) {
                     mapped_tool {
-                        projects {
-                            documentId
-                        }
-                        tool {
-                            slug
-                            name
+                        dashboard_panels {
+                            project {
+                                documentId
+                            }
+                            mapped_tools {
+                                tool {
+                                    slug
+                                    name
+                                }
+                            }
                         }
                     }
                     name
@@ -23,9 +28,18 @@ export function getStrategiesByDocumentId(
             }
         `,
         variables: {
-            strategyNameFilter: {
+            filters: {
                 mapped_tool: {
-                    projects: { documentId: { eq: documentId } },
+                    dashboard_panels: {
+                        slug: {
+                            eq: pannelSlug,
+                        },
+                        project: {
+                            documentId: {
+                                eq: documentId,
+                            },
+                        },
+                    },
                 },
             },
         },

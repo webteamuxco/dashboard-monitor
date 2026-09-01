@@ -4,6 +4,7 @@ import { ProjectConfiguration } from "../ProjectConfiguration";
 import { MappedTool } from "../MappedTools";
 import { ToolConfiguration } from "../tool/ToolConfiguration";
 import {
+    DashboardPanelDto,
     DefaultConfigDto,
     MappedToolDto,
     ProjectDto,
@@ -12,6 +13,7 @@ import {
 } from "../dto/StrapiProject";
 import { StrategyDto } from "../dto/StrapiStrategy";
 import { Strategy } from "../Strategy";
+import { DashboardPanel } from "../DashboardPanels";
 
 function mapDefaultConfig(dto: DefaultConfigDto): ProjectConfiguration {
     return {
@@ -24,6 +26,19 @@ function mapMappedTool(dto: MappedToolDto): MappedTool {
         documentId: dto.documentId,
         name: dto.name,
         strategies: dto.strategies.map((strategy) => ({ name: strategy.name })),
+    };
+}
+
+export function mapDashboardPanel(dto: DashboardPanelDto): DashboardPanel {
+    return {
+       toolConfigurations: dto.tool_configuration?.map(mapToolConfiguration),
+       mappedTools: dto.mapped_tools?.map(mapMappedTool),
+       id: dto.documentId,
+       icon: dto.icon,
+       name: dto.name,
+       order: dto.order,
+       slug: dto.slug,
+       displayName: dto.display_name
     };
 }
 
@@ -52,8 +67,7 @@ export function mapProject(dto: ProjectDto): Project {
     return {
         documentId: dto.documentId,
         slug: dto.slug,
-        mappedTools: dto.mapped_tools.map(mapMappedTool),
-        toolConfigurations: dto.tool_configuration.map(mapToolConfiguration),
+        dashboardPanels: dto.dashboard_panels.map(mapDashboardPanel), 
         defaultConfig: dto.default_config
             ? mapDefaultConfig(dto.default_config)
             : undefined,
