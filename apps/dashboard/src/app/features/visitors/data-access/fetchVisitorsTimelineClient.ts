@@ -4,10 +4,12 @@ export async function fetchVisitorsTimelineClient(
   documentId: string,
   windowMinutes: number,
 ): Promise<VisitorPoint[]> {
+
   const params = new URLSearchParams({
     documentId,
     windowMinutes: String(windowMinutes),
   });
+
   const res = await fetch(`/api/visitors/timeline?${params.toString()}`, {
     cache: "no-store",
   });

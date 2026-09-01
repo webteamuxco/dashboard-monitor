@@ -4,6 +4,7 @@ import { ProjectConfiguration } from "../ProjectConfiguration";
 import { MappedTool } from "../MappedTools";
 import { ToolConfiguration } from "../tool/ToolConfiguration";
 import {
+    DashboardPanelDto,
     DefaultConfigDto,
     MappedToolDto,
     ProjectDto,
@@ -12,6 +13,7 @@ import {
 } from "../dto/StrapiProject";
 import { StrategyDto } from "../dto/StrapiStrategy";
 import { Strategy } from "../Strategy";
+import { DashboardPanel } from "../DashboardPanels";
 
 function mapDefaultConfig(dto: DefaultConfigDto): ProjectConfiguration {
     return {
@@ -27,6 +29,19 @@ function mapMappedTool(dto: MappedToolDto): MappedTool {
     };
 }
 
+export function mapDashboardPanel(dto: DashboardPanelDto): DashboardPanel {
+    return {
+       toolConfigurations: dto.tool_configuration?.map(mapToolConfiguration),
+       mappedTools: dto.mapped_tools?.map(mapMappedTool),
+       id: dto.documentId,
+       icon: dto.icon,
+       name: dto.name,
+       order: dto.order,
+       slug: dto.slug,
+       displayName: dto.display_name
+    };
+}
+
 function mapToolConfiguration(dto: ToolConfigurationDto): ToolConfiguration {
     switch (dto.__typename) {
         case "ComponentConfigGlitchtipConfiguration":
@@ -36,7 +51,7 @@ function mapToolConfiguration(dto: ToolConfigurationDto): ToolConfiguration {
                 url: dto.url,
                 projectId: dto.projectId,
                 organization: dto.organization,
-                toolName: dto.tool?.name ?? "",
+                toolSlug: dto.tool?.slug ?? "",
             };
         case "ComponentConfigPosthogConfiguration":
             return {
@@ -52,8 +67,6 @@ export function mapProject(dto: ProjectDto): Project {
     return {
         documentId: dto.documentId,
         slug: dto.slug,
-        mappedTools: dto.mapped_tools.map(mapMappedTool),
-        toolConfigurations: dto.tool_configuration.map(mapToolConfiguration),
         defaultConfig: dto.default_config
             ? mapDefaultConfig(dto.default_config)
             : undefined,

@@ -12,7 +12,7 @@ interface KpiRowProps {
   strategies?: StrategiesKey[]
 }
 
-export function KpiRow({ documentId, limit, intervalMs, strategies }: KpiRowProps) {
+export function KpiRow({ documentId,  limit, intervalMs, strategies }: KpiRowProps) {
 
   return (
     <div className="flex w-full gap-2.5">

@@ -7,30 +7,6 @@ export function getProjectByIdQuery(projectId: string): GraphQlQuery {
                 project(documentId: $documentId) {
                     documentId
                     slug
-                    mapped_tools {
-                        documentId
-                        name
-                        strategies {
-                            name
-                        }
-                    }
-                    tool_configuration {
-                        __typename
-                        ... on ComponentConfigGlitchtipConfiguration {
-                            id
-                            url
-                            projectId
-                            organization
-                            tool {
-                                name
-                            }
-                        }
-                        ... on ComponentConfigPosthogConfiguration {
-                            id
-                            url
-                            projectId
-                        }
-                    }
                     default_config {
                         DefaultRefreshIntervalMS
                     }

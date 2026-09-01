@@ -9,20 +9,22 @@ import { EnvironmentSelector } from "./EnvironmentSelector";
 import { ProjectSelector } from "./ProjectSelector";
 import { isDashboardInteractive } from "../state/useDashboardWindow";
 import { useEnvironment } from "../state/useEnvironment";
+import { PannelSelector } from "./PannelSelector";
 
 interface DashboardHeaderProps {
   documentId: string;
+  panelId: string;
   limit: number;
   intervalMs: number;
 }
 
-export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHeaderProps) {
+export function DashboardHeader({ documentId, panelId, limit, intervalMs }: DashboardHeaderProps) {
 
   const adminUrl = process.env.NEXT_PUBLIC_STRAPI_ADMIN_URL ?? '/admin'
   const docsSiteUrl = process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? '/docs'
   const queryClient = useQueryClient();
   const environment = useEnvironment((s) => s.environment);
-  const { dataUpdatedAt } = useIssues(documentId, limit, environment, intervalMs);
+  const { dataUpdatedAt } = useIssues(panelId, limit, environment, intervalMs);
   const isFetching = useIsFetching() > 0;
 
   const intervalSeconds = Math.round(intervalMs / 1000);
@@ -66,6 +68,7 @@ export function DashboardHeader({ documentId, limit, intervalMs }: DashboardHead
           {isInteractive && (
             <>
               <ProjectSelector fallbackDocumentId={documentId} />
+              <PannelSelector fallbackDocumentId={documentId}></PannelSelector>
               <EnvironmentSelector />
               <WindowSelector />
             </>

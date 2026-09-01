@@ -38,15 +38,15 @@ const fetchRecent = cache(
     limit: number,
     environment: string | null,
   ): Promise<IssueRow[]> => {
-    
       const errorMonitorFactory = await getErrorMonitorFactory(documentId)
       const connection = await errorMonitorFactory.createConnection(documentId)
       const strategy =  errorMonitorFactory.createStrategy(connection)
+  
       const issues = await strategy.getIssues(connection.projectId, {
         limit,
         environment: environment ?? undefined,
       });
-      
+
       return issues.map(toRow);
   },
 );

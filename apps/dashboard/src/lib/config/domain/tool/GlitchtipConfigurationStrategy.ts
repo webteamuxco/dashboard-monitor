@@ -11,7 +11,7 @@ export type GlitchtipConfiguration = {
     url: string;
     projectId: string;
     organization: string;
-    toolName: string;
+    toolSlug: string;
 };
 
 export interface GlitchtipConnection extends ToolConnection {
@@ -26,7 +26,7 @@ export class GlitchtipConfigurationStrategy implements ToolConfigurationStrategy
             strategyName: string, 
             toolSlug: string
         ): Promise<boolean> => {
-            return await new StrapiClientFactory().create().isProjectHasStrategy(documentId, strategyName, toolSlug);
+            return await new StrapiClientFactory().create().isPanelHasStrategy(documentId, strategyName, toolSlug);
         }
     )
 
@@ -37,25 +37,25 @@ export class GlitchtipConfigurationStrategy implements ToolConfigurationStrategy
    */
   resolveConnection = cache(
     async (documentId: string): Promise<GlitchtipConnection> => {
-      const project = await new StrapiClientFactory().create().getProjectById(documentId);
+      const panel = await new StrapiClientFactory().create().getPanelById(documentId);
       
-      if (!project) {
-        throw new Error(`Strapi project "${documentId}" not found.`);
+      if (!panel) {
+        throw new Error(`Strapi panel "${documentId}" not found.`);
       }
 
-      const glitchtip = project.toolConfigurations?.find(
+      const glitchtip = panel.toolConfigurations?.find(
         (configuration) => configuration.kind === "glitchtip",
       );
       
       if (!glitchtip) {
         throw new Error(
-          `Strapi project "${documentId}" has no GlitchTip configuration.`,
+          `Strapi panel "${documentId}" has no GlitchTip configuration.`,
         );
       }
 
       if (!glitchtip.url || !glitchtip.organization || !glitchtip.projectId) {
         throw new Error(
-          `GlitchTip configuration of Strapi project "${documentId}" is incomplete ` +
+          `GlitchTip configuration of Strapi panel "${documentId}" is incomplete ` +
             "(url, organization and projectId are all required).",
         );
       }

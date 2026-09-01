@@ -5,6 +5,7 @@ import { StrapiClientStrategy } from "@/lib/config/domain/StrapiStrategy";
 import { Project } from "@/lib/config/domain/Project";
 import { ProjectSummary } from "@/lib/config/domain/ProjectSummary";
 import { Strategy } from "@/lib/config/domain/Strategy";
+import { DashboardPanel } from "@/lib/config/domain/DashboardPanels";
 
 function getConfigMonitor(): StrapiClientStrategy {
     const factory = new StrapiClientFactory()
@@ -19,9 +20,14 @@ const fetchProjectList = cache((): Promise<ProjectSummary[]> => {
   return getConfigMonitor().getProjects()
 });
 
-const fetchProjectStrategies = cache((projectId: string): Promise<Strategy[] | null> => {
-  return getConfigMonitor().getProjectStrategies(projectId)
+const fetchProjectStrategies = cache((projectId: string, selectedPanel?: string | null): Promise<Strategy[] | null> => {
+  return getConfigMonitor().getProjectStrategies(projectId, selectedPanel)
 });
+
+const fetchProjectPanels = cache((projectId: string): Promise<DashboardPanel[] | null> => {
+  return getConfigMonitor().getProjectPanels(projectId)
+});
+
 
 
 export class ConfigDataAccess {
@@ -37,9 +43,16 @@ export class ConfigDataAccess {
   }
 
   getProjectStrategies(
-    projectId: string
+    projectId: string,
+    selectedPanel?: string | null
   ): Promise<Strategy[] | null> {
-    return fetchProjectStrategies(projectId);
+    return fetchProjectStrategies(projectId, selectedPanel);
+  }
+
+  getProjectPanels(
+    projectId: string
+  ): Promise<DashboardPanel[] | null> {
+    return fetchProjectPanels(projectId);
   }
 }
 

@@ -20,7 +20,7 @@ export interface GlitchtipConfigurationDto {
     url: string;
     projectId: string;
     organization: string;
-    tool: { name: string } | null;
+    tool: { slug: string } | null;
 }
 
 export interface PosthogConfigurationDto {
@@ -41,10 +41,19 @@ export interface DefaultConfigDto {
 export interface ProjectDto {
     documentId: string;
     slug: string;
-    mapped_tools: MappedToolDto[];
-    tool_configuration: ToolConfigurationDto[];
     default_config: DefaultConfigDto | null;
     timeInterval: TimeIntervalDto[]
+}
+
+export interface DashboardPanelDto {
+    tool_configuration?: ToolConfigurationDto[];
+    mapped_tools?: MappedToolDto[];
+    documentId: string;
+    name: string;
+    icon: string;
+    order: number;
+    slug: string;
+    display_name: string;
 }
 
 export interface ProjectSummaryDto {
