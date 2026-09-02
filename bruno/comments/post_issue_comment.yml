@@ -1,0 +1,25 @@
+info:
+  name: POST Issue Comment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/api/issues/11/comments?documentId=o91j7c61spgcyyi9bk4eysod"
+  params:
+    - name: documentId
+      value: o91j7c61spgcyyi9bk4eysod
+      type: query
+  body:
+    type: json
+    data: |-
+      {
+        "content": "dkjgkdsjgkljdslk"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

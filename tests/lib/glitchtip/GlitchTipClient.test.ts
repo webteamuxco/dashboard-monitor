@@ -108,6 +108,66 @@ describe("GlitchTipClient.get", () => {
   });
 });
 
+describe("GlitchTipClient.post", () => {
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function created(data: unknown): Response {
+    return {
+      ok: true,
+      status: 201,
+      json: async () => data,
+    } as unknown as Response;
+  }
+
+  it("sends the JSON body with the auth and content-type headers", async () => {
+    fetchMock.mockResolvedValue(created({ id: 1 }));
+    const client = new GlitchTipClient({ baseUrl: "https://gt.example.com", token: "secret" });
+
+    await client.post("/api/0/issues/7/comments/", { data: { text: "hi" } });
+
+    const url = fetchMock.mock.calls[0][0] as URL;
+    const init = fetchMock.mock.calls[0][1];
+    expect(url.toString()).toBe("https://gt.example.com/api/0/issues/7/comments/");
+    expect(init.method).toBe("POST");
+    expect(init.body).toBe('{"data":{"text":"hi"}}');
+    expect(init.headers).toEqual({
+      Authorization: "Bearer secret",
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    });
+    expect(init.cache).toBe("no-store");
+  });
+
+  it("returns the parsed created entity", async () => {
+    fetchMock.mockResolvedValue(created({ id: 12 }));
+    const client = new GlitchTipClient({ baseUrl: "https://x", token: "t" });
+
+    expect(await client.post<{ id: number }>("/p", {})).toEqual({ id: 12 });
+  });
+
+  it("throws on a non-2xx response like every other verb", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 422,
+      text: async () => "invalid payload",
+    } as unknown as Response);
+    const client = new GlitchTipClient({ baseUrl: "https://x", token: "t" });
+
+    await expect(client.post("/api/0/issues/7/comments/", {})).rejects.toThrow(
+      /GlitchTip API error 422 on \/api\/0\/issues\/7\/comments\/: invalid payload/,
+    );
+  });
+});
+
 describe("GlitchTipClient.getPaginated", () => {
   let fetchMock: ReturnType<typeof vi.fn>;
 

@@ -5,6 +5,7 @@ const getIssueMock = vi.fn();
 const getIssueLatestEventMock = vi.fn();
 const getIssueEventsMock = vi.fn();
 const getIssueCommentsMock = vi.fn();
+const createIssueCommentMock = vi.fn();
 
 const createConnectionMock = vi.fn(async () => ({
   baseUrl: "https://gt",
@@ -21,6 +22,7 @@ vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
       getIssueLatestEvent: getIssueLatestEventMock,
       getIssueEvents: getIssueEventsMock,
       getIssueComments: getIssueCommentsMock,
+      createIssueComment: createIssueCommentMock,
       getErrorStats: vi.fn(),
     }),
   }),
@@ -53,6 +55,7 @@ describe("IssuesDataAccess", () => {
     getIssueLatestEventMock.mockReset();
     getIssueEventsMock.mockReset();
     getIssueCommentsMock.mockReset();
+    createIssueCommentMock.mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
   });
@@ -195,6 +198,66 @@ describe("IssuesDataAccess", () => {
       expect(out.latestEvent).toEqual(evt);
       expect(out.events).toHaveLength(2);
       expect(out.comments).toEqual([{ id: "c1" }]);
+    });
+  });
+
+  describe("postComment", () => {
+    it("resolves the factory from the panel documentId it was given", async () => {
+      createIssueCommentMock.mockResolvedValue({ id: "c1" });
+
+      await new IssuesDataAccess().postComment("panel-42", "i1", {
+        content: "on it",
+      });
+
+      expect(createConnectionMock).toHaveBeenCalledWith("panel-42");
+    });
+
+    it("renames the DTO's content into the domain's text", async () => {
+      createIssueCommentMock.mockResolvedValue({ id: "c1" });
+
+      await new IssuesDataAccess().postComment("doc1", "i42", {
+        content: "on it",
+      });
+
+      expect(createIssueCommentMock).toHaveBeenCalledWith("i42", {
+        text: "on it",
+      });
+    });
+
+    it("returns the created comment as the strategy mapped it", async () => {
+      createIssueCommentMock.mockResolvedValue({
+        id: "c9",
+        dateCreated: "2026-05-28T08:29:00Z",
+        text: "on it",
+        authorName: "Mickael",
+        authorEmail: null,
+      });
+
+      const out = await new IssuesDataAccess().postComment("doc1", "i1", {
+        content: "on it",
+      });
+
+      expect(out).toMatchObject({ id: "c9", text: "on it" });
+    });
+
+    it("lets a provider failure bubble up — the route turns it into a 502", async () => {
+      createIssueCommentMock.mockRejectedValue(
+        new Error("GlitchTip API error 403 on /api/0/issues/i1/comments/"),
+      );
+
+      await expect(
+        new IssuesDataAccess().postComment("doc1", "i1", { content: "on it" }),
+      ).rejects.toThrow(/403/);
+    });
+
+    it("is not memoized — two identical comments both reach the provider", async () => {
+      createIssueCommentMock.mockResolvedValue({ id: "c1" });
+
+      const dataAccess = new IssuesDataAccess();
+      await dataAccess.postComment("doc1", "i1", { content: "ping" });
+      await dataAccess.postComment("doc1", "i1", { content: "ping" });
+
+      expect(createIssueCommentMock).toHaveBeenCalledTimes(2);
     });
   });
 });

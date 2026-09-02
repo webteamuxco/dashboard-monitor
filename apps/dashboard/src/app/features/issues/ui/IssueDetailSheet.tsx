@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Plus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
@@ -19,7 +19,9 @@ import type {
 } from "@/lib/errorMonitor/domain/IssueEvent";
 import type { IssueComment } from "@/lib/errorMonitor/domain/IssueComment";
 import { useIssueDetail } from "../hooks/useIssueDetail";
+import { useCreateIssueComment } from "../hooks/useCreateIssueComment";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 
 const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" | "debug"> = {
@@ -50,7 +52,7 @@ export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDet
         {open && isError && (
           <SheetError message={error instanceof Error ? error.message : "Erreur inconnue"} />
         )}
-        {open && data && <DetailBody detail={data} />}
+        {open && data && <DetailBody documentId={documentId} detail={data} />}
       </SheetContent>
     </Sheet>
   );
@@ -84,7 +86,13 @@ function SheetError({ message }: { message: string }) {
   );
 }
 
-function DetailBody({ detail }: { detail: NonNullable<ReturnType<typeof useIssueDetail>["data"]> }) {
+function DetailBody({
+  documentId,
+  detail,
+}: {
+  documentId: string;
+  detail: NonNullable<ReturnType<typeof useIssueDetail>["data"]>;
+}) {
   const { issue, latestEvent, events, comments } = detail;
 
   const [selectedEvent, setSelectedEvent] = useState<IssueEvent | null>(latestEvent)
@@ -147,7 +155,11 @@ function DetailBody({ detail }: { detail: NonNullable<ReturnType<typeof useIssue
           </div>
 
           <div className="w-[25%] h-[70vh] max-h-[70vh] overflow-y-auto">
-            <CommentsSection comments={comments} />
+            <CommentsSection
+              documentId={documentId}
+              issueId={issue.id}
+              comments={comments}
+            />
           </div>
         </div>
 
@@ -551,7 +563,6 @@ function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: 
 
   if (events.length === 0) return null;
 
-  console.log(events)
   return (
     <section>
       <SectionTitle>Événements récents ({events.length})</SectionTitle>
@@ -585,23 +596,131 @@ function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: 
   );
 }
 
-function CommentsSection({ comments }: { comments: IssueComment[] }) {
+function CommentsSection({
+  documentId,
+  issueId,
+  comments,
+}: {
+  documentId: string;
+  issueId: string;
+  comments: IssueComment[];
+}) {
+
+  const [edit, isEdit] = useState<boolean>(false)
+
   return (
     <section>
-      <SectionTitle>Commentaires ({comments.length})</SectionTitle>
-      {comments.length === 0 ? (
-        <p className="font-mono text-[0.6875rem] text-muted-foreground/70">
-          Aucun commentaire.
-        </p>
-      ) : (
-        <ul className="space-y-1.5">
-          {comments.map((c) => (
-            <CommentItem key={c.id} comment={c} />
-          ))}
-        </ul>
+      <div className="flex justify-between items-center">
+        <SectionTitle>Commentaires ({comments.length})</SectionTitle>
+        
+        {!edit && 
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer text-xs mb-2"
+            onClick={() => isEdit(true)}
+          >
+            <Plus /> Ajouter un commentaire
+          </Button>
+        }
+
+        {edit && 
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer text-xs mb-2"
+            onClick={() => isEdit(false)}
+          >
+            <X/> Annuler
+          </Button>
+        }
+      </div>
+
+      <CommentInput
+        documentId={documentId}
+        issueId={issueId}
+        isOpen={edit}
+        onSaved={() => isEdit(false)}
+      />
+      
+      {!edit && (
+        <>
+        {comments.length === 0 ? (
+          <p className="font-mono text-[0.6875rem] text-muted-foreground/70">
+            Aucun commentaire.
+          </p>
+        ) : (
+          <ul className="space-y-1.5">
+            {comments.map((c) => (
+              <CommentItem key={c.id} comment={c} />
+            ))}
+          </ul>
+        )}
+        </>
       )}
     </section>
   );
+}
+
+function CommentInput({
+  documentId,
+  issueId,
+  isOpen,
+  onSaved,
+}: {
+  documentId: string;
+  issueId: string;
+  isOpen: boolean;
+  onSaved: () => void;
+}) {
+  const [content, setContent] = useState<string>("");
+  const { mutate, isPending, isError, error } = useCreateIssueComment(documentId, issueId);
+
+  if(!isOpen) {
+    return null
+  }
+
+  const handleSubmit = (event: React.SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const text = content.trim();
+    if (!text) return;
+    mutate(text, {
+      onSuccess: () => {
+        setContent("");
+        onSaved();
+      },
+    });
+  };
+
+  return (
+    <form className="mb-4" onSubmit={handleSubmit}>
+      <textarea
+        value={content}
+        rows={4}
+        cols={50}
+        onChange={(e) => setContent(e.target.value)}
+        disabled={isPending}
+        className="w-full rounded border border-border bg-muted/70 mb-2 p-2 font-mono text-[0.6875rem]"
+        placeholder="Entrer votre commentaire ici"
+      />
+
+      {isError && (
+        <p className="mb-2 font-mono text-[0.625rem] text-level-fatal">
+          {error instanceof Error ? error.message : "Erreur inconnue"}
+        </p>
+      )}
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="cursor-pointer text-xs mb-2"
+        type="submit"
+        disabled={isPending || !content.trim()}
+      >
+        {isPending ? "Enregistrement…" : "Enregistrer"}
+      </Button>
+    </form>
+  )
 }
 
 function CommentItem({ comment }: { comment: IssueComment }) {

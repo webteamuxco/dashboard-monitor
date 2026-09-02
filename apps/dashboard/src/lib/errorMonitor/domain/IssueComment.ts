@@ -1,3 +1,7 @@
+export interface NewIssueComment {
+  text: string;
+}
+
 export interface IssueComment {
   id: string;
   dateCreated: string;

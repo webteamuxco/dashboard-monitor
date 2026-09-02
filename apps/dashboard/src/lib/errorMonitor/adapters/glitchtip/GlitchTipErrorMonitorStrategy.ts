@@ -4,12 +4,15 @@ import type { Issue, IssueFilters } from "../../domain/Issue";
 import type { Period } from "@/lib/shared/domain/Period";
 import type { TimeSeriesPoint } from "../../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../../domain/IssueEvent";
-import type { IssueComment } from "../../domain/IssueComment";
+import type { IssueComment, NewIssueComment } from "../../domain/IssueComment";
 import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "./dto/GlitchTipIssue";
 import type { GlitchTipStatsV2Dto } from "./dto/GlitchTipStatsV2";
 import type { GlitchTipEventDto } from "./dto/GlitchTipEvent";
-import type { GlitchTipCommentDto } from "./dto/GlitchTipComment";
+import type {
+  GlitchTipCommentDto,
+  GlitchTipCommentPayloadDto,
+} from "./dto/GlitchTipComment";
 import type {
   GlitchTipIssueStatsDto,
   GlitchTipStatsPeriod,
@@ -165,5 +168,17 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
       `/api/0/issues/${issueId}/comments/`,
     );
     return dto.map(mapGlitchTipComment);
+  }
+
+  async createIssueComment(
+    issueId: string,
+    comment: NewIssueComment,
+  ): Promise<IssueComment> {
+    const payload: GlitchTipCommentPayloadDto = { data: { text: comment.text } };
+    const dto = await this.client.post<GlitchTipCommentDto>(
+      `/api/0/issues/${issueId}/comments/`,
+      payload,
+    );
+    return mapGlitchTipComment(dto);
   }
 }

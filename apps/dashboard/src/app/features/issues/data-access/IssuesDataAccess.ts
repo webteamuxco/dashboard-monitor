@@ -4,6 +4,11 @@ import type { Issue } from "@/lib/errorMonitor/domain/Issue";
 import type { IssueRow } from "../domain/IssueRow";
 import type { IssueDetailView } from "../domain/IssueDetailView";
 import { getErrorMonitorFactory } from "@/lib/errorMonitor/GetErrorMonitor";
+import type {
+  IssueComment,
+  NewIssueComment,
+} from "@/lib/errorMonitor/domain/IssueComment";
+import type { CommentDTO } from "../domain/commentsDto";
 
 const EVENTS_PAGE_SIZE = 25;
 
@@ -69,6 +74,19 @@ const fetchRecentUnresolved = cache(
   },
 );
 
+const postIssueComment =
+  async (
+    documentId: string,
+    issueId: string,
+    dto: NewIssueComment,
+  ): Promise<IssueComment> => {
+    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
+    const connection = await errorMonitorFactory.createConnection(documentId)
+    const strategy =  errorMonitorFactory.createStrategy(connection)
+
+    return await strategy.createIssueComment(issueId, dto);
+  }
+
 const fetchDetail = cache(
   async (documentId: string, issueId: string): Promise<IssueDetailView> => {
     const errorMonitorFactory = await getErrorMonitorFactory(documentId)
@@ -115,6 +133,14 @@ export class IssuesDataAccess {
 
   getDetail(documentId: string, issueId: string): Promise<IssueDetailView> {
     return fetchDetail(documentId, issueId);
+  }
+
+  postComment(
+    documentId: string,
+    issueId: string,
+    content: CommentDTO,
+  ): Promise<IssueComment> {
+    return postIssueComment(documentId, issueId, { text: content.content });
   }
 }
 

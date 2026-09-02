@@ -2,9 +2,11 @@ import type { Issue, IssueFilters } from "../domain/Issue";
 import type { Period } from "@/lib/shared/domain/Period";
 import type { TimeSeriesPoint } from "../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../domain/IssueEvent";
-import type { IssueComment } from "../domain/IssueComment";
+import type { IssueComment, NewIssueComment } from "../domain/IssueComment";
 
 export interface ErrorMonitorStrategyInterface {
+
+  // GET
   getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]>;
   getErrorStats(
     projectId: string,
@@ -15,4 +17,10 @@ export interface ErrorMonitorStrategyInterface {
   getIssueLatestEvent(issueId: string): Promise<IssueEvent | null>;
   getIssueEvents(issueId: string, limit?: number): Promise<IssueEvent[]>;
   getIssueComments(issueId: string): Promise<IssueComment[]>;
+
+  // POST
+  createIssueComment(
+    issueId: string,
+    comment: NewIssueComment,
+  ): Promise<IssueComment>;
 }

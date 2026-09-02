@@ -9,6 +9,10 @@ export interface GlitchTipClientConfig {
 // only form GlitchTip's list filters accept — a comma-joined value is rejected.
 type QueryParams = Record<string, string | number | Array<string | number> | undefined>;
 
+type RequestOverrides = Omit<RequestInit, "headers" | "cache"> & {
+  headers?: Record<string, string>;
+};
+
 export interface PaginateOptions {
   // Stop once this many items have been collected across pages (honours an
   // explicit caller limit that can span more than one page).
@@ -44,7 +48,11 @@ export class GlitchTipClient {
     this.token = config.token;
   }
 
-  private async request(path: string, query?: QueryParams): Promise<Response> {
+  private async request(
+    path: string,
+    query?: QueryParams,
+    overrides?: RequestOverrides,
+  ): Promise<Response> {
     const url = new URL(this.baseUrl + path);
     if (query) {
       for (const [key, value] of Object.entries(query)) {
@@ -58,9 +66,11 @@ export class GlitchTipClient {
     }
 
     const response = await fetch(url, {
+      ...overrides,
       headers: {
         Authorization: `Bearer ${this.token}`,
         Accept: "application/json",
+        ...overrides?.headers,
       },
       cache: "no-store",
     });
@@ -77,6 +87,15 @@ export class GlitchTipClient {
 
   async get<T>(path: string, query?: QueryParams): Promise<T> {
     const response = await this.request(path, query);
+    return (await response.json()) as T;
+  }
+
+  async post<T>(path: string, body: unknown, query?: QueryParams): Promise<T> {
+    const response = await this.request(path, query, {
+      method: "POST",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    });
     return (await response.json()) as T;
   }
 

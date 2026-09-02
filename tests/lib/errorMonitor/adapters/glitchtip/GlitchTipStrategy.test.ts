@@ -21,13 +21,15 @@ function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIss
 describe("GlitchTipErrorMonitorStrategy", () => {
   let get: ReturnType<typeof vi.fn>;
   let getPaginated: ReturnType<typeof vi.fn>;
+  let post: ReturnType<typeof vi.fn>;
   let client: GlitchTipClient;
   let strategy: GlitchTipErrorMonitorStrategy;
 
   beforeEach(() => {
     get = vi.fn();
     getPaginated = vi.fn();
-    client = { get, getPaginated } as unknown as GlitchTipClient;
+    post = vi.fn();
+    client = { get, getPaginated, post } as unknown as GlitchTipClient;
     strategy = new GlitchTipErrorMonitorStrategy(client, "my-org");
   });
 
@@ -270,6 +272,36 @@ describe("GlitchTipErrorMonitorStrategy", () => {
 
       expect(getPaginated).toHaveBeenCalledWith("/api/0/issues/i1/comments/");
       expect(out[0]).toMatchObject({ id: "c1", text: "hi" });
+    });
+  });
+
+  describe("createIssueComment", () => {
+    it("posts the text in GlitchTip's data envelope and maps the created comment", async () => {
+      post.mockResolvedValue({
+        id: "c9",
+        dateCreated: "2026-05-28T00:00:00Z",
+        data: { text: "on it" },
+        user: { name: "Ada", email: "ada@example.com" },
+      });
+
+      const out = await strategy.createIssueComment("i1", { text: "on it" });
+
+      expect(post).toHaveBeenCalledWith("/api/0/issues/i1/comments/", {
+        data: { text: "on it" },
+      });
+      expect(out).toEqual({
+        id: "c9",
+        dateCreated: "2026-05-28T00:00:00Z",
+        text: "on it",
+        authorName: "Ada",
+        authorEmail: "ada@example.com",
+      });
+    });
+
+    it("lets a client failure bubble up", async () => {
+      post.mockRejectedValue(new Error("GlitchTip API error 403 on /api/0/issues/i1/comments/"));
+
+      await expect(strategy.createIssueComment("i1", { text: "x" })).rejects.toThrow(/403/);
     });
   });
 });
