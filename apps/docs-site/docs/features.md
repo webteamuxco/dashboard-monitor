@@ -118,7 +118,7 @@ The Strapi-backed catalog: projects, per-project configuration, and each project
 
 - **Backed by:** [src/lib/config/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/) (`StrapiClientFactory` → `StrapiClientStrategy` → `StrapiRepository`)
 - **API routes:** `GET /api/config/projects`, `GET /api/config/projects/[projectId]`, `GET /api/config/projects/[projectId]/panels`, `GET /api/config/projects/[projectId]/strategies?selectedPanel`
-- **Domain types:** `ProjectSummary` (catalog entry), `Project` (`defaultConfig`, `timeInterval`), `DashboardPanel` (mapped tools, tool configurations, selector metadata), `Strategy`
+- **Domain types:** `ProjectSummary` (catalog entry), `Project` (`defaultConfig`, `timeInterval`), `DashboardPanel` (mapped tools, tool configurations, selector metadata), `Strategy` (just a `name` — the tool it belongs to is matched in the query filter, not selected)
 - **Hooks:** `useProjects()`, `useProjectConfig(projectId)`, `usePanels(projectId)` — all `staleTime: 5 min`, this config barely moves
 - **Query keys:** `["config", "projects"]`, `["config", "project", projectId]`, `["config", "pannels", projectId]`
 

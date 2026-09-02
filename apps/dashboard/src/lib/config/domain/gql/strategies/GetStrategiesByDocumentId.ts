@@ -10,19 +10,6 @@ export function getStrategiesByDocumentId(
                 $filters: StrategyFiltersInput
             ) {
                 strategies(filters: $filters) {
-                    mapped_tool {
-                        dashboard_panels {
-                            project {
-                                documentId
-                            }
-                            mapped_tools {
-                                tool {
-                                    slug
-                                    name
-                                }
-                            }
-                        }
-                    }
                     name
                 }
             }

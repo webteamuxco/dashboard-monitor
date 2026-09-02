@@ -61,6 +61,56 @@ describe("IssuesDataAccess", () => {
     vi.useRealTimers();
   });
 
+  describe("getRecent", () => {
+    it("queries without a status filter — resolved issues show up too", async () => {
+      getIssuesMock.mockResolvedValue([]);
+
+      // This is what /api/issues and the server prefetch both call, so the
+      // first paint and the first poll must agree.
+      await new IssuesDataAccess().getRecent("doc-recent-1", 50);
+
+      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { limit: 50 });
+    });
+
+    it("defaults limit to 20 when omitted", async () => {
+      getIssuesMock.mockResolvedValue([]);
+
+      await new IssuesDataAccess().getRecent("doc-recent-2");
+
+      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { limit: 20 });
+    });
+
+    it("forwards the environment into the issue filters", async () => {
+      getIssuesMock.mockResolvedValue([]);
+
+      await new IssuesDataAccess().getRecent("doc-recent-3", 20, "production");
+
+      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", {
+        limit: 20,
+        environment: "production",
+      });
+    });
+
+    it("resolves the factory from the panel documentId it was given", async () => {
+      getIssuesMock.mockResolvedValue([]);
+
+      await new IssuesDataAccess().getRecent("panel-42", 20);
+
+      expect(createConnectionMock).toHaveBeenCalledWith("panel-42");
+    });
+
+    it("maps each Issue into an IssueRow", async () => {
+      getIssuesMock.mockResolvedValue([
+        buildIssue({ id: "i9", isResolved: true }),
+      ]);
+
+      const out = await new IssuesDataAccess().getRecent("doc-recent-4", 10);
+
+      expect(out[0]).toMatchObject({ id: "i9", isResolved: true });
+      expect(out[0].lastSeenLabel).toBeTypeOf("string");
+    });
+  });
+
   describe("getRecentUnresolved", () => {
     it("queries unresolved issues with the provided limit", async () => {
       getIssuesMock.mockResolvedValue([]);

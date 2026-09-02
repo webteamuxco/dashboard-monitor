@@ -5,7 +5,7 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/config/projects/f20rkqy3w59m3k5kloosbwug/strategies/"
+  url: "{{url}}/api/config/projects/f20rkqy3w59m3k5kloosbwug/strategies"
   auth: inherit
 
 settings:

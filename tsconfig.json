@@ -1,0 +1,23 @@
+// Covers the root-level Vitest suite, which sits outside every app's tsconfig.
+// `pnpm typecheck` runs it (as `typecheck:tests`) after the per-app ones.
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "types": ["node"],
+    "paths": {
+      "@/*": ["./apps/dashboard/src/*"]
+    }
+  },
+  "include": ["tests/**/*.ts", "tests/**/*.tsx", "vitest.config.ts"],
+  "exclude": ["node_modules"]
+}

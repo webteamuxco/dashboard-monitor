@@ -7,6 +7,7 @@ import {
 import {
   DEFAULT_WINDOW_PRESETS,
   presetsFromTimeInterval,
+  readDefaultWindowMinutesFromEnv,
 } from "@/app/features/dashboard/state/windowPresets";
 
 describe("useDashboardWindow store", () => {
@@ -83,6 +84,31 @@ describe("presetsFromTimeInterval", () => {
 
     expect(fromNull.presets).toEqual([...DEFAULT_WINDOW_PRESETS]);
     expect(fromEmpty.presets).toEqual([...DEFAULT_WINDOW_PRESETS]);
+  });
+});
+
+describe("readDefaultWindowMinutesFromEnv", () => {
+  const ENV = "NEXT_PUBLIC_DASHBOARD_RESERVATIONS_WINDOW_MINUTES";
+
+  beforeEach(() => {
+    delete process.env[ENV];
+  });
+
+  it("defaults to 30 minutes when unset", () => {
+    expect(readDefaultWindowMinutesFromEnv()).toBe(30);
+  });
+
+  it("reads a positive integer", () => {
+    process.env[ENV] = "120";
+
+    expect(readDefaultWindowMinutesFromEnv()).toBe(120);
+  });
+
+  it("rejects zero, negatives and non-integers", () => {
+    for (const raw of ["0", "-15", "12.5", "abc", ""]) {
+      process.env[ENV] = raw;
+      expect(readDefaultWindowMinutesFromEnv()).toBe(30);
+    }
   });
 });
 

@@ -15,19 +15,6 @@ export function getSpecificStrategyByDocumentIdQuery(
           filters: $strategyNameFilter
           pagination: $pagination
         ) {
-          mapped_tool {
-            dashboard_panels {
-              documentId
-              slug
-              project {
-                documentId
-              }
-            }
-            tool {
-              slug
-              name
-            }
-          }
           name
         }
       }

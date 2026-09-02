@@ -23,9 +23,10 @@ dashboard-monitor/
 └── pnpm-workspace.yaml       # packages: apps/*
 ```
 
-Two things routinely surprise people:
+Three things routinely surprise people:
 
-- **The Vitest suite is at the repo root**, not inside `apps/dashboard`. The root [vitest.config.ts](vitest.config.ts) maps `@/` to `apps/dashboard/src` and `include: ["tests/**/*.test.ts"]`. The `test` task is declared by the dashboard package, so `turbo run test` executes it from `apps/dashboard` against the root config.
+- **The Vitest suite is at the repo root**, not inside `apps/dashboard`. The root [vitest.config.ts](vitest.config.ts) maps `@/` to `apps/dashboard/src` and discovers `tests/**/*.test.ts(x)`. The `test` task is declared by the dashboard package, so `turbo run test` executes it from `apps/dashboard` against the root config.
+- **The root `devDependencies` duplicate four runtime packages** — `react`, `react-dom`, `@tanstack/react-query`, `zustand` — pinned to the exact versions `apps/dashboard` uses, because the suite renders hooks and components from outside that workspace. `resolve.dedupe` in the Vitest config keeps a single instance of each. **Bump them in both manifests together**, or the tests load a second copy of React and every hook throws.
 - **`.env.local` belongs to `apps/dashboard/`**, not the root. `cp apps/dashboard/.env.example apps/dashboard/.env.local`.
 
 ## Stack
@@ -46,8 +47,8 @@ Run from the repo root — every script fans out through Turborepo:
 ```bash
 pnpm dev            # dashboard on :3000 + docs site on :3002
 pnpm build          # production build of both apps
-pnpm typecheck      # tsc --noEmit (dashboard) + tsc (docs-site)
-pnpm lint           # ESLint (dashboard only)
+pnpm typecheck      # per-app tsc, then the test suite (typecheck:tests)
+pnpm lint           # per-app ESLint, then the test suite (lint:tests)
 pnpm test           # Vitest one-shot
 pnpm test:watch
 pnpm test:coverage
@@ -55,7 +56,9 @@ pnpm test:coverage
 
 Target a single app with `pnpm --filter dashboard-monitor <script>` or `pnpm --filter docs-site <script>`.
 
-Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky enforces this.
+`typecheck` and `lint` each run Turborepo over the apps **and then** the root-level suite, which no app's config covers: the root [tsconfig.json](tsconfig.json) and [eslint.config.mjs](eslint.config.mjs) exist for `tests/**` alone. Tests are held to the same bar as production code — `strict`, no `any`.
+
+Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky's pre-commit hook runs all three.
 
 ## Workflow rules
 
