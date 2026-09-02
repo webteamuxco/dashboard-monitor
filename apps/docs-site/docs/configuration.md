@@ -1,13 +1,24 @@
+---
+sidebar_position: 9
+title: Configuration
+---
+
 # Configuration
 
 Configuration comes from **two places**:
 
-- **Strapi admin** — everything project-scoped: which projects exist, which tool backs each monitor family, each tool's connection details, the refresh cadence, the window presets.
+- **Strapi admin** — everything project- or panel-scoped: which projects exist, which panels they offer, which tool backs each monitor family of a panel, each tool's connection details, the refresh cadence, the window presets.
 - **Environment variables** — the API secrets, plus a few display-only UI knobs.
 
-The rule of thumb: if a value differs per project, it belongs in Strapi. If it is a credential or a build-time UI toggle, it belongs in the environment.
+The rule of thumb: if a value differs per project or per panel, it belongs in Strapi. If it is a credential or a build-time UI toggle, it belongs in the environment.
 
-The canonical env template lives in [.env.example](https://github.com/webteamuxco/dashboard-monitor/tree/main/.env.example) (committed). Copy it to `.env.local` and fill it in.
+The canonical env template lives in [apps/dashboard/.env.example](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/.env.example) (committed). Copy it to `apps/dashboard/.env.local` and fill it in — the file belongs to the dashboard app, not to the monorepo root:
+
+```bash
+cp apps/dashboard/.env.example apps/dashboard/.env.local
+```
+
+The docs site (`apps/docs-site`) needs no environment configuration.
 
 ## Loading rules
 
@@ -27,7 +38,7 @@ flowchart LR
 
 ## Strapi admin (required)
 
-Without a reachable Strapi holding at least one published project, the dashboard renders a configuration message instead of the panels.
+Without a reachable Strapi holding at least one published project, the dashboard renders a configuration message instead of the widgets. A project with no **dashboard panel** renders an empty grid — see [panels.md](panels.md).
 
 ### `STRAPI_BASE_URL`
 
@@ -39,27 +50,27 @@ Without a reachable Strapi holding at least one published project, the dashboard
 
 - **Type:** secret (server-only)
 - **Consumed by:** [StrapiClientFactory.ts:8](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/StrapiClientFactory.ts#L8)
-- **Effect:** Bearer token for the Strapi GraphQL API. Needs read access to projects, mapped tools, strategies and tool configurations.
+- **Effect:** Bearer token for the Strapi GraphQL API. Needs read access to projects, dashboard panels, mapped tools, strategies and tool configurations.
 
 Both are validated together — missing either throws `Strapi env vars missing: STRAPI_BASE_URL, STRAPI_TOKEN`.
 
 ## Provider secrets
 
-These are the **only** provider values left in the environment. Instance URL, organization and project id come from the project's tool configuration in Strapi.
+These are the **only** provider values left in the environment. Instance URL, organization and project id come from the **panel's** tool configuration in Strapi.
 
 ### `GLITCHTIP_TOKEN`
 
 - **Type:** secret (server-only)
 - **Consumed by:** [AbstractGlitchtipFactory.ts:28](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/AbstractGlitchtipFactory.ts#L28)
-- **Effect:** Bearer token sent on every GlitchTip API call, for both the error and log monitors. Required as soon as a project maps `glitchtip`.
+- **Effect:** Bearer token sent on every GlitchTip API call, for both the error and log monitors. Required as soon as a panel maps `glitchtip`.
 
 ### `POSTHOG_PERSONAL_API_KEY`
 
 - **Type:** secret (server-only)
 - **Consumed by:** [AbstractPosthogFactory.ts:22](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/AbstractPosthogFactory.ts#L22)
-- **Effect:** PostHog personal API key, sent as Bearer on HogQL queries. Required as soon as a project maps `posthog`.
+- **Effect:** PostHog personal API key, sent as Bearer on HogQL queries. Required as soon as a panel maps `posthog`.
 
-One token per vendor, per deployment. Pointing two projects at two different GlitchTip instances is possible today only if the same token is valid on both.
+One token per vendor, per deployment. Pointing two panels at two different GlitchTip instances is possible today only if the same token is valid on both.
 
 ## Dashboard UI knobs (browser-exposed)
 
@@ -75,7 +86,21 @@ One token per vendor, per deployment. Pointing two projects at two different Gli
 - **Supported values:** `true`, `false`
 - **Default:** `false`
 - **Consumed by:** [useDashboardWindow.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/useDashboardWindow.ts) (`isDashboardInteractive()`)
-- **Effect:** when `false`, hides the UI controls (window selector, …) — read-only kiosk mode.
+- **Effect:** when `false`, hides every header control — project selector, panel selector, environment selector, window selector, refresh button, Admin and Documentation links. Read-only kiosk mode: the first project and its first panel by `order` are displayed.
+
+### `NEXT_PUBLIC_STRAPI_ADMIN_URL`
+
+- **Example:** `http://localhost:1337`
+- **Default:** `/admin`
+- **Consumed by:** [DashboardHeader.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/ui/DashboardHeader.tsx)
+- **Effect:** target of the header's **Admin** button (opens in a new tab). Only rendered in interactive mode. Public on purpose — it is a link, not a credential.
+
+### `NEXT_PUBLIC_DOCS_SITE_URL`
+
+- **Example:** `http://localhost:3002/docs`
+- **Default:** `/docs`
+- **Consumed by:** [DashboardHeader.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/ui/DashboardHeader.tsx)
+- **Effect:** target of the header's **Documentation** button — this Docusaurus site. Its `baseUrl` is `/docs/`, so include that path segment.
 
 ### `NEXT_PUBLIC_DASHBOARD_RESERVATIONS_WINDOW_MINUTES`
 
@@ -103,14 +128,19 @@ One token per vendor, per deployment. Pointing two projects at two different Gli
 | Setting | Where in Strapi | Consumed by |
 |---|---|---|
 | Project catalog (title, slug, `documentId`) | Project entries | header selector, `/api/config/projects` |
-| Which tool backs a monitor family | Project → mapped tools → strategies (`error-monitor`, `log-monitor`, `tracker-monitor`) × tool slug | each family's Resolver |
-| Instance URL, organization, provider project id | Project → tool configuration component | `createConnection()` of each factory |
-| Refresh cadence | Project → default config → `DefaultRefreshIntervalMS` | [useActiveProject.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/hooks/useActiveProject.ts), falls back to 30 000 ms |
-| Window presets | Project → `timeInterval[]` (`duration` × `interval`) | [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/windowPresets.ts), falls back to 30m / 1h / 12h / 24h |
+| Refresh cadence | **Project** → default config → `DefaultRefreshIntervalMS` | [useActiveProject.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/hooks/useActiveProject.ts), falls back to 30 000 ms |
+| Window presets | **Project** → `timeInterval[]` (`duration` × `interval`) | [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/windowPresets.ts), falls back to 30m / 1h / 12h / 24h |
+| The panel list and its order | **Panel** → `order` | `PannelSelector`, `/api/config/projects/[projectId]/panels` |
+| Panel label and icon | **Panel** → `display_name`, `icon` (kebab-case lucide name) | `PannelSelector` — an unknown icon silently falls back to `Circle` |
+| Which widgets a panel renders | **Panel** → mapped tools → strategies (`error-monitor`, `log-monitor`, `tracker-monitor`) | `DashboardContent`, via `/api/config/projects/[projectId]/strategies?selectedPanel` |
+| Which tool backs a monitor family | **Panel** → mapped tools → strategy × tool slug | each family's Resolver, via `support()` |
+| Instance URL, organization, provider project id | **Panel** → tool configuration component | `createConnection()` of each factory |
 
-The active project itself is **not** configured: it is chosen in the header and persisted client-side under the `localStorage` key `dashboard-selected-project`. On first load the server picks the first project of the list.
+Note which level owns what: the cadence and the presets are project-wide, everything about *what is displayed and where it comes from* is per panel. See [panels.md](panels.md).
 
-## Minimal working `.env.local`
+Neither the active project nor the active panel is configured server-side: both are chosen in the header and persisted client-side under the `localStorage` keys `dashboard-selected-project` and `dashboard-selected-pannel` (note the spelling). On a fresh browser the first project of the list and its first panel by `order` are used.
+
+## Minimal working `apps/dashboard/.env.local`
 
 ```bash
 STRAPI_BASE_URL=http://localhost:1337
@@ -126,8 +156,8 @@ Everything else has a sensible default. The rest of the wiring is done in Strapi
 
 When you introduce a new `process.env.X`:
 
-1. First ask whether it belongs in Strapi instead. Anything project-scoped does.
-2. Add it to `.env.example` with an empty value and an English comment explaining its purpose and the supported values.
+1. First ask whether it belongs in Strapi instead. Anything project- or panel-scoped does.
+2. Add it to `apps/dashboard/.env.example` with an empty value and an English comment explaining its purpose and the supported values.
 3. Document it in this file under the relevant section, with a link to the file:line that consumes it.
 4. If the code can run without it, define a clear default inline (e.g. `?? 30`). Otherwise throw an explicit error early (`throw new Error("X is required")`) — silent failure is worse than a loud crash.
 5. Provider secrets are read in the abstract vendor factory, never in a strategy or an HTTP client.

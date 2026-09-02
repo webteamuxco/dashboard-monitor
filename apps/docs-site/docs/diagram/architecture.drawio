@@ -7,50 +7,50 @@
         <mxCell id="title" value="dashboard-monitor — Overview" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="40" y="20" width="1520" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="subtitle" value="Which adapter runs is decided per project in Strapi admin. The environment only carries the API secrets." style="text;html=1;align=center;fontSize=12;fontStyle=2;fontColor=#666666" vertex="1" parent="1">
+        <mxCell id="subtitle" value="Which adapter runs is decided per DASHBOARD PANEL in Strapi admin. The environment only carries the API secrets. Monorepo: apps/dashboard (Next.js) + apps/docs-site (Docusaurus)." style="text;html=1;align=center;fontSize=12;fontStyle=2;fontColor=#666666" vertex="1" parent="1">
           <mxGeometry x="40" y="52" width="1520" height="20" as="geometry" />
         </mxCell>
 
         <mxCell id="zoneBrowser" value="Browser (Client)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="90" width="1520" height="170" as="geometry" />
         </mxCell>
-        <mxCell id="reactComp" value="React Components&#xa;Panels (Issues, ErrorRate, Reservations)&#xa;KPI row + IssueDetailSheet&#xa;ProjectSelector · WindowSelector · EnvironmentSelector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="reactComp" value="React Components&#xa;Widgets (Issues, ErrorRate, Reservations, Visitors)&#xa;mounted from the selected panel's strategies&#xa;KPI row + IssueDetailSheet&#xa;ProjectSelector · PannelSelector · WindowSelector · EnvironmentSelector" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="70" y="130" width="350" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="tanstack" value="TanStack Query (server state)&#xa;useIssues · useIssueDetail · useErrorRate&#xa;useReservations · useVisitorsTimeline&#xa;useProjects · useProjectConfig&#xa;cache + polling + retry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="tanstack" value="TanStack Query (server state)&#xa;useIssues · useIssueDetail · useErrorRate&#xa;useReservations · useVisitorsTimeline&#xa;useProjects · useProjectConfig · usePanels · useProjectStrategy&#xa;cache + polling + retry" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="450" y="130" width="360" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="zustand" value="Zustand (UI state only)&#xa;useSelectedProject (persisted, skipHydration)&#xa;useDashboardWindow (presets + windowMinutes)&#xa;useEnvironment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="zustand" value="Zustand (UI state only)&#xa;useSelectedProject (persisted, skipHydration)&#xa;useSelectedPanel (pannelId + panelSlug + panelIcon, persisted)&#xa;useDashboardWindow (presets + windowMinutes)&#xa;useEnvironment" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="840" y="130" width="360" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="browserNote" value="Rules&#xa;· no server data in Zustand&#xa;· no UI state in TanStack&#xa;· no secrets on the client&#xa;· documentId is the only id that crosses" style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+        <mxCell id="browserNote" value="Rules&#xa;· no server data in Zustand&#xa;· no UI state in TanStack&#xa;· no secrets on the client&#xa;· only Strapi documentIds cross:&#xa;   project id (config) + panel id (data)" style="shape=note;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
           <mxGeometry x="1230" y="130" width="300" height="110" as="geometry" />
         </mxCell>
 
-        <mxCell id="zoneServer" value="Next.js Server — src/app/api/* · src/app/features/*/data-access · src/lib/{error,log,tracker}Monitor" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="zoneServer" value="Next.js Server (apps/dashboard) — src/app/api/* · src/app/features/*/data-access · src/lib/{error,log,tracker}Monitor" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="300" width="1520" height="600" as="geometry" />
         </mxCell>
-        <mxCell id="routes" value="Route Handlers (force-dynamic)&#xa;/api/issues · /api/issues/[id] · /api/error-rate&#xa;/api/reservations · /api/visitors/timeline&#xa;/api/config/projects · /api/config/projects/[projectId]&#xa;every data route requires ?documentId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="routes" value="Route Handlers (force-dynamic)&#xa;/api/issues · /api/issues/[id] · /api/error-rate&#xa;/api/reservations · /api/visitors/timeline&#xa;/api/config/projects · .../[projectId] · .../panels · .../strategies&#xa;data routes require ?documentId = PANEL id&#xa;config routes take the PROJECT id (+ ?selectedPanel = panel slug)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="70" y="340" width="440" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="dataAccess" value="Data Access [server-only, React cache()]&#xa;IssuesDataAccess · ErrorRateDataAccess&#xa;ReservationsDataAccess · VisitorsTimelineDataAccess&#xa;&#xa;const factory = await get&lt;Family&gt;Monitor(documentId)&#xa;const connection = await factory.createConnection(documentId)&#xa;const strategy = factory.createStrategy(connection)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;fontStyle=1;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+        <mxCell id="dataAccess" value="Data Access [server-only, React cache()]&#xa;IssuesDataAccess · ErrorRateDataAccess&#xa;ReservationsDataAccess · VisitorsTimelineDataAccess&#xa;&#xa;const factory = await get&lt;Family&gt;Monitor(panelId)&#xa;const connection = await factory.createConnection(panelId)&#xa;const strategy = factory.createStrategy(connection)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;fontStyle=1;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
           <mxGeometry x="560" y="340" width="480" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="configDA" value="ConfigDataAccess [server-only]&#xa;getProjectsList() → ProjectSummary[]&#xa;getProjectConfig(documentId) → Project" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="configDA" value="ConfigDataAccess [server-only, React cache()]&#xa;getProjectsList() → ProjectSummary[]&#xa;getProjectConfig(projectId) → Project (cadence + window presets)&#xa;getProjectPanels(projectId) → DashboardPanel[] | null&#xa;getProjectStrategies(projectId, panelSlug) → Strategy[] | null" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="1090" y="340" width="440" height="110" as="geometry" />
         </mxCell>
 
-        <mxCell id="entry" value="get&lt;Family&gt;Monitor(documentId)  [server-only]&#xa;GetErrorMonitor.ts · GetLogMonitor.ts · GetTrackerMonitor.ts&#xa;module scope: factories = [ new GlitchTipFactory(), … ]&#xa;→ Resolver.resolve(documentId) : Promise&lt;Factory&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="entry" value="get&lt;Family&gt;Monitor(panelId)  [server-only]&#xa;GetErrorMonitor.ts · GetLogMonitor.ts · GetTrackerMonitor.ts&#xa;module scope: factories = [ new GlitchTipFactory(), … ]&#xa;→ Resolver.resolve(panelId) : Promise&lt;Factory&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="70" y="490" width="440" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="resolver" value="&lt;Family&gt;MonitorResolver  [server-only]&#xa;STRATEGY_RESOLVER = &quot;error-monitor&quot; | &quot;log-monitor&quot; | &quot;tracker-monitor&quot;&#xa;for (factory of factories)&#xa;   if (await factory.support(documentId, STRATEGY_RESOLVER)) return factory&#xa;else throw &quot;No …Factory supports type … Please add missing Mapped tools in admin.&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="resolver" value="&lt;Family&gt;MonitorResolver  [server-only]&#xa;STRATEGY_RESOLVER = &quot;error-monitor&quot; | &quot;log-monitor&quot; | &quot;tracker-monitor&quot;&#xa;(the same constants DashboardContent uses to mount widgets — shared/strategiesEnum.ts)&#xa;for (factory of factories)&#xa;   if (await factory.support(panelId, STRATEGY_RESOLVER)) return factory&#xa;else throw &quot;No …Factory supports type … Please add missing Mapped tools in admin.&quot;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="560" y="490" width="480" height="100" as="geometry" />
         </mxCell>
         <mxCell id="factoryInterface" value="«interface» FactoryInterface&lt;TStrategy&gt;&#xa;support(documentId, strategyResolver): Promise&lt;boolean&gt;&#xa;createConnection(documentId): Promise&lt;ToolConnection&gt;&#xa;createStrategy(connection): TStrategy" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;dashed=1;" vertex="1" parent="1">
           <mxGeometry x="1090" y="490" width="440" height="100" as="geometry" />
         </mxCell>
 
-        <mxCell id="abstractFactory" value="Abstract&lt;Vendor&gt;Factory  [server-only, shared/factory/]&#xa;TOOL_RESOLVER = &quot;glitchtip&quot; | &quot;posthog&quot;&#xa;support() → ConfigurationStrategy.isConfigure(documentId, strategy, TOOL_RESOLVER)&#xa;createConnection() → ConfigurationStrategy.resolveConnection(documentId)&#xa;create&lt;Vendor&gt;Client() → reads the env secret, builds the HTTP client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="abstractFactory" value="Abstract&lt;Vendor&gt;Factory  [server-only, shared/factory/]&#xa;TOOL_RESOLVER = &quot;glitchtip&quot; | &quot;posthog&quot;&#xa;support() → ConfigurationStrategy.isConfigure(panelId, strategy, TOOL_RESOLVER)&#xa;createConnection() → ConfigurationStrategy.resolveConnection(panelId)&#xa;create&lt;Vendor&gt;Client() → reads the env secret, builds the HTTP client" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="70" y="630" width="440" height="110" as="geometry" />
         </mxCell>
         <mxCell id="concreteFactory" value="Concrete Factory (family × vendor)  [server-only]&#xa;GlitchTipFactory · GlitchTipLogMonitorFactory · PostHogFactory&#xa;extends Abstract&lt;Vendor&gt;Factory&#xa;implements &lt;Family&gt;MonitorFactoryInterface&#xa;only createStrategy(connection)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
@@ -60,30 +60,30 @@
           <mxGeometry x="1090" y="630" width="440" height="110" as="geometry" />
         </mxCell>
 
-        <mxCell id="concreteStrategy" value="Concrete Strategy  [server-only]&#xa;GlitchTipErrorMonitorStrategy · GlitchTipLogMonitorStrategy&#xa;PostHogStrategy&#xa;uses the HTTP client + mappers (DTO → domain)&#xa;receives connection.projectId — never the Strapi documentId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="concreteStrategy" value="Concrete Strategy  [server-only]&#xa;GlitchTipErrorMonitorStrategy · GlitchTipLogMonitorStrategy&#xa;PostHogStrategy&#xa;uses the HTTP client + mappers (DTO → domain)&#xa;receives connection.projectId (the PROVIDER's id) — never a Strapi documentId" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="560" y="780" width="480" height="100" as="geometry" />
         </mxCell>
         <mxCell id="httpClients" value="HTTP clients  [server-only, src/lib/tool/]&#xa;GlitchTipClient — get / getPaginated (Link cursor), Bearer&#xa;PostHogClient — POST HogQL /api/projects/{id}/query/, Bearer&#xa;transport only: throws on non-2xx" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="1090" y="780" width="440" height="100" as="geometry" />
         </mxCell>
-        <mxCell id="secretNote" value="process.env (server-only secrets)&#xa;GLITCHTIP_TOKEN&#xa;POSTHOG_PERSONAL_API_KEY&#xa;STRAPI_BASE_URL / STRAPI_TOKEN&#xa;&#xa;No driver env var: the adapter&#xa;comes from Strapi mapped tools." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+        <mxCell id="secretNote" value="process.env (server-only secrets)&#xa;GLITCHTIP_TOKEN&#xa;POSTHOG_PERSONAL_API_KEY&#xa;STRAPI_BASE_URL / STRAPI_TOKEN&#xa;&#xa;No driver env var: the adapter&#xa;comes from the PANEL's mapped tools." style="shape=note;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
           <mxGeometry x="70" y="780" width="440" height="100" as="geometry" />
         </mxCell>
 
         <mxCell id="zoneConfig" value="Config layer — src/lib/config/" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="40" y="930" width="800" height="240" as="geometry" />
         </mxCell>
-        <mxCell id="cfgStrategy" value="Tool configuration strategies  [React cache()]&#xa;GlitchtipConfigurationStrategy · PosthogConfigurationStrategy&#xa;isConfigure(documentId, strategyName, toolSlug): Promise&lt;boolean&gt;&#xa;resolveConnection(documentId): Promise&lt;ToolConnection&gt;&#xa;ToolConnection { baseUrl, projectId } (+ organizationSlug for GlitchTip)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="cfgStrategy" value="Tool configuration strategies  [React cache()]&#xa;GlitchtipConfigurationStrategy · PosthogConfigurationStrategy&#xa;isConfigure(panelId, strategyName, toolSlug): Promise&lt;boolean&gt; → isPanelHasStrategy&#xa;resolveConnection(panelId): Promise&lt;ToolConnection&gt; → getPanelById&#xa;ToolConnection { baseUrl, projectId } (+ organizationSlug for GlitchTip)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="70" y="970" width="740" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="strapiRepo" value="StrapiClientFactory → StrapiClientStrategy → StrapiRepository&#xa;GraphQL POST &lt;STRAPI_BASE_URL&gt;/graphql — getProjects · getProjectById · isPanelHasStrategy&#xa;DTO → projectMapper → Project / ProjectSummary / ToolConfiguration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+        <mxCell id="strapiRepo" value="StrapiClientFactory → StrapiClientStrategy → StrapiRepository&#xa;GraphQL POST &lt;STRAPI_BASE_URL&gt;/graphql&#xa;project id: getProjects · getProjectById · getProjectPanels · getProjectStrategies(+panel slug)&#xa;panel id: getPanelById · isPanelHasStrategy&#xa;DTO → projectMapper → Project / ProjectSummary / DashboardPanel / Strategy / ToolConfiguration&#xa;execute&lt;T&gt;() is an UNCHECKED cast: a field missing from a query becomes undefined" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
           <mxGeometry x="70" y="1075" width="740" height="75" as="geometry" />
         </mxCell>
 
         <mxCell id="zoneExternal" value="External" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;strokeWidth=2;verticalAlign=top;align=left;spacingTop=8;spacingLeft=12;fontSize=13;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="880" y="930" width="680" height="240" as="geometry" />
         </mxCell>
-        <mxCell id="strapiApi" value="Strapi admin&#xa;GraphQL&#xa;projects · mapped tools&#xa;strategies · tool configurations" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="strapiApi" value="Strapi admin&#xa;GraphQL&#xa;projects → dashboard panels&#xa;mapped tools · strategies&#xa;tool configurations" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="910" y="975" width="290" height="140" as="geometry" />
         </mxCell>
         <mxCell id="glitchtipApi" value="GlitchTip REST API&#xa;/api/0/organizations/{org}/…&#xa;/api/0/issues/{id}/…" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#666666;fontSize=11;fontStyle=1;" vertex="1" parent="1">
@@ -97,7 +97,7 @@
           <mxGeometry x="40" y="1200" width="1520" height="70" as="geometry" />
         </mxCell>
 
-        <mxCell id="eFetch" value="fetch JSON (?documentId)" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="tanstack" target="routes">
+        <mxCell id="eFetch" value="fetch JSON (?documentId = panel id)" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="tanstack" target="routes">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="eRoutesDA" value="" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="routes" target="dataAccess">
@@ -121,7 +121,7 @@
         <mxCell id="eConcreteExtends" value="extends" style="endArrow=block;endFill=0;html=1;rounded=0;strokeWidth=2;fontSize=11;" edge="1" parent="1" source="concreteFactory" target="abstractFactory">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="eResolverSupport" value="2. support(documentId, strategy)" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=10;" edge="1" parent="1" source="resolver" target="concreteFactory">
+        <mxCell id="eResolverSupport" value="2. support(panelId, strategy)" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=10;" edge="1" parent="1" source="resolver" target="concreteFactory">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="eAbstractCfg" value="3. asks Strapi&#xa;isConfigure / resolveConnection" style="endArrow=classic;html=1;rounded=0;strokeWidth=2;fontSize=10;" edge="1" parent="1" source="abstractFactory" target="cfgStrategy">
@@ -168,7 +168,7 @@
         <mxCell id="title2" value="src/lib/errorMonitor/ — UML detail (the other two families are identical)" style="text;html=1;align=center;verticalAlign=middle;fontSize=20;fontStyle=1" vertex="1" parent="1">
           <mxGeometry x="40" y="20" width="1520" height="30" as="geometry" />
         </mxCell>
-        <mxCell id="subtitle2" value="Legend: ▷ implements / extends (dashed = implements)   →  uses/returns   « » UML stereotype" style="text;html=1;align=center;fontSize=11;fontStyle=2;fontColor=#666666" vertex="1" parent="1">
+        <mxCell id="subtitle2" value="Legend: ▷ implements / extends (dashed = implements)   →  uses/returns   « » UML stereotype   —   every `documentId` below is a DASHBOARD PANEL documentId" style="text;html=1;align=center;fontSize=11;fontStyle=2;fontColor=#666666" vertex="1" parent="1">
           <mxGeometry x="40" y="52" width="1520" height="20" as="geometry" />
         </mxCell>
 
@@ -232,7 +232,7 @@
         <mxCell id="cAbstractPh" value="«abstract» AbstractPostHogFactory&#xa;──────────────&#xa;TOOL_RESOLVER = &quot;posthog&quot;&#xa;──────────────&#xa;+ support(documentId, strategyResolver): Promise&lt;boolean&gt;&#xa;+ createConnection(documentId): Promise&lt;ToolConnection&gt;&#xa;+ createPostHogClient(c): PostHogClient&#xa;    reads POSTHOG_PERSONAL_API_KEY, throws if missing&#xa;no type guard: PosthogConnection adds no field to ToolConnection" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d6b656;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
           <mxGeometry x="570" y="940" width="480" height="150" as="geometry" />
         </mxCell>
-        <mxCell id="cCfgStrategy" value="«class» &lt;Vendor&gt;ConfigurationStrategy  (src/lib/config/domain/tool/)&#xa;implements ToolConfigurationStrategyInterface&#xa;──────────────&#xa;+ isConfigure = cache((documentId, strategyName, toolSlug) =&gt; …)&#xa;+ resolveConnection = cache((documentId) =&gt; …)&#xa;──────────────&#xa;→ StrapiClientFactory().create().isPanelHasStrategy / getProjectById&#xa;throws when the tool configuration is incomplete" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
+        <mxCell id="cCfgStrategy" value="«class» &lt;Vendor&gt;ConfigurationStrategy  (src/lib/config/domain/tool/)&#xa;implements ToolConfigurationStrategyInterface&#xa;──────────────&#xa;+ isConfigure = cache((documentId, strategyName, toolSlug) =&gt; …)&#xa;+ resolveConnection = cache((documentId) =&gt; …)&#xa;──────────────&#xa;→ StrapiClientFactory().create().isPanelHasStrategy / getPanelById&#xa;throws &quot;Strapi panel … not found&quot; or when the tool configuration is incomplete" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;align=left;verticalAlign=top;spacingTop=6;spacingLeft=10;" vertex="1" parent="1">
           <mxGeometry x="1070" y="940" width="470" height="150" as="geometry" />
         </mxCell>
 

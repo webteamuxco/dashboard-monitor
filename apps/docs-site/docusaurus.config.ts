@@ -4,9 +4,11 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
+const GITHUB_REPO = 'https://github.com/webteamuxco/dashboard-monitor';
+
 const config: Config = {
-  title: 'My Site',
-  tagline: 'Dinosaurs are cool',
+  title: 'dashboard-monitor',
+  tagline: 'Provider-agnostic kiosk dashboard for errors, logs and visitor analytics',
   favicon: 'img/favicon.ico',
 
   markdown: {
@@ -24,10 +26,8 @@ const config: Config = {
   url: "https://dashboard.uxco-group.com",
   baseUrl: "/docs/",
 
-  // GitHub pages deployment config.
-  // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'webteamuxco',
+  projectName: 'dashboard-monitor',
 
   onBrokenLinks: 'throw',
 
@@ -44,28 +44,12 @@ const config: Config = {
       'classic',
       {
         docs: {
+          // The docs are the whole site: `intro.md` carries `slug: /`.
           routeBasePath: '/',
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
+          editUrl: `${GITHUB_REPO}/tree/main/apps/docs-site/`,
         },
-        blog: {
-          showReadingTime: true,
-          feedOptions: {
-            type: ['rss', 'atom'],
-            xslt: true,
-          },
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
-          editUrl:
-            'https://github.com/facebook/docusaurus/tree/main/packages/create-docusaurus/templates/shared/',
-          // Useful options to enforce blogging best practices
-          onInlineTags: 'warn',
-          onInlineAuthors: 'warn',
-          onUntruncatedBlogPosts: 'warn',
-        },
+        blog: false,
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -74,15 +58,14 @@ const config: Config = {
   ],
 
   themeConfig: {
-    // Replace with your project's social card
     image: 'img/docusaurus-social-card.jpg',
     colorMode: {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'My Site',
+      title: 'dashboard-monitor',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'dashboard-monitor logo',
         src: 'img/logo.svg',
       },
       items: [
@@ -90,11 +73,10 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'tutorialSidebar',
           position: 'left',
-          label: 'Tutorial',
+          label: 'Documentation',
         },
-        {to: '/blog', label: 'Blog', position: 'left'},
         {
-          href: 'https://github.com/facebook/docusaurus',
+          href: GITHUB_REPO,
           label: 'GitHub',
           position: 'right',
         },
@@ -104,46 +86,32 @@ const config: Config = {
       style: 'dark',
       links: [
         {
-          title: 'Docs',
+          title: 'Start here',
           items: [
-            {
-              label: 'Tutorial',
-              to: '/intro',
-            },
+            {label: 'Introduction', to: '/'},
+            {label: 'Getting started', to: '/getting-started'},
+            {label: 'Configuration', to: '/configuration'},
           ],
         },
         {
-          title: 'Community',
+          title: 'Architecture',
           items: [
-            {
-              label: 'Stack Overflow',
-              href: 'https://stackoverflow.com/questions/tagged/docusaurus',
-            },
-            {
-              label: 'Discord',
-              href: 'https://discordapp.com/invite/docusaurus',
-            },
-            {
-              label: 'X',
-              href: 'https://x.com/docusaurus',
-            },
+            {label: 'Overview', to: '/architecture'},
+            {label: 'Panels', to: '/panels'},
+            {label: 'Monitors', to: '/monitors'},
+            {label: 'Data flow', to: '/data-flow'},
           ],
         },
         {
           title: 'More',
           items: [
-            {
-              label: 'Blog',
-              to: '/blog',
-            },
-            {
-              label: 'GitHub',
-              href: 'https://github.com/facebook/docusaurus',
-            },
+            {label: 'Features', to: '/features'},
+            {label: 'State management', to: '/state-management'},
+            {label: 'GitHub', href: GITHUB_REPO},
           ],
         },
       ],
-      copyright: `Copyright © ${new Date().getFullYear()} My Project, Inc. Built with Docusaurus.`,
+      copyright: `Copyright © ${new Date().getFullYear()} UXCO Group.`,
     },
     prism: {
       theme: prismThemes.github,

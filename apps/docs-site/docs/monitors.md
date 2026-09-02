@@ -1,3 +1,8 @@
+---
+sidebar_position: 5
+title: Monitors
+---
+
 # Monitors: Strategy & Factory pattern
 
 The monitor layer is the **central abstraction** of this project. It defines how the dashboard talks to external observability providers (GlitchTip, PostHog, …) without coupling the UI to any of them.
@@ -10,16 +15,21 @@ There are three monitor *families*, each independent:
 
 All three follow the same shape. This doc describes that shape once, then shows how to add a new adapter.
 
+Every `src/…` path below is relative to `apps/dashboard/`.
+
 ## What decides which adapter runs
 
-**Strapi admin, not an env var.** Every dashboard project is a Strapi entry that declares:
+**Strapi admin, not an env var.** Every **dashboard panel** is a Strapi entry that declares:
 
 - its **mapped tools** — which tool (`glitchtip`, `posthog`, …) backs which strategy (`error-monitor`, `log-monitor`, `tracker-monitor`);
 - its **tool configurations** — the connection details for each tool (instance URL, organization, project id).
 
 The only thing left in the environment is the **API secret** of each vendor (`GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`). See [configuration.md](configuration.md).
 
-Everything downstream is keyed on the Strapi `documentId` of the selected project.
+:::warning The `documentId` this layer receives is a **panel** id
+
+Provider wiring lives on the panel, not on the project ([panels.md](panels.md)). So everything in this document — `get<Family>Monitor(documentId)`, `support(documentId, …)`, `createConnection(documentId)` — receives the Strapi `documentId` of the selected **dashboard panel**. The parameter name is a leftover from when wiring lived on the project. Hand a project id to any of them and the lookup fails with `Strapi panel "<id>" not found.`
+:::
 
 ## The pattern
 
@@ -81,12 +91,12 @@ classDiagram
 ### Roles
 
 - **Strategy interface** — the contract the data-access layer depends on. Stable across providers.
-- **`FactoryInterface<TStrategy>`** ([shared/factory/FactoryInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/FactoryInterface.ts)) — the three-step contract every factory honours: *do you support this project?* → *give me its connection* → *build me a strategy*.
+- **`FactoryInterface<TStrategy>`** ([shared/factory/FactoryInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/FactoryInterface.ts)) — the three-step contract every factory honours: *do you support this panel?* → *give me its connection* → *build me a strategy*.
 - **Abstract vendor factory** ([shared/factory/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/)) — one per vendor (`AbstractGlitchTipFactory`, `AbstractPostHogFactory`). Owns everything that is vendor-specific but family-agnostic: the tool slug, the Strapi lookup, the connection type guard, and the HTTP client construction (including the env secret check). Shared by every family using that vendor.
 - **Concrete factory** — one per (family × vendor). Implements only `createStrategy(connection)`.
 - **Resolver** — holds the family's factory list and its `STRATEGY_RESOLVER` name. Returns the first factory whose `support()` answers true, throws otherwise.
 - **`get<Family>Monitor(documentId)`** — the public entry point. Returns the resolved **Factory** (not a Strategy). Marked `import "server-only"`.
-- **Tool configuration strategy** ([config/domain/tool/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/)) — the Strapi seam. `isConfigure()` answers the mapped-tool question, `resolveConnection()` reads the tool configuration. Both wrapped in React `cache()` so one request hits Strapi once.
+- **Tool configuration strategy** ([config/domain/tool/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/)) — the Strapi seam. `isConfigure()` answers the mapped-tool question via `isPanelHasStrategy()`, `resolveConnection()` reads the panel's tool configuration via `getPanelById()`. Both wrapped in React `cache()` so one request hits Strapi once.
 - **Concrete Strategy** — provider-specific implementation. Holds an HTTP client, runs requests, calls **Mappers** to translate DTOs to domain types.
 - **HTTP client** — low-level transport (`GlitchTipClient`, `PostHogClient`). No business logic.
 
@@ -94,10 +104,12 @@ classDiagram
 
 | Constant | Declared in | Values today |
 |---|---|---|
-| `STRATEGY_RESOLVER` | each family's `<Family>MonitorResolver.ts` | `error-monitor`, `log-monitor`, `tracker-monitor` |
+| `STRATEGY_RESOLVER` | each family's `<Family>MonitorResolver.ts`, sourced from [shared/strategiesEnum.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/strategiesEnum.ts) | `error-monitor`, `log-monitor`, `tracker-monitor` |
 | `TOOL_RESOLVER` | each `shared/factory/Abstract<Vendor>Factory.ts` | `glitchtip`, `posthog` |
 
-A project whose Strapi mapped tools do not pair those two strings gets a thrown resolver error — an intentional, visible failure rather than a silent fallback.
+A panel whose Strapi mapped tools do not pair those two strings gets a thrown resolver error — an intentional, visible failure rather than a silent fallback.
+
+`strategiesEnum.ts` is shared with the UI: `DashboardContent` matches the same three constants against the panel's strategy list to decide which widgets to mount. That is what keeps the rendered grid and the resolvable adapters from drifting apart.
 
 ## Resolution flow
 
@@ -111,20 +123,20 @@ sequenceDiagram
     participant Strapi
     participant Strategy as GlitchTipErrorMonitorStrategy
 
-    Caller->>Get: getErrorMonitorFactory(documentId)
-    Get->>Resolver: resolve(documentId)
+    Caller->>Get: getErrorMonitorFactory(panelId)
+    Get->>Resolver: resolve(panelId)
     loop for each registered factory
-        Resolver->>Factory: support(documentId, "error-monitor")
-        Factory->>Config: isConfigure(documentId, "error-monitor", "glitchtip")
-        Config->>Strapi: GraphQL — does this project map that tool?
+        Resolver->>Factory: support(panelId, "error-monitor")
+        Factory->>Config: isConfigure(panelId, "error-monitor", "glitchtip")
+        Config->>Strapi: GraphQL — does this panel map that tool?
         Strapi-->>Config: strategies[]
         Config-->>Factory: true
     end
     Resolver-->>Caller: factory
 
-    Caller->>Factory: createConnection(documentId)
-    Factory->>Config: resolveConnection(documentId)
-    Config->>Strapi: GraphQL — project tool configurations
+    Caller->>Factory: createConnection(panelId)
+    Factory->>Config: resolveConnection(panelId)
+    Config->>Strapi: GraphQL — panel tool configurations
     Strapi-->>Config: { url, organization, projectId }
     Config-->>Caller: ToolConnection
 
@@ -139,12 +151,12 @@ sequenceDiagram
 The call site is always the same three lines:
 
 ```typescript
-const factory = await getErrorMonitorFactory(documentId);
-const connection = await factory.createConnection(documentId);
+const factory = await getErrorMonitorFactory(panelId);
+const connection = await factory.createConnection(panelId);
 const strategy = factory.createStrategy(connection);
 ```
 
-`connection.projectId` is the **provider's** project id (GlitchTip numeric id, PostHog project id) — never the Strapi `documentId`. Confusing the two is the most common wiring bug in this codebase.
+`connection.projectId` is the **provider's** project id (GlitchTip numeric id, PostHog project id) — never a Strapi `documentId`. Confusing the two is the most common wiring bug in this codebase, now that three ids are in circulation: project id, panel id, provider project id.
 
 ## The three monitor families
 
@@ -292,7 +304,21 @@ src/lib/config/domain/tool/SentryConfigurationStrategy.ts
   isConfigure() / resolveConnection()   — both wrapped in cache()
 ```
 
-Then add `SentryConfiguration` to the [ToolConfiguration](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/ToolConfiguration.ts) union and map its Strapi component in [projectMapper.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/mappers/projectMapper.ts).
+Then add `SentryConfiguration` to the [ToolConfiguration](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/ToolConfiguration.ts) union, add a `SentryConfigurationDto` (with its `__typename`) plus a `mapToolConfiguration` case in [projectMapper.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/mappers/projectMapper.ts), and add the matching inline fragment to the panel query:
+
+```graphql
+tool_configuration {
+  __typename
+  ... on ComponentConfigSentryConfiguration {
+    url
+    projectId
+    organization
+    id
+  }
+}
+```
+
+Forgetting `__typename` or the fragment is silent: the mapper's `switch` matches nothing and the configuration becomes `undefined`.
 
 ### 3. Add the abstract vendor factory
 
@@ -349,9 +375,9 @@ const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] =
 
 ### 7. Document the secret and map the tool
 
-Add `SENTRY_TOKEN` to `.env.example` and [docs/configuration.md](configuration.md). Then, in Strapi admin, map the `sentry` tool to the `error-monitor` strategy of the target project and fill its tool configuration (url, organization, project id).
+Add `SENTRY_TOKEN` to `apps/dashboard/.env.example` and [configuration.md](configuration.md). Then, in Strapi admin, map the `sentry` tool to the `error-monitor` strategy of the target **dashboard panel** and fill its tool configuration (url, organization, project id).
 
-Nothing else changes: no UI, hook, API route or data-access edit. Switching a project from GlitchTip to Sentry is a Strapi edit, and it can differ per project.
+Nothing else changes: no UI, hook, API route or data-access edit. Switching from GlitchTip to Sentry is a Strapi edit, and it can differ per panel — one project can keep GlitchTip on its production panel and try Sentry on another.
 
 ## Adding a new monitor family
 
@@ -374,7 +400,7 @@ src/lib/uptimeMonitor/
 └── GetUptimeMonitor.ts          # public entry point
 ```
 
-Then declare the `uptime-monitor` strategy in Strapi admin and map a tool to it. No env var is involved in family resolution.
+Add `uptime-monitor` to [shared/strategiesEnum.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/strategiesEnum.ts) so both the resolver and `DashboardContent` read the same constant, declare the strategy in Strapi admin, map a tool to it on a panel, and mount the widget from the strategy mapping in `DashboardContent`. No env var is involved in family resolution.
 
 ## Testing strategy
 
@@ -388,6 +414,8 @@ Never let a factory test reach `StrapiClientFactory`: an unmocked configuration 
 ## Common pitfalls
 
 - **Importing a `Get*Monitor` from a client component.** Fails at build time because of `import "server-only"`. Intentional — keep monitor logic on the server.
-- **Passing the Strapi `documentId` where a provider project id is expected.** Strategies take `connection.projectId`; only the factory and the resolver speak `documentId`.
+- **Passing a Strapi `documentId` where a provider project id is expected.** Strategies take `connection.projectId`; only the factory and the resolver speak `documentId`.
+- **Passing the *project* `documentId` where the *panel* one is expected.** Both are opaque strings, so nothing type-checks it. The symptom is `Strapi panel "<id>" not found.` See [panels.md](panels.md#the-two-identifiers).
 - **Forgetting to register the new Factory in `Get*Monitor.ts`.** The resolver throws `No <X>Factory supports type "<strategy>"` — the same message you get when the Strapi mapping is missing, so check both.
+- **Mapping the tool on the project instead of the panel.** `support()` only looks at panels; a mapping left at project level resolves nothing.
 - **Leaking provider DTO types upward.** The data access layer must only see domain types (`Issue`, `Log`, …). Importing `GlitchTipIssueDto` in `IssuesDataAccess.ts` means a missing mapper.
