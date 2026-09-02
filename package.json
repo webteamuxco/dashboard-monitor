@@ -1,6 +1,6 @@
 {
   "name": "dashboard-monitor",
-  "version": "2.0.1",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "dev": "turbo run dev",
