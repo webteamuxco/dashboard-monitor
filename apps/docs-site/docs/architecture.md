@@ -91,7 +91,7 @@ flowchart TB
         ZS[Zustand stores<br/>useSelectedProject, useSelectedPanel<br/>useDashboardWindow, useEnvironment]
     end
     subgraph L3[3. BFF - app/api/]
-        Routes[/api/issues · /api/error-rate<br/>/api/reservations · /api/visitors/timeline<br/>/api/config/projects/ · .../panels · .../strategies]
+        Routes["/api/issues · /api/error-rate<br/>/api/reservations · /api/visitors/timeline<br/>/api/config/projects/ · .../panels · .../strategies"]
     end
     subgraph L4[4. Data access - features/.../data-access]
         DA[IssuesDataAccess · ErrorRateDataAccess<br/>ReservationsDataAccess · VisitorsTimelineDataAccess<br/>ConfigDataAccess]
