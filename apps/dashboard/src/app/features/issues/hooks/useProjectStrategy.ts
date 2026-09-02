@@ -12,10 +12,7 @@ export function useProjectStrategy(
   intervalMs: number,
 ) {
   return useQuery({
-    queryKey: [
-      ...issuesKeys.isConfig(documentId, environment),
-      selectedPanel,
-    ],
+    queryKey: issuesKeys.isConfig(documentId, environment, selectedPanel),
 
     queryFn: () => fetchProjectStrategy(documentId, selectedPanel!),
 

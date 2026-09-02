@@ -32,13 +32,13 @@ Without a reachable Strapi holding at least one published project, the dashboard
 ### `STRAPI_BASE_URL`
 
 - **Example:** `http://localhost:1337`
-- **Consumed by:** [StrapiClientFactory.ts:7](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/domain/StrapiClientFactory.ts#L7)
+- **Consumed by:** [StrapiClientFactory.ts:7](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/StrapiClientFactory.ts#L7)
 - **Effect:** root of the Strapi instance. The GraphQL endpoint is derived as `<root>/graphql`, so a value ending in `/api` makes every request fail with `405 Method Not Allowed`.
 
 ### `STRAPI_TOKEN`
 
 - **Type:** secret (server-only)
-- **Consumed by:** [StrapiClientFactory.ts:8](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/domain/StrapiClientFactory.ts#L8)
+- **Consumed by:** [StrapiClientFactory.ts:8](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/StrapiClientFactory.ts#L8)
 - **Effect:** Bearer token for the Strapi GraphQL API. Needs read access to projects, mapped tools, strategies and tool configurations.
 
 Both are validated together — missing either throws `Strapi env vars missing: STRAPI_BASE_URL, STRAPI_TOKEN`.
@@ -50,13 +50,13 @@ These are the **only** provider values left in the environment. Instance URL, or
 ### `GLITCHTIP_TOKEN`
 
 - **Type:** secret (server-only)
-- **Consumed by:** [AbstractGlitchtipFactory.ts:28](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/shared/factory/AbstractGlitchtipFactory.ts#L28)
+- **Consumed by:** [AbstractGlitchtipFactory.ts:28](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/AbstractGlitchtipFactory.ts#L28)
 - **Effect:** Bearer token sent on every GlitchTip API call, for both the error and log monitors. Required as soon as a project maps `glitchtip`.
 
 ### `POSTHOG_PERSONAL_API_KEY`
 
 - **Type:** secret (server-only)
-- **Consumed by:** [AbstractPosthogFactory.ts:22](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/shared/factory/AbstractPosthogFactory.ts#L22)
+- **Consumed by:** [AbstractPosthogFactory.ts:22](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/AbstractPosthogFactory.ts#L22)
 - **Effect:** PostHog personal API key, sent as Bearer on HogQL queries. Required as soon as a project maps `posthog`.
 
 One token per vendor, per deployment. Pointing two projects at two different GlitchTip instances is possible today only if the same token is valid on both.
@@ -67,33 +67,33 @@ One token per vendor, per deployment. Pointing two projects at two different Gli
 
 - **Example:** `"UXCO Dashboard Monitor"`
 - **Default:** none (header title stays empty if unset)
-- **Consumed by:** [DashboardHeader.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/ui/DashboardHeader.tsx)
+- **Consumed by:** [DashboardHeader.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/ui/DashboardHeader.tsx)
 - **Effect:** label displayed in the dashboard header.
 
 ### `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY`
 
 - **Supported values:** `true`, `false`
 - **Default:** `false`
-- **Consumed by:** [useDashboardWindow.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/useDashboardWindow.ts) (`isDashboardInteractive()`)
+- **Consumed by:** [useDashboardWindow.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/useDashboardWindow.ts) (`isDashboardInteractive()`)
 - **Effect:** when `false`, hides the UI controls (window selector, …) — read-only kiosk mode.
 
 ### `NEXT_PUBLIC_DASHBOARD_RESERVATIONS_WINDOW_MINUTES`
 
 - **Default:** `30`
-- **Consumed by:** [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/page.tsx), [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/windowPresets.ts) (`readDefaultWindowMinutesFromEnv()`)
+- **Consumed by:** [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx), [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/windowPresets.ts) (`readDefaultWindowMinutesFromEnv()`)
 - **Effect:** **fallback** initial window, used only when the selected project declares no `timeInterval` in Strapi. A project with time intervals overrides both the presets and the initial value.
 
 ### `NEXT_PUBLIC_DASHBOARD_ENVIRONMENTS`
 
 - **Example:** `production,staging`
 - **Default:** empty (selector hidden, no environment filter)
-- **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/environments.ts)
+- **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/environments.ts)
 - **Effect:** comma-separated list shown in the header environment selector. Filters issues and error rate.
 
 ### `NEXT_PUBLIC_DASHBOARD_DEFAULT_ENVIRONMENT`
 
 - **Default:** first entry of the list above, or `null` ("all environments") when the list is empty
-- **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/environments.ts) (`resolveDefaultEnvironment()`)
+- **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/environments.ts) (`resolveDefaultEnvironment()`)
 - **Effect:** environment selected on load. Must be one of the values above, otherwise it falls back.
 
 > This resolver is deliberately isomorphic: `page.tsx` and the Zustand store must agree on the default, or the prefetched query keys would not match on hydration.
@@ -105,8 +105,8 @@ One token per vendor, per deployment. Pointing two projects at two different Gli
 | Project catalog (title, slug, `documentId`) | Project entries | header selector, `/api/config/projects` |
 | Which tool backs a monitor family | Project → mapped tools → strategies (`error-monitor`, `log-monitor`, `tracker-monitor`) × tool slug | each family's Resolver |
 | Instance URL, organization, provider project id | Project → tool configuration component | `createConnection()` of each factory |
-| Refresh cadence | Project → default config → `DefaultRefreshIntervalMS` | [useActiveProject.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/hooks/useActiveProject.ts), falls back to 30 000 ms |
-| Window presets | Project → `timeInterval[]` (`duration` × `interval`) | [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/windowPresets.ts), falls back to 30m / 1h / 12h / 24h |
+| Refresh cadence | Project → default config → `DefaultRefreshIntervalMS` | [useActiveProject.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/hooks/useActiveProject.ts), falls back to 30 000 ms |
+| Window presets | Project → `timeInterval[]` (`duration` × `interval`) | [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/windowPresets.ts), falls back to 30m / 1h / 12h / 24h |
 
 The active project itself is **not** configured: it is chosen in the header and persisted client-side under the `localStorage` key `dashboard-selected-project`. On first load the server picks the first project of the list.
 

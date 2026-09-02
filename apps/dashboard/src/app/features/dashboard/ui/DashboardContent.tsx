@@ -6,6 +6,7 @@ import { ReservationsPanel } from "@/app/features/reservations/ui/ReservationsPa
 import { ErrorRatePanel } from "@/app/features/errorRate/ui/ErrorRatePanel";
 import { DashboardHeader } from "./DashboardHeader";
 import { useActiveProject } from "../hooks/useActiveProject";
+import { useActivePanel } from "../hooks/useActivePanel";
 import { useDashboardWindow, type WindowPreset } from "../state/useDashboardWindow";
 import { useProjectStrategy } from "../../issues/hooks/useProjectStrategy";
 import { useEnvironment } from "../state/useEnvironment";
@@ -14,7 +15,6 @@ import { ERROR_MONITOR_STRATEGY_ENUM, LOG_MONITOR_STRATEGY_ENUM, TRACKER_MONITOR
 import { VisitorsPanel } from "../../visitors/ui/VisitorsPanel";
 import { KpiRow } from "./IssuesKpiRow";
 import { EmptyState } from "./EmptyState";
-import { useSelectedPanel } from "../state/useSelectedPanel";
 import { cn } from "@/lib/utils";
 
 interface DashboardContentProps {
@@ -48,8 +48,7 @@ export function DashboardContent({
   );
 
   const environment = useEnvironment((s) => s.environment);
-  const panelSlug = useSelectedPanel((s) => s.panelSlug);
-  const panelId = useSelectedPanel((s) => s.pannelId);
+  const { panelId, panelSlug } = useActivePanel(documentId);
 
   const { data, isPending, isFetching, isError, error } =
     useProjectStrategy(

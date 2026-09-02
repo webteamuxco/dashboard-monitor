@@ -81,12 +81,12 @@ classDiagram
 ### Roles
 
 - **Strategy interface** — the contract the data-access layer depends on. Stable across providers.
-- **`FactoryInterface<TStrategy>`** ([shared/factory/FactoryInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/shared/factory/FactoryInterface.ts)) — the three-step contract every factory honours: *do you support this project?* → *give me its connection* → *build me a strategy*.
-- **Abstract vendor factory** ([shared/factory/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/shared/factory/)) — one per vendor (`AbstractGlitchTipFactory`, `AbstractPostHogFactory`). Owns everything that is vendor-specific but family-agnostic: the tool slug, the Strapi lookup, the connection type guard, and the HTTP client construction (including the env secret check). Shared by every family using that vendor.
+- **`FactoryInterface<TStrategy>`** ([shared/factory/FactoryInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/FactoryInterface.ts)) — the three-step contract every factory honours: *do you support this project?* → *give me its connection* → *build me a strategy*.
+- **Abstract vendor factory** ([shared/factory/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/)) — one per vendor (`AbstractGlitchTipFactory`, `AbstractPostHogFactory`). Owns everything that is vendor-specific but family-agnostic: the tool slug, the Strapi lookup, the connection type guard, and the HTTP client construction (including the env secret check). Shared by every family using that vendor.
 - **Concrete factory** — one per (family × vendor). Implements only `createStrategy(connection)`.
 - **Resolver** — holds the family's factory list and its `STRATEGY_RESOLVER` name. Returns the first factory whose `support()` answers true, throws otherwise.
 - **`get<Family>Monitor(documentId)`** — the public entry point. Returns the resolved **Factory** (not a Strategy). Marked `import "server-only"`.
-- **Tool configuration strategy** ([config/domain/tool/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/domain/tool/)) — the Strapi seam. `isConfigure()` answers the mapped-tool question, `resolveConnection()` reads the tool configuration. Both wrapped in React `cache()` so one request hits Strapi once.
+- **Tool configuration strategy** ([config/domain/tool/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/)) — the Strapi seam. `isConfigure()` answers the mapped-tool question, `resolveConnection()` reads the tool configuration. Both wrapped in React `cache()` so one request hits Strapi once.
 - **Concrete Strategy** — provider-specific implementation. Holds an HTTP client, runs requests, calls **Mappers** to translate DTOs to domain types.
 - **HTTP client** — low-level transport (`GlitchTipClient`, `PostHogClient`). No business logic.
 
@@ -150,7 +150,7 @@ const strategy = factory.createStrategy(connection);
 
 ### errorMonitor
 
-[src/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface.ts)
+[src/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface.ts)
 
 ```typescript
 export interface ErrorMonitorStrategyInterface {
@@ -164,13 +164,13 @@ export interface ErrorMonitorStrategyInterface {
 ```
 
 - **Strapi strategy name:** `error-monitor`
-- **Entry point:** [GetErrorMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/errorMonitor/GetErrorMonitor.ts) — `getErrorMonitorFactory(documentId)`
-- **Registered adapters:** `glitchtip` ([GlitchTipErrorMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorFactory.ts))
+- **Entry point:** [GetErrorMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/GetErrorMonitor.ts) — `getErrorMonitorFactory(documentId)`
+- **Registered adapters:** `glitchtip` ([GlitchTipErrorMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorFactory.ts))
 - **Domain types:** `Issue`, `IssueEvent`, `IssueComment`, `TimeSeriesPoint`, `ErrorLevel`
 
 ### logMonitor
 
-[src/lib/logMonitor/strategy/LogMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/logMonitor/strategy/LogMonitorStrategyInterface.ts)
+[src/lib/logMonitor/strategy/LogMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/logMonitor/strategy/LogMonitorStrategyInterface.ts)
 
 ```typescript
 export interface LogMonitorStrategyInterface {
@@ -179,15 +179,15 @@ export interface LogMonitorStrategyInterface {
 ```
 
 - **Strapi strategy name:** `log-monitor`
-- **Entry point:** [GetLogMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/logMonitor/GetLogMonitor.ts) — `getLogMonitor(documentId)`
-- **Registered adapters:** `glitchtip` ([GlitchTipLogMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorFactory.ts))
+- **Entry point:** [GetLogMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/logMonitor/GetLogMonitor.ts) — `getLogMonitor(documentId)`
+- **Registered adapters:** `glitchtip` ([GlitchTipLogMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorFactory.ts))
 - **Domain types:** `Log`, `LogLevel`, `LogFilters`
 
 > The reservations feature consumes this monitor with a tag filter (`reservation.sent`) to aggregate business events on top of the log layer.
 
 ### trackerMonitor
 
-[src/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface.ts)
+[src/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface.ts)
 
 ```typescript
 export interface TrackerMonitorStrategyInterface {
@@ -199,8 +199,8 @@ export interface TrackerMonitorStrategyInterface {
 ```
 
 - **Strapi strategy name:** `tracker-monitor`
-- **Entry point:** [GetTrackerMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/trackerMonitor/GetTrackerMonitor.ts) — `getTrackerMonitor(documentId)`
-- **Registered adapters:** `posthog` ([PostHogFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/trackerMonitor/adapters/posthog/PostHogFactory.ts))
+- **Entry point:** [GetTrackerMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/trackerMonitor/GetTrackerMonitor.ts) — `getTrackerMonitor(documentId)`
+- **Registered adapters:** `posthog` ([PostHogFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/trackerMonitor/adapters/posthog/PostHogFactory.ts))
 - **Domain types:** `VisitorsTimeSeriesPoint`
 
 ## Anatomy of an adapter
@@ -270,7 +270,7 @@ Suppose you want to add **Sentry** as a second `errorMonitor` backend.
 
 ### 1. Register the tool slug
 
-[src/lib/errorMonitor/ErrorMonitorTypeEnums.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/errorMonitor/ErrorMonitorTypeEnums.ts):
+[src/lib/errorMonitor/ErrorMonitorTypeEnums.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/ErrorMonitorTypeEnums.ts):
 
 ```typescript
 export const GLITCHTIP = "glitchtip";
@@ -283,7 +283,7 @@ export const errorMonitorMapper: ErrorMonitorType = {
 
 ### 2. Add the Strapi seam for the vendor
 
-A new vendor needs a tool configuration strategy next to the existing ones, implementing [ToolConfigurationStrategyInterface](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/domain/tool/ToolConfigurationStrategyInterface.ts):
+A new vendor needs a tool configuration strategy next to the existing ones, implementing [ToolConfigurationStrategyInterface](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/ToolConfigurationStrategyInterface.ts):
 
 ```text
 src/lib/config/domain/tool/SentryConfigurationStrategy.ts
@@ -292,7 +292,7 @@ src/lib/config/domain/tool/SentryConfigurationStrategy.ts
   isConfigure() / resolveConnection()   — both wrapped in cache()
 ```
 
-Then add `SentryConfiguration` to the [ToolConfiguration](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/domain/tool/ToolConfiguration.ts) union and map its Strapi component in [projectMapper.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/domain/mappers/projectMapper.ts).
+Then add `SentryConfiguration` to the [ToolConfiguration](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/tool/ToolConfiguration.ts) union and map its Strapi component in [projectMapper.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/mappers/projectMapper.ts).
 
 ### 3. Add the abstract vendor factory
 
@@ -338,7 +338,7 @@ Match every method of `ErrorMonitorStrategyInterface`. Inside each method: HTTP 
 
 ### 6. Register in GetErrorMonitor
 
-[src/lib/errorMonitor/GetErrorMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/errorMonitor/GetErrorMonitor.ts):
+[src/lib/errorMonitor/GetErrorMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/GetErrorMonitor.ts):
 
 ```typescript
 const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] = [

@@ -126,7 +126,7 @@ flowchart LR
     Mon -- Bearer token --> External[(External APIs)]
 ```
 
-All monitor and config code is guarded by `import "server-only"` (see [GetErrorMonitor.ts:1](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/errorMonitor/GetErrorMonitor.ts#L1)). If a client component ever imports it by mistake, the build fails. Tokens never reach the bundle.
+All monitor and config code is guarded by `import "server-only"` (see [GetErrorMonitor.ts:1](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/GetErrorMonitor.ts#L1)). If a client component ever imports it by mistake, the build fails. Tokens never reach the bundle.
 
 What crosses the boundary is the Strapi `documentId` of the selected project — a public identifier. The provider project ids, instance URLs and organization slugs are resolved server-side from it.
 
@@ -134,7 +134,7 @@ Variables prefixed `NEXT_PUBLIC_*` are intentionally non-sensitive: display-only
 
 ## Initial render path (kiosk first load)
 
-The home page is a **Server Component** ([src/app/page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/page.tsx)) that reads the project list from Strapi, picks the first project, prefetches all panel queries server-side, and hydrates the client. The kiosk displays data on the first paint without a client-side fetch round-trip.
+The home page is a **Server Component** ([src/app/page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx)) that reads the project list from Strapi, picks the first project, prefetches all panel queries server-side, and hydrates the client. The kiosk displays data on the first paint without a client-side fetch round-trip.
 
 ```mermaid
 sequenceDiagram

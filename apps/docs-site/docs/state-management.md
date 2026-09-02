@@ -41,7 +41,7 @@ flowchart LR
 
 ### Setup
 
-[src/app/providers.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/providers.tsx):
+[src/app/providers.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/providers.tsx):
 
 ```typescript
 function makeQueryClient() {
@@ -57,7 +57,7 @@ function makeQueryClient() {
 }
 ```
 
-Mounted in [src/app/layout.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/layout.tsx) via `<Providers>`.
+Mounted in [src/app/layout.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/layout.tsx) via `<Providers>`.
 
 - **`staleTime: 30s`** — data is considered fresh for 30s after fetch. Re-renders don't trigger a refetch within that window.
 - **`refetchOnWindowFocus: false`** — the kiosk has no "focus events" — polling is enough.
@@ -129,7 +129,7 @@ Two rules:
 
 ### Hydration from server
 
-[src/app/page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/page.tsx) seeds the config queries with `setQueryData`, prefetches the four panel queries in parallel using a server-side `QueryClient`, then dehydrates the cache and wraps children in `<HydrationBoundary state={...}>`. The client mounts already-populated. See [data-flow.md](data-flow.md).
+[src/app/page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx) seeds the config queries with `setQueryData`, prefetches the four panel queries in parallel using a server-side `QueryClient`, then dehydrates the cache and wraps children in `<HydrationBoundary state={...}>`. The client mounts already-populated. See [data-flow.md](data-flow.md).
 
 **The keys must match exactly across the boundary.** The server resolves the environment with `resolveDefaultEnvironment()` and the window with `presetsFromTimeInterval()`; the client stores start from the same values. Diverging here doesn't break anything visibly — it just silently refetches everything on mount, which defeats the prefetch.
 
@@ -139,7 +139,7 @@ Three stores, each scoped to one concern.
 
 ### useSelectedProject
 
-[src/app/features/dashboard/state/useSelectedProject.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/useSelectedProject.ts)
+[src/app/features/dashboard/state/useSelectedProject.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/useSelectedProject.ts)
 
 ```typescript
 export const useSelectedProject = create<SelectedProjectStore>()(
@@ -161,7 +161,7 @@ export const useSelectedProject = create<SelectedProjectStore>()(
 
 ### useDashboardWindow
 
-[src/app/features/dashboard/state/useDashboardWindow.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/useDashboardWindow.ts)
+[src/app/features/dashboard/state/useDashboardWindow.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/useDashboardWindow.ts)
 
 - **State:** `{ presets: WindowPreset[], windowMinutes: number }`
 - **Actions:** `setWindowMinutes(minutes)`, `hydrateFromStrapi(presets, windowMinutes)`
@@ -176,7 +176,7 @@ The reservations and visitors hooks subscribe to `windowMinutes` to refetch when
 
 ### useEnvironment
 
-[src/app/features/dashboard/state/useEnvironment.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/state/useEnvironment.ts)
+[src/app/features/dashboard/state/useEnvironment.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/useEnvironment.ts)
 
 - **State:** `{ environment: string | null }` — `null` means "all environments"
 - **Action:** `setEnvironment(environment)`

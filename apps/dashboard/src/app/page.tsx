@@ -12,18 +12,16 @@ import { configKeys } from "./features/config/queryKeys";
 import { DashboardContent } from "./features/dashboard/ui/DashboardContent";
 import { resolveDefaultEnvironment } from "./features/dashboard/state/environments";
 import { presetsFromTimeInterval } from "./features/dashboard/state/windowPresets";
+import {
+  ERROR_MONITOR_STRATEGY_ENUM,
+  LOG_MONITOR_STRATEGY_ENUM,
+  TRACKER_MONITOR_STRATEGY_ENUM,
+} from "@/lib/shared/strategiesEnum";
 
 export const dynamic = "force-dynamic";
 
 const DEFAULT_REFRESH_INTERVAL_MS = 30_000;
 const DEFAULT_LIMIT = 20;
-const DEFAULT_RESERVATIONS_WINDOW = 30;
-
-function getReservationsWindowMinutes(): number {
-  const raw = process.env.NEXT_PUBLIC_DASHBOARD_RESERVATIONS_WINDOW_MINUTES;
-  const parsed = raw ? Number(raw) : NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_RESERVATIONS_WINDOW;
-}
 
 function ConfigMessage({ children }: { children: React.ReactNode }) {
   return (
@@ -35,7 +33,6 @@ function ConfigMessage({ children }: { children: React.ReactNode }) {
 
 export default async function Home() {
   const fallbackRefreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS;
-  const reservationsWindow = getReservationsWindowMinutes();
   const environment = resolveDefaultEnvironment();
 
   const projects = await configDataAccess.getProjectsList();
@@ -50,33 +47,84 @@ export default async function Home() {
   }
 
   const initialDocumentId = projects[0].documentId;
-  const initialConfig = await configDataAccess.getProjectConfig(initialDocumentId);
+  const [initialConfig, panels] = await Promise.all([
+    configDataAccess.getProjectConfig(initialDocumentId),
+    configDataAccess.getProjectPanels(initialDocumentId),
+  ]);
+
   const { presets: initialWindowPresets, initialWindowMinutes } =
     presetsFromTimeInterval(initialConfig?.timeInterval);
 
   const queryClient = new QueryClient();
   queryClient.setQueryData(configKeys.projects(), projects);
   queryClient.setQueryData(configKeys.project(initialDocumentId), initialConfig);
+  queryClient.setQueryData(configKeys.pannels(initialDocumentId), panels);
 
-  await Promise.all([
-    queryClient.prefetchQuery({
-      queryKey: issuesKeys.recent(initialDocumentId, DEFAULT_LIMIT, environment),
-      queryFn: () =>
-        issuesDataAccess.getRecentUnresolved(initialDocumentId, DEFAULT_LIMIT, environment),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: reservationsKeys.series(initialDocumentId, reservationsWindow),
-      queryFn: () => reservationsDataAccess.getSeries(initialDocumentId, reservationsWindow),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: errorRateKeys.series(initialDocumentId, environment),
-      queryFn: () => errorRateDataAccess.getSeries(initialDocumentId, environment),
-    }),
-    queryClient.prefetchQuery({
-      queryKey: visitorsKeys.timeline(initialDocumentId, reservationsWindow),
-      queryFn: () => visitorsTimelineDataAccess.getSeries(initialDocumentId, reservationsWindow),
-    }),
-  ]);
+  // Strapi returns the panels sorted by `order`, and PannelSelector selects the
+  // first one when nothing is persisted yet. Prefetching under any other id
+  // would build query keys the widgets never read.
+  const initialPanel = panels?.[0];
+
+  if (initialPanel) {
+    const strategies = await configDataAccess.getProjectStrategies(
+      initialDocumentId,
+      initialPanel.slug,
+    );
+
+    queryClient.setQueryData(
+      issuesKeys.isConfig(initialDocumentId, environment, initialPanel.slug),
+      strategies,
+    );
+
+    // Mirror of the strategy mapping in DashboardContent: prefetching a widget
+    // the panel does not map would resolve no factory and throw.
+    const strategyNames = strategies?.map((strategy) => strategy.name) ?? [];
+    const prefetches: Promise<void>[] = [];
+
+    if (strategyNames.includes(ERROR_MONITOR_STRATEGY_ENUM)) {
+      prefetches.push(
+        queryClient.prefetchQuery({
+          queryKey: issuesKeys.recent(initialPanel.id, DEFAULT_LIMIT, environment),
+          queryFn: () =>
+            issuesDataAccess.getRecent(initialPanel.id, DEFAULT_LIMIT, environment),
+        }),
+        queryClient.prefetchQuery({
+          queryKey: errorRateKeys.series(initialPanel.id, environment),
+          queryFn: () => errorRateDataAccess.getSeries(initialPanel.id, environment),
+        }),
+      );
+    }
+
+    if (strategyNames.includes(LOG_MONITOR_STRATEGY_ENUM)) {
+      prefetches.push(
+        queryClient.prefetchQuery({
+          queryKey: reservationsKeys.series(
+            initialPanel.id,
+            initialWindowMinutes,
+            environment,
+          ),
+          queryFn: () =>
+            reservationsDataAccess.getSeries(
+              initialPanel.id,
+              initialWindowMinutes,
+              environment,
+            ),
+        }),
+      );
+    }
+
+    if (strategyNames.includes(TRACKER_MONITOR_STRATEGY_ENUM)) {
+      prefetches.push(
+        queryClient.prefetchQuery({
+          queryKey: visitorsKeys.timeline(initialPanel.id, initialWindowMinutes),
+          queryFn: () =>
+            visitorsTimelineDataAccess.getSeries(initialPanel.id, initialWindowMinutes),
+        }),
+      );
+    }
+
+    await Promise.all(prefetches);
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

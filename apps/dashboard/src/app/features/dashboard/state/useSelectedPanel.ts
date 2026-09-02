@@ -13,9 +13,9 @@ interface SelectedPanelStore {
 }
 
 // skipHydration: the persisted value is applied on the client after mount by
-// useActiveProject, so the server render and the first client render both start
-// from `null` (falling back to the server-resolved initial project). This keeps
-// the prefetched query keys matching during hydration.
+// useActivePanel, so the server render and the first client render both start
+// from the empty selection (falling back to the project's first panel by
+// `order`, which is the one the server prefetched for).
 export const useSelectedPanel = create<SelectedPanelStore>()(
   persist(
     (set) => ({

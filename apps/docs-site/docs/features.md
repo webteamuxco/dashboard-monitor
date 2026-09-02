@@ -1,6 +1,6 @@
 # Features
 
-A "feature" is a self-contained vertical slice of the dashboard: its data fetching, its domain types, its hooks, and its UI. Features live under [src/app/features/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/).
+A "feature" is a self-contained vertical slice of the dashboard: its data fetching, its domain types, its hooks, and its UI. Features live under [src/app/features/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/).
 
 The standard layout of a feature folder is:
 
@@ -24,13 +24,13 @@ flowchart LR
     Server -->|maps to| Domain[domain/Type.ts]
 ```
 
-Every data feature is parameterized by the Strapi **`documentId`** of the active project, threaded down from [DashboardContent](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/ui/DashboardContent.tsx) via [useActiveProject](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/hooks/useActiveProject.ts). It is part of every query key, so switching project refetches everything without manual invalidation.
+Every data feature is parameterized by the Strapi **`documentId`** of the active project, threaded down from [DashboardContent](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/ui/DashboardContent.tsx) via [useActiveProject](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/hooks/useActiveProject.ts). It is part of every query key, so switching project refetches everything without manual invalidation.
 
 ## Feature catalog
 
 ### issues
 
-[src/app/features/issues/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/issues/)
+[src/app/features/issues/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/issues/)
 
 Lists unresolved error issues and shows full details (events, stacktrace, comments, breadcrumbs) in a side sheet.
 
@@ -45,7 +45,7 @@ The detail sheet is only mounted when an issue is selected; the `useIssueDetail`
 
 ### errorRate
 
-[src/app/features/errorRate/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/errorRate/)
+[src/app/features/errorRate/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/errorRate/)
 
 Displays a 24-hour error count chart (one point per hour bucket) using Recharts.
 
@@ -60,7 +60,7 @@ A `null` count means "no data for that bucket" and is preserved as-is — it ren
 
 ### reservations
 
-[src/app/features/reservations/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/reservations/)
+[src/app/features/reservations/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/reservations/)
 
 Tracks "reservation sent" business events over a sliding time window. Backed by the log monitor with a tag filter rather than a dedicated metrics endpoint — convenient and provider-agnostic.
 
@@ -75,7 +75,7 @@ The series is zero-filled minute by minute before aggregation, so the chart alwa
 
 ### visitors
 
-[src/app/features/visitors/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/visitors/)
+[src/app/features/visitors/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/visitors/)
 
 Shows live visitor counts split between **new** and **returning** users over a sliding window. Powered by a HogQL query against PostHog.
 
@@ -90,21 +90,21 @@ Shows live visitor counts split between **new** and **returning** users over a s
 
 ### config
 
-[src/app/features/config/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/config/)
+[src/app/features/config/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/config/)
 
 The Strapi-backed project catalog and per-project configuration. Not a panel — it feeds the header selector and the whole dashboard's wiring.
 
-- **Backed by:** [src/lib/config/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/lib/config/) (`StrapiClientFactory` → `StrapiClientStrategy` → `StrapiRepository`)
+- **Backed by:** [src/lib/config/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/) (`StrapiClientFactory` → `StrapiClientStrategy` → `StrapiRepository`)
 - **API routes:** `GET /api/config/projects`, `GET /api/config/projects/[projectId]`
 - **Domain types:** `ProjectSummary` (catalog entry), `Project` (mapped tools, tool configurations, `defaultConfig`, `timeInterval`)
 - **Hooks:** `useProjects()`, `useProjectConfig(documentId)` — both `staleTime: 5 min`, this config barely moves
 - **Query keys:** `["config", "projects"]`, `["config", "project", documentId]`
 
-Both queries are seeded server-side with `setQueryData` in [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/page.tsx), so the selector and the first project's settings are available on first paint.
+Both queries are seeded server-side with `setQueryData` in [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx), so the selector and the first project's settings are available on first paint.
 
 ### dashboard
 
-[src/app/features/dashboard/](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/features/dashboard/)
+[src/app/features/dashboard/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/)
 
 Dashboard-wide state and chrome. Not a data feature — it owns the kiosk's project selector, window selector, environment selector, header and KPI row.
 
@@ -126,6 +126,6 @@ Dashboard-wide state and chrome. Not a data feature — it owns the kiosk's proj
 5. **Centralize query keys** in `queryKeys.ts`, with `documentId` as the first variable segment.
 6. **Wrap fetch in a TanStack Query hook** in `hooks/use<Name>.ts`. Use `refetchInterval` for polling.
 7. **Build the panel** in `ui/<Name>Panel.tsx`. Pure UI — no fetch.
-8. **Wire it into [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/src/app/page.tsx)** (prefetch) and into `DashboardContent` (render).
+8. **Wire it into [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx)** (prefetch) and into `DashboardContent` (render).
 
 See any of `issues`, `errorRate`, `reservations`, `visitors` as a working template.

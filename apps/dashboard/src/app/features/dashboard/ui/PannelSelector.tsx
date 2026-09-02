@@ -1,6 +1,6 @@
 "use client";
 
-import { createElement, useEffect, useId } from "react";
+import { createElement, useId } from "react";
 import { useSelectedProject } from "../state/useSelectedProject";
 import { useSelectedPanel } from "../state/useSelectedPanel";
 import { usePanels } from "../../config/hooks/usePannels";
@@ -34,25 +34,9 @@ export function PannelSelector({ fallbackDocumentId }: ProjectSelectorProps) {
 
   const selectId = useId();
 
+  // Resolving the active panel is useActivePanel's job — this selector is only
+  // mounted in interactive mode, so it can only ever handle user changes.
   const { data: panels } = usePanels(documentId);
-
-  useEffect(() => {
-    if (!panels?.length || panelSlug) {
-      return;
-    }
-
-    const firstPanel = panels[0];
-
-    setPanelId(firstPanel.id);
-    setPanelSlug(firstPanel.slug);
-    setPanelIcon(firstPanel.icon);
-  }, [
-    panels,
-    panelSlug,
-    setPanelId,
-    setPanelSlug,
-    setPanelIcon,
-  ]);
 
   if (!documentId || !panels?.length) {
     return null;
