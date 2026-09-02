@@ -5,6 +5,27 @@ Toutes les évolutions notables de la plateforme UXCO Booking sont documentées 
 Format basé sur [Keep a Changelog](https://keepachangelog.com/) et
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [2.0.0] - 2026-09-02
+
+### 📚 Documentation
+
+- **(release)** Update CHANGELOG.md [skip ci]
+- **(dashboard)** Update a link for focs
+- **(dahsboard)** Remove docs folder and keep only docusaurus docs
+- **(dashboard)** Update all docs for panel feature
+- **(dashboard)** Update all CLAUDE.md
+
+### 🚀 Nouveautés
+
+- **(dashboard)** Update front icon for dashboard
+- **(dashboard)** Add icon to KPI cards
+- **(fashboard)** Update target blank to url header
+- **(dashboard)** Add project pannel
+
+### 🧪 Tests
+
+- **(dashboard)** Typecheck and lint the root test suite
+
 ## [1.5.0] - 2026-08-28
 
 ### 📚 Documentation
