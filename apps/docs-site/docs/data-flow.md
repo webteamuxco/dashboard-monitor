@@ -183,7 +183,7 @@ sequenceDiagram
     Content->>TQ: useProjectStrategy(projectId, slug) (hit)
     Content->>Content: mount the widgets those strategies allow
     Content->>TQ: each widget queries with the panel id (hit)
-    Note over Content: no network on first paint;<br/>polling takes over after intervalMs
+    Note over Content: no network on first paint<br/>polling takes over after intervalMs
 ```
 
 Two cases turn those hits into a refetch, both harmless: a panel restored from `localStorage` that isn't `panels[0]` (the server prefetched for the first one), and a panel list changed in Strapi between the server render and the client's selection.
