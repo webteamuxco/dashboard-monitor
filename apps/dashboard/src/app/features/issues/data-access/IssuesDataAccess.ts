@@ -88,15 +88,31 @@ const postIssueComment =
   }
 
 const fetchDetail = cache(
-  async (documentId: string, issueId: string): Promise<IssueDetailView> => {
+  async (
+    documentId: string,
+    issueId: string,
+    environment: string | null,
+  ): Promise<IssueDetailView> => {
     const errorMonitorFactory = await getErrorMonitorFactory(documentId)
     const connection = await errorMonitorFactory.createConnection(documentId)
     const monitor =  errorMonitorFactory.createStrategy(connection)
 
+    const eventsPromise = monitor.getIssueEvents(
+      issueId,
+      EVENTS_PAGE_SIZE,
+      environment ?? undefined,
+    );
+    // The head of an environment-scoped feed *is* that environment's latest
+    // event, and scoping costs the adapter a feed scan — asking for it again
+    // would pay for the same answer twice.
+    const latestEventPromise = environment
+      ? eventsPromise.then((events) => events[0] ?? null)
+      : monitor.getIssueLatestEvent(issueId);
+
     const [issue, latestEvent, events, comments] = await Promise.all([
       monitor.getIssue(issueId),
-      monitor.getIssueLatestEvent(issueId),
-      monitor.getIssueEvents(issueId, EVENTS_PAGE_SIZE),
+      latestEventPromise,
+      eventsPromise,
       monitor.getIssueComments(issueId),
     ]);
 
@@ -131,8 +147,12 @@ export class IssuesDataAccess {
     return fetchRecentUnresolved(documentId, limit, environment);
   }
 
-  getDetail(documentId: string, issueId: string): Promise<IssueDetailView> {
-    return fetchDetail(documentId, issueId);
+  getDetail(
+    documentId: string,
+    issueId: string,
+    environment: string | null = null,
+  ): Promise<IssueDetailView> {
+    return fetchDetail(documentId, issueId, environment);
   }
 
   postComment(

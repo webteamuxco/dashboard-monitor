@@ -34,16 +34,19 @@ describe("fetchErrorRateClient", () => {
     expect(calledParams(fetchMock)).not.toHaveProperty("environment");
   });
 
-  it("preserves a null bucket count — a gap is not a zero", async () => {
-    mockOk([
-      { bucketEpoch: 1, label: "10:00", count: null },
-      { bucketEpoch: 2, label: "11:00", count: 4 },
-    ]);
+  it("unwraps the points and the truncation flag from the { data } envelope", async () => {
+    mockOk({
+      points: [
+        { bucketEpoch: 1, label: "10h", count: 0 },
+        { bucketEpoch: 2, label: "11h", count: 4 },
+      ],
+      truncated: true,
+    });
 
     const series = await fetchErrorRateClient("panel-1");
 
-    expect(series[0].count).toBeNull();
-    expect(series[1].count).toBe(4);
+    expect(series.points.map((p) => p.count)).toEqual([0, 4]);
+    expect(series.truncated).toBe(true);
   });
 
   it("throws the BFF error message on failure", async () => {

@@ -68,10 +68,13 @@ export interface GlitchTipProcessingErrorDto {
   data?: Record<string, unknown> | null;
 }
 
-export interface GlitchTipEventDto {
+// The two event endpoints answer the same payload in opposite conventions:
+// `/issues/{id}/events/latest/` in camelCase (`eventID`, `dateCreated`),
+// `/issues/{id}/events/` in snake_case (`event_id`, `date_created`). One mixed
+// shape would leave a field `undefined` on each endpoint, so each gets its own
+// variant and the mapper narrows on the discriminating key.
+interface GlitchTipEventBaseDto {
   id: string;
-  eventID: string;
-  date_created: string;
   message?: string | null;
   platform?: string | null;
   culprit?: string | null;
@@ -87,3 +90,15 @@ export interface GlitchTipEventDto {
   errors?: GlitchTipProcessingErrorDto[] | null;
   entries?: GlitchTipEntryDto[];
 }
+
+export interface GlitchTipLatestEventDto extends GlitchTipEventBaseDto {
+  eventID: string;
+  dateCreated: string;
+}
+
+export interface GlitchTipListEventDto extends GlitchTipEventBaseDto {
+  event_id: string;
+  date_created: string;
+}
+
+export type GlitchTipEventDto = GlitchTipLatestEventDto | GlitchTipListEventDto;

@@ -123,7 +123,48 @@ describe("useIssueDetail", () => {
     await waitFor(() =>
       expect(result.current.data).toEqual({ issue: { id: "i1" } }),
     );
-    expect(fetchIssueDetailClientMock).toHaveBeenCalledWith("panel-1", "i1");
+    expect(fetchIssueDetailClientMock).toHaveBeenCalledWith("panel-1", "i1", null);
+  });
+
+  it("fetches the detail scoped to the selected environment", async () => {
+    fetchIssueDetailClientMock.mockResolvedValue({ issue: { id: "i1" } });
+
+    const { result } = renderQueryHook(
+      (environment: string) => useIssueDetail("panel-1", "i1", environment),
+      "production",
+    );
+
+    await waitFor(() =>
+      expect(result.current.data).toEqual({ issue: { id: "i1" } }),
+    );
+    expect(fetchIssueDetailClientMock).toHaveBeenCalledWith(
+      "panel-1",
+      "i1",
+      "production",
+    );
+  });
+
+  it("refetches when the environment changes", async () => {
+    fetchIssueDetailClientMock.mockImplementation(
+      async (_documentId: string, _issueId: string, environment: string) => ({
+        issue: { id: environment },
+      }),
+    );
+
+    const { result, rerender } = renderQueryHook(
+      (environment: string) => useIssueDetail("panel-1", "i1", environment),
+      "production",
+    );
+
+    await waitFor(() =>
+      expect(result.current.data).toEqual({ issue: { id: "production" } }),
+    );
+
+    rerender("recette");
+
+    await waitFor(() =>
+      expect(result.current.data).toEqual({ issue: { id: "recette" } }),
+    );
   });
 });
 

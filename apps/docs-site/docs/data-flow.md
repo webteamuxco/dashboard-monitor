@@ -134,8 +134,11 @@ sequenceDiagram
         Page->>QC: prefetchQuery(errorRateKeys.series(panelId, …))
         QC->>DA: getSeries(panelId, environment)
         DA->>Mon: getErrorStats(projectId, period=24h, environment)
-        Mon-->>DA: TimeSeriesPoint[]
-        DA-->>QC: ErrorRatePoint[]
+        Mon->>Ext: GET /api/0/organizations/{org}/issues/
+        Mon->>Ext: GET /api/0/issues/{id}/events/ (per issue active in the window)
+        Mon->>Mon: bucket per hour, keep the events tagged environment
+        Mon-->>DA: TimeSeries { points, truncated }
+        DA-->>QC: ErrorRateSeries
     and
         Page->>QC: prefetchQuery(reservationsKeys.series(panelId, …))
         QC->>DA: getSeries(panelId, initialWindowMinutes)
@@ -297,23 +300,30 @@ sequenceDiagram
     User->>Panel: click issue row
     Panel->>Panel: setSelectedIssueId(id)
     Panel->>Sheet: render with issueId
-    Sheet->>Hook: useIssueDetail(panelId, issueId)
-    Hook->>Hook: enabled = !!issueId, queryKey = detail(issueId)
-    Hook->>Route: GET /api/issues/{id}?documentId=panelId
-    Route->>DA: getDetail(panelId, id)
+    Sheet->>Sheet: environment = useEnvironment()
+    Sheet->>Hook: useIssueDetail(panelId, issueId, environment)
+    Hook->>Hook: enabled = !!issueId, queryKey = detail(issueId, environment)
+    Hook->>Route: GET /api/issues/{id}?documentId=panelId&environment=Z
+    Route->>DA: getDetail(panelId, id, environment)
 
-    par fetch 4 things in parallel
+    par fetch in parallel
         DA->>Mon: getIssue(id)
         Mon->>Ext: GET /api/0/issues/{id}/
+        Note over Mon,Ext: group aggregates, all environments
     and
-        DA->>Mon: getIssueLatestEvent(id)
-        Mon->>Ext: GET /api/0/issues/{id}/events/latest/
-    and
-        DA->>Mon: getIssueEvents(id, limit=25)
-        Mon->>Ext: GET /api/0/issues/{id}/events/?limit=25
+        DA->>Mon: getIssueEvents(id, limit=25, environment)
+        Mon->>Ext: GET /api/0/issues/{id}/events/ (paginated scan)
+        Mon->>Mon: keep the events tagged environment=Z
     and
         DA->>Mon: getIssueComments(id)
         Mon->>Ext: GET /api/0/issues/{id}/comments/
+    end
+
+    alt an environment is selected
+        DA->>DA: latestEvent = events[0] ?? null
+    else all environments
+        DA->>Mon: getIssueLatestEvent(id)
+        Mon->>Ext: GET /api/0/issues/{id}/events/latest/
     end
 
     Mon-->>DA: { issue, latestEvent, events, comments }
@@ -325,7 +335,9 @@ sequenceDiagram
 
 Issue endpoints are organization-scoped rather than project-scoped, so the detail calls take the issue id alone — but the route still requires the panel `documentId` to resolve which GlitchTip instance to talk to.
 
-The detail query is **not** prefetched server-side — it only fires when a row is clicked. Once fetched, it's cached under `["issues", "detail", issueId]` for the rest of the session (subject to `staleTime: 30000`).
+The detail query is **not** prefetched server-side — it only fires when a row is clicked. Once fetched, it's cached under `["issues", "detail", issueId, environment]` for the rest of the session (subject to `staleTime: 30000`). The environment sits in the key because the events feed is scoped to it: without that segment, switching the selector would re-read another environment's events from the cache.
+
+The `alt` branch is not a shortcut, it's the absence of a duplicate: GlitchTip's `/events/latest/` ignores `environment`, so a scoped "latest event" can only be the head of the scoped feed — which `getIssueEvents` has already produced. Asking the adapter for it separately would pay for the same feed scan twice. See [monitors.md](monitors.md#the-environment-filter-is-the-adapters-problem-not-the-providers) for what each GlitchTip endpoint does and does not filter.
 
 ## DTO -> domain mapping
 

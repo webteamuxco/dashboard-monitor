@@ -20,6 +20,7 @@ import type {
 import type { IssueComment } from "@/lib/errorMonitor/domain/IssueComment";
 import { useIssueDetail } from "../hooks/useIssueDetail";
 import { useCreateIssueComment } from "../hooks/useCreateIssueComment";
+import { useEnvironment } from "@/app/features/dashboard/state/useEnvironment";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -40,8 +41,14 @@ interface IssueDetailSheetProps {
 
 export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDetailSheetProps) {
   const open = !!issueId;
-  const { data, isPending, isError, error } = useIssueDetail(documentId, issueId);
-  
+  const environment = useEnvironment((s) => s.environment);
+  const { data, isPending, isError, error } = useIssueDetail(
+    documentId,
+    issueId,
+    environment,
+  );
+
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -52,7 +59,9 @@ export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDet
         {open && isError && (
           <SheetError message={error instanceof Error ? error.message : "Erreur inconnue"} />
         )}
-        {open && data && <DetailBody documentId={documentId} detail={data} />}
+        {open && data && (
+          <DetailBody documentId={documentId} detail={data} environment={environment} />
+        )}
       </SheetContent>
     </Sheet>
   );
@@ -89,9 +98,11 @@ function SheetError({ message }: { message: string }) {
 function DetailBody({
   documentId,
   detail,
+  environment,
 }: {
   documentId: string;
   detail: NonNullable<ReturnType<typeof useIssueDetail>["data"]>;
+  environment: string | null;
 }) {
   const { issue, latestEvent, events, comments } = detail;
 
@@ -110,7 +121,10 @@ function DetailBody({
           <Badge variant={LEVEL_VARIANT[issue.level]}>{issue.level}</Badge>
           <Badge variant="warning">{issue.type}</Badge>
           <ProjectPill projectId={issue.projectId} />
-          <span className="font-mono text-[0.625rem] text-muted-foreground/70">
+          <span
+            className="font-mono text-[0.625rem] text-muted-foreground/70"
+            title="Total du groupe, toutes envs confondues"
+          >
             ×{issue.eventCount}
           </span>
           <span
@@ -135,7 +149,7 @@ function DetailBody({
         <div className="flex gap-2.5 h-full">
 
           <div className="w-[25%] h-[70vh] max-h-[70vh] overflow-y-auto">
-            <EventsSection events={events} selectedEventId={selectedEvent?.id} setSelectedEvent={(event: IssueEvent) => {setSelectedEvent(event)}} />
+            <EventsSection events={events} environment={environment} selectedEventId={selectedEvent?.id} setSelectedEvent={(event: IssueEvent) => {setSelectedEvent(event)}} />
           </div>
 
           <div className="flex flex-col gap-2.5 w-[50%] h-[70vh] max-h-[70vh] overflow-y-auto">
@@ -205,7 +219,11 @@ function MetaSection({
       <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[0.6875rem]">
         <MetaRow label="Première occurrence" value={firstSeenLabel} title={firstSeenIso} />
         <MetaRow label="Dernière occurrence" value={lastSeenLabel} title={lastSeenIso} />
-        <MetaRow label="Événements" value={String(eventCount)} />
+        <MetaRow
+          label="Événements (toutes envs)"
+          value={String(eventCount)}
+          title="GlitchTip n'agrège pas un groupe par environnement : ce total couvre toutes les envs."
+        />
         <MetaRow label="Statut" value={isResolved ? "résolu" : "non résolu"} />
       </dl>
     </section>
@@ -559,13 +577,30 @@ function BreadcrumbsSection({ breadcrumbs }: { breadcrumbs: Breadcrumb[] }) {
   );
 }
 
-function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: IssueEvent[], selectedEventId?: string, setSelectedEvent: (event: IssueEvent) => void; }) {
+function eventEnvironment(event: IssueEvent): string | null {
+  return event.tags.find((t) => t.key === "environment")?.value ?? null;
+}
 
-  if (events.length === 0) return null;
+function EventsSection({ events, environment, selectedEventId, setSelectedEvent }: { events: IssueEvent[], environment: string | null, selectedEventId?: string, setSelectedEvent: (event: IssueEvent) => void; }) {
+
+  if (events.length === 0) {
+    if (!environment) return null;
+    return (
+      <section>
+        <SectionTitle>Événements récents</SectionTitle>
+        <p className="font-mono text-[0.6875rem] text-muted-foreground/70">
+          Aucun événement en {environment} parmi les plus récents de cette issue.
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section>
-      <SectionTitle>Événements récents ({events.length})</SectionTitle>
+      <SectionTitle>
+        Événements récents ({events.length}
+        {environment ? ` · ${environment}` : ""})
+      </SectionTitle>
       <ul className="divide-y divide-border rounded border border-border">
         {events.map((e) => (
           <li
@@ -586,9 +621,14 @@ function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: 
                   }).format(new Date(e.dateCreated))}
               </span>
             </div>
-            {e.message && (
-              <div className="truncate text-muted-foreground/80">{e.id}</div>
-            )}
+            <div className="flex items-center justify-between gap-2">
+              {e.message && (
+                <span className="truncate text-muted-foreground/80">{e.id}</span>
+              )}
+              <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-muted-foreground/80">
+                {eventEnvironment(e) ?? "env ?"}
+              </span>
+            </div>
           </li>
         ))}
       </ul>

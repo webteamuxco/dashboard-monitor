@@ -32,14 +32,15 @@ export function ErrorRatePanel({ documentId, intervalMs }: ErrorRatePanelProps) 
   );
 
   const showBackgroundDot = isFetching && !isPending;
+  const points = data?.points;
 
   const labelByEpoch = useMemo(() => {
     const map = new Map<number, string>();
-    data?.forEach((p) => map.set(p.bucketEpoch, p.label));
+    points?.forEach((p) => map.set(p.bucketEpoch, p.label));
     return map;
-  }, [data]);
+  }, [points]);
 
-  const ticks = useMemo(() => data?.map((p) => p.bucketEpoch) ?? [], [data]);
+  const ticks = useMemo(() => points?.map((p) => p.bucketEpoch) ?? [], [points]);
 
   return (
     <Card className="flex h-full flex-col">
@@ -56,8 +57,16 @@ export function ErrorRatePanel({ documentId, intervalMs }: ErrorRatePanelProps) 
             />
           )}
           <span className="font-mono text-[0.625rem] text-muted-foreground/60">
-            erreurs / h · 24h
+            erreurs / h · 24h{environment ? ` · ${environment}` : ""}
           </span>
+          {data?.truncated && (
+            <span
+              className="font-mono text-[0.625rem] text-level-warning"
+              title="Le volume de la fenêtre dépasse le budget de lecture : les valeurs affichées sont un minorant."
+            >
+              série tronquée
+            </span>
+          )}
         </div>
       </CardHeader>
       <CardContent className="flex-1 min-h-0">
@@ -70,7 +79,7 @@ export function ErrorRatePanel({ documentId, intervalMs }: ErrorRatePanelProps) 
             </PanelMessage>
           ) : (
             <ChartContainer config={config}>
-              <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+              <AreaChart data={points} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
                 <defs>
                   <linearGradient id="errorRateFill" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="var(--color-count)" stopOpacity={0.25} />

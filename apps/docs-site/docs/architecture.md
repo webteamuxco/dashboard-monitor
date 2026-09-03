@@ -203,8 +203,8 @@ sequenceDiagram
         DA-->>NextServer: IssueRow[]
     and
         NextServer->>DA: getSeries(panelId, environment) [error rate]
-        DA->>Ext: GET stats_v2
-        DA-->>NextServer: ErrorRatePoint[]
+        DA->>Ext: GET issues/ then issues/{id}/events/ per active issue
+        DA-->>NextServer: ErrorRateSeries
     and
         NextServer->>DA: getSeries(panelId, initialWindowMinutes) [reservations]
         DA->>Ext: GET /api/0/organizations/{org}/logs/

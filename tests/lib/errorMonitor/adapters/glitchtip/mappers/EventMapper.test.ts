@@ -1,17 +1,41 @@
 import { describe, it, expect } from "vitest";
 import { mapGlitchTipEvent } from "@/lib/errorMonitor/adapters/glitchtip/mappers/EventMapper";
-import type { GlitchTipEventDto } from "@/lib/errorMonitor/adapters/glitchtip/dto/GlitchTipEvent";
+import type {
+  GlitchTipLatestEventDto,
+  GlitchTipListEventDto,
+} from "@/lib/errorMonitor/adapters/glitchtip/dto/GlitchTipEvent";
 
-function baseDto(overrides: Partial<GlitchTipEventDto> = {}): GlitchTipEventDto {
+// The shape of the `/issues/{id}/events/` feed — snake_case.
+function baseDto(overrides: Partial<GlitchTipListEventDto> = {}): GlitchTipListEventDto {
   return {
     id: "evt1",
-    eventID: "deadbeef",
+    event_id: "deadbeef",
     date_created: "2026-05-28T10:00:00Z",
     ...overrides,
   };
 }
 
 describe("mapGlitchTipEvent", () => {
+  it("reads the camelCase identity keys of the latest-event endpoint", () => {
+    const dto: GlitchTipLatestEventDto = {
+      id: "evt1",
+      eventID: "deadbeef",
+      dateCreated: "2026-05-28T10:00:00Z",
+    };
+
+    expect(mapGlitchTipEvent(dto)).toMatchObject({
+      eventID: "deadbeef",
+      dateCreated: "2026-05-28T10:00:00Z",
+    });
+  });
+
+  it("reads the snake_case identity keys of the events feed", () => {
+    expect(mapGlitchTipEvent(baseDto())).toMatchObject({
+      eventID: "deadbeef",
+      dateCreated: "2026-05-28T10:00:00Z",
+    });
+  });
+
   it("maps the flat fields and applies defaults to optional ones", () => {
     const out = mapGlitchTipEvent(baseDto());
 

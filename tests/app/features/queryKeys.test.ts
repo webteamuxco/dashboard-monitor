@@ -67,8 +67,19 @@ describe("issuesKeys", () => {
     ]);
   });
 
-  it("keys a detail by the provider issue id alone", () => {
-    expect(issuesKeys.detail("i1")).toEqual(["issues", "detail", "i1"]);
+  it("keys a detail by the provider issue id, then the environment", () => {
+    // The detail's events feed is environment-scoped, so switching the
+    // selector must be a cache miss rather than a stale re-read.
+    expect(issuesKeys.detail("i1", "production")).toEqual([
+      "issues",
+      "detail",
+      "i1",
+      "production",
+    ]);
+  });
+
+  it("defaults the detail's environment to null so the key stays stable", () => {
+    expect(issuesKeys.detail("i1")).toEqual(["issues", "detail", "i1", null]);
   });
 
   it("keys the strategy list by project, environment and panel slug", () => {

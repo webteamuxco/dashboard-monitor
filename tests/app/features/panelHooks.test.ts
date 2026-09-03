@@ -36,7 +36,10 @@ beforeEach(() => {
 
 describe("useErrorRate", () => {
   it("fetches with the panel documentId and the environment", async () => {
-    fetchErrorRateClientMock.mockResolvedValue([{ bucketEpoch: 1 }]);
+    fetchErrorRateClientMock.mockResolvedValue({
+      points: [{ bucketEpoch: 1, label: "10h", count: 3 }],
+      truncated: false,
+    });
 
     const { result } = renderQueryHook(
       () => useErrorRate("panel-1", "staging", 30_000),
@@ -44,14 +47,21 @@ describe("useErrorRate", () => {
     );
 
     await waitFor(() =>
-      expect(result.current.data).toEqual([{ bucketEpoch: 1 }]),
+      expect(result.current.data).toEqual({
+        points: [{ bucketEpoch: 1, label: "10h", count: 3 }],
+        truncated: false,
+      }),
     );
     expect(fetchErrorRateClientMock).toHaveBeenCalledWith("panel-1", "staging");
   });
 
   it("refetches when the environment changes", async () => {
     fetchErrorRateClientMock.mockImplementation(
-      async (_id: string, environment: string | null) => [{ environment }],
+      async (_id: string, environment: string | null) => ({
+        points: [],
+        truncated: false,
+        environment,
+      }),
     );
 
     const { result, rerender } = renderQueryHook(
@@ -60,18 +70,18 @@ describe("useErrorRate", () => {
     );
 
     await waitFor(() =>
-      expect(result.current.data).toEqual([{ environment: "production" }]),
+      expect(result.current.data).toMatchObject({ environment: "production" }),
     );
 
     rerender(null);
 
     await waitFor(() =>
-      expect(result.current.data).toEqual([{ environment: null }]),
+      expect(result.current.data).toMatchObject({ environment: null }),
     );
   });
 
   it("surfaces the BFF error", async () => {
-    fetchErrorRateClientMock.mockRejectedValue(new Error("stats_v2 failed"));
+    fetchErrorRateClientMock.mockRejectedValue(new Error("GlitchTip API error 502"));
 
     const { result } = renderQueryHook(
       () => useErrorRate("panel-1", null, 30_000),

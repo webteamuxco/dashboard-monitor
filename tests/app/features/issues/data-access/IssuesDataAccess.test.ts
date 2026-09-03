@@ -173,7 +173,7 @@ describe("IssuesDataAccess", () => {
 
       expect(getIssueMock).toHaveBeenCalledWith("i42");
       expect(getIssueLatestEventMock).toHaveBeenCalledWith("i42");
-      expect(getIssueEventsMock).toHaveBeenCalledWith("i42", 25);
+      expect(getIssueEventsMock).toHaveBeenCalledWith("i42", 25, undefined);
       expect(getIssueCommentsMock).toHaveBeenCalledWith("i42");
 
       expect(out.issue).toMatchObject({
@@ -198,6 +198,38 @@ describe("IssuesDataAccess", () => {
       expect(out.latestEvent).toEqual(evt);
       expect(out.events).toHaveLength(2);
       expect(out.comments).toEqual([{ id: "c1" }]);
+    });
+
+    it("scopes the events feed to the environment", async () => {
+      getIssueMock.mockResolvedValue(buildIssue());
+      getIssueEventsMock.mockResolvedValue([]);
+      getIssueCommentsMock.mockResolvedValue([]);
+
+      await new IssuesDataAccess().getDetail("doc1", "i-scoped", "production");
+
+      expect(getIssueEventsMock).toHaveBeenCalledWith("i-scoped", 25, "production");
+    });
+
+    it("takes the scoped feed's head as the latest event, without a second scan", async () => {
+      getIssueMock.mockResolvedValue(buildIssue());
+      const head = { id: "e-prod", eventID: "x", dateCreated: "now" };
+      getIssueEventsMock.mockResolvedValue([head, { id: "e-older" }]);
+      getIssueCommentsMock.mockResolvedValue([]);
+
+      const out = await new IssuesDataAccess().getDetail("doc1", "i-head", "production");
+
+      expect(getIssueLatestEventMock).not.toHaveBeenCalled();
+      expect(out.latestEvent).toEqual(head);
+    });
+
+    it("reports no latest event when the scoped feed is empty", async () => {
+      getIssueMock.mockResolvedValue(buildIssue());
+      getIssueEventsMock.mockResolvedValue([]);
+      getIssueCommentsMock.mockResolvedValue([]);
+
+      const out = await new IssuesDataAccess().getDetail("doc1", "i-empty", "production");
+
+      expect(out.latestEvent).toBeNull();
     });
   });
 

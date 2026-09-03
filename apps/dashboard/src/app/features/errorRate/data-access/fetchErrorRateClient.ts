@@ -1,9 +1,9 @@
-import type { ErrorRatePoint } from "../domain/ErrorRatePoint";
+import type { ErrorRateSeries } from "../domain/ErrorRatePoint";
 
 export async function fetchErrorRateClient(
   documentId: string,
   environment: string | null = null,
-): Promise<ErrorRatePoint[]> {
+): Promise<ErrorRateSeries> {
 
   const params = new URLSearchParams({ documentId });
   
@@ -18,6 +18,6 @@ export async function fetchErrorRateClient(
     throw new Error(payload?.error ?? `Request failed with status ${res.status}`);
   }
 
-  const payload = (await res.json()) as { data: ErrorRatePoint[] };
+  const payload = (await res.json()) as { data: ErrorRateSeries };
   return payload.data;
 }

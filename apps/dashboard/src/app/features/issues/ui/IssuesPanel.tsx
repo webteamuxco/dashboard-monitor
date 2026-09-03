@@ -130,9 +130,10 @@ function IssueLine({ row, onSelect }: { row: IssueRow; onSelect: () => void }) {
               {row.isResolved && <Badge variant="resolved">résolu</Badge>}
               {row.type && <Badge variant="warning">{row.type}</Badge>}
               <ProjectPill projectId={row.projectId} />
+              {/*
               <span className="font-mono text-[0.625rem] text-muted-foreground/60">
                 ×{row.eventCount}
-              </span>
+              </span>*/}
               <span
                 className="font-mono text-[0.625rem] text-muted-foreground/60"
                 title={row.lastSeenIso}

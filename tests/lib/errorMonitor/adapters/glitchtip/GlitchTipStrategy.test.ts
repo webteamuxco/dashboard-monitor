@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GlitchTipErrorMonitorStrategy } from "@/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorStrategy";
 import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "@/lib/errorMonitor/adapters/glitchtip/dto/GlitchTipIssue";
+import type { GlitchTipListEventDto } from "@/lib/errorMonitor/adapters/glitchtip/dto/GlitchTipEvent";
 
 function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIssueDto {
   return {
@@ -15,6 +16,21 @@ function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIss
     project: { id: "p1", slug: "", name: "", platform: "" },
     metadata: { type: "Err", value: "" },
     ...overrides,
+  };
+}
+
+function buildEventDto({
+  id,
+  environment,
+}: {
+  id: string;
+  environment?: string;
+}): GlitchTipListEventDto {
+  return {
+    id,
+    event_id: id,
+    date_created: "2026-05-28T00:00:00Z",
+    tags: environment ? [{ key: "environment", value: environment }] : [],
   };
 }
 
@@ -102,98 +118,172 @@ describe("GlitchTipErrorMonitorStrategy", () => {
   });
 
   describe("getErrorStats", () => {
-    it("calls stats_v2 with the period parameters and maps the response", async () => {
-      get.mockResolvedValue({
-        intervals: ["2026-05-28T00:00:00Z"],
-        groups: [{ by: {}, totals: {}, series: { "sum(quantity)": [3] } }],
+    const WINDOW = {
+      from: "2026-07-03T08:00:00Z",
+      to: "2026-07-03T10:00:00Z",
+      interval: "1h",
+    } as const;
+
+    // One mock backs both the issues list and every per-issue event feed.
+    function routeFeeds(
+      issues: GlitchTipIssueDto[],
+      feeds: Record<string, GlitchTipListEventDto[]>,
+    ) {
+      getPaginated.mockImplementation(async (path: string) => {
+        if (path.endsWith("/issues/")) return issues;
+        const id = /\/issues\/([^/]+)\/events\//.exec(path)?.[1] ?? "";
+        return feeds[id] ?? [];
+      });
+    }
+
+    function buildEventAt(at: string, environment?: string): GlitchTipListEventDto {
+      return {
+        id: at,
+        event_id: at,
+        date_created: at,
+        tags: environment ? [{ key: "environment", value: environment }] : [],
+      };
+    }
+
+    const countAt = (series: { points: { timestamp: string; count: number }[] }, iso: string) =>
+      series.points.find((point) => point.timestamp === iso)?.count;
+
+    it("lists the project's issues without an environment filter", async () => {
+      routeFeeds([], {});
+
+      await strategy.getErrorStats("p", WINDOW, "production");
+
+      expect(getPaginated.mock.calls[0][0]).toBe("/api/0/organizations/my-org/issues/");
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({ project: "p", query: "" });
+      // Filtering the list would admit an issue whose window activity belongs
+      // to another environment, and then count all of it.
+      expect(getPaginated.mock.calls[0][1]).not.toHaveProperty("environment");
+    });
+
+    it("counts each event in the bucket of its own timestamp, zero-filling the window", async () => {
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-03T09:30:00Z" })], {
+        "1": [
+          buildEventAt("2026-07-03T09:30:00Z", "production"),
+          buildEventAt("2026-07-03T09:15:00Z", "production"),
+        ],
+      });
+
+      const out = await strategy.getErrorStats("p", WINDOW);
+
+      expect(countAt(out, "2026-07-03T09:00:00.000Z")).toBe(2);
+      expect(countAt(out, "2026-07-03T08:00:00.000Z")).toBe(0);
+      expect(out.truncated).toBe(false);
+    });
+
+    it("keeps only the events whose own environment tag matches", async () => {
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-03T09:30:00Z" })], {
+        "1": [
+          buildEventAt("2026-07-03T09:30:00Z", "recette"),
+          buildEventAt("2026-07-03T09:15:00Z", "production"),
+        ],
+      });
+
+      const production = await strategy.getErrorStats("p", WINDOW, "production");
+      const recette = await strategy.getErrorStats("p", WINDOW, "recette");
+      const all = await strategy.getErrorStats("p", WINDOW);
+
+      expect(countAt(production, "2026-07-03T09:00:00.000Z")).toBe(1);
+      expect(countAt(recette, "2026-07-03T09:00:00.000Z")).toBe(1);
+      // The whole point: a total is the sum of its environments.
+      expect(countAt(all, "2026-07-03T09:00:00.000Z")).toBe(2);
+    });
+
+    it("ignores events that fall outside the window", async () => {
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-03T09:30:00Z" })], {
+        "1": [
+          buildEventAt("2026-07-03T09:30:00Z"),
+          buildEventAt("2026-07-03T06:00:00Z"),
+        ],
+      });
+
+      const out = await strategy.getErrorStats("p", WINDOW);
+
+      expect(out.points.reduce((sum, point) => sum + point.count, 0)).toBe(1);
+    });
+
+    it("never reads the feed of an issue untouched during the window", async () => {
+      routeFeeds(
+        [
+          buildIssueDto({ id: "stale", lastSeen: "2026-07-01T00:00:00Z" }),
+          buildIssueDto({ id: "active", lastSeen: "2026-07-03T09:00:00Z" }),
+        ],
+        { active: [buildEventAt("2026-07-03T09:00:00Z")] },
+      );
+
+      await strategy.getErrorStats("p", WINDOW);
+
+      const paths = getPaginated.mock.calls.map((call) => call[0]);
+      expect(paths).toContain("/api/0/issues/active/events/");
+      expect(paths).not.toContain("/api/0/issues/stale/events/");
+    });
+
+    it("stops walking a feed at the first event older than the window", async () => {
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-03T09:00:00Z" })], {
+        "1": [buildEventAt("2026-07-03T09:00:00Z")],
+      });
+
+      await strategy.getErrorStats("p", WINDOW);
+
+      const feedCall = getPaginated.mock.calls.find((call) =>
+        String(call[0]).endsWith("/events/"),
+      );
+      const stopWhen = feedCall?.[2]?.stopWhen as (e: GlitchTipListEventDto) => boolean;
+      expect(stopWhen(buildEventAt("2026-07-03T07:00:00Z"))).toBe(true);
+      expect(stopWhen(buildEventAt("2026-07-03T09:00:00Z"))).toBe(false);
+    });
+
+    it("uses daily buckets when the period spans more than 24h", async () => {
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-04T00:00:00Z" })], {
+        "1": [buildEventAt("2026-07-04T05:00:00Z")],
       });
 
       const out = await strategy.getErrorStats("p", {
-        from: "2026-05-28T00:00:00Z",
-        to: "2026-05-29T00:00:00Z",
-        interval: "1h",
+        from: "2026-07-01T00:00:00Z",
+        to: "2026-07-05T00:00:00Z",
+        interval: "1d",
       });
 
-      expect(get).toHaveBeenCalledWith(
-        "/api/0/organizations/my-org/stats_v2/",
-        expect.objectContaining({
-          category: "error",
-          interval: "1h",
-          field: "sum(quantity)",
-          project: "p",
-          start: "2026-05-28T00:00:00Z",
-          end: "2026-05-29T00:00:00Z",
-        }),
-      );
-      expect(out).toEqual([{ timestamp: "2026-05-28T00:00:00Z", count: 3 }]);
+      expect(out.points).toHaveLength(5);
+      expect(countAt(out, "2026-07-04T00:00:00.000Z")).toBe(1);
     });
 
-    it("does not send the environment to stats_v2 (it is ignored there)", async () => {
-      get.mockResolvedValue({ intervals: [], groups: [] });
-
-      await strategy.getErrorStats("p", {
-        from: "2026-05-28T00:00:00Z",
-        to: "2026-05-29T00:00:00Z",
-        interval: "1h",
+    it("flags the series as truncated when the event budget runs out", async () => {
+      const flood = Array.from({ length: 2_000 }, () =>
+        buildEventAt("2026-07-03T09:00:00Z"),
+      );
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-03T09:00:00Z" })], {
+        "1": flood,
       });
 
-      expect(get.mock.calls[0][1]).not.toHaveProperty("environment");
+      const out = await strategy.getErrorStats("p", WINDOW);
+
+      expect(out.truncated).toBe(true);
+      expect(countAt(out, "2026-07-03T09:00:00.000Z")).toBe(2_000);
     });
 
-    it("sums the issues-stats buckets of the issues seen in the environment", async () => {
-      getPaginated.mockResolvedValue([
-        buildIssueDto({ id: "1" }),
-        buildIssueDto({ id: "2" }),
-      ]);
-      get.mockResolvedValue([
-        { id: "1", count: "3", stats: { "24h": [[1783069200, 2]], "14d": null } },
-        { id: "2", count: "1", stats: { "24h": [[1783069200, 1]], "14d": null } },
-      ]);
-
-      const out = await strategy.getErrorStats(
-        "p",
-        { from: "2026-07-03T08:00:00Z", to: "2026-07-03T10:00:00Z", interval: "1h" },
-        "production",
+    it("flags the series as truncated when the issues list caps on still-active issues", async () => {
+      const capped = Array.from({ length: 200 }, (_unused, i) =>
+        buildIssueDto({ id: `i${i}`, lastSeen: "2026-07-03T09:00:00Z" }),
       );
+      routeFeeds(capped, {});
 
-      expect(getPaginated.mock.calls[0][1]).toMatchObject({
-        project: "p",
-        environment: "production",
-        query: "",
-      });
-      expect(get).toHaveBeenCalledWith(
-        "/api/0/organizations/my-org/issues-stats/",
-        { groups: ["1", "2"], statsPeriod: "24h" },
-      );
-      const at = (iso: string) => out.find((point) => point.timestamp === iso)?.count;
-      expect(at("2026-07-03T09:00:00.000Z")).toBe(3); // 2 + 1 on the same hour
-      expect(at("2026-07-03T08:00:00.000Z")).toBe(0); // zero-filled
+      const out = await strategy.getErrorStats("p", WINDOW);
+
+      expect(out.truncated).toBe(true);
     });
 
-    it("asks for daily buckets when the period spans more than 24h", async () => {
-      getPaginated.mockResolvedValue([buildIssueDto({ id: "1" })]);
-      get.mockResolvedValue([{ id: "1", count: "0", stats: { "24h": null, "14d": [] } }]);
+    it("reports a complete all-zero series when nothing happened in the window", async () => {
+      routeFeeds([buildIssueDto({ id: "1", lastSeen: "2026-07-01T00:00:00Z" })], {});
 
-      await strategy.getErrorStats(
-        "p",
-        { from: "2026-07-01T00:00:00Z", to: "2026-07-05T00:00:00Z", interval: "1d" },
-        "production",
-      );
+      const out = await strategy.getErrorStats("p", WINDOW);
 
-      expect(get.mock.calls[0][1]).toMatchObject({ statsPeriod: "14d" });
-    });
-
-    it("does not call issues-stats when no issue matches the environment", async () => {
-      getPaginated.mockResolvedValue([]);
-
-      const out = await strategy.getErrorStats(
-        "p",
-        { from: "2026-07-03T08:00:00Z", to: "2026-07-03T10:00:00Z", interval: "1h" },
-        "production",
-      );
-
-      expect(get).not.toHaveBeenCalled();
-      expect(out.map((point) => point.count)).toEqual([0, 0, 0]);
+      expect(out.points.map((point) => point.count)).toEqual([0, 0, 0]);
+      expect(out.truncated).toBe(false);
     });
   });
 
@@ -220,6 +310,26 @@ describe("GlitchTipErrorMonitorStrategy", () => {
 
       expect(get).toHaveBeenCalledWith("/api/0/issues/i1/events/latest/");
       expect(out?.id).toBe("e1");
+    });
+
+    it("takes the head of the scoped feed instead, since /events/latest/ ignores the environment", async () => {
+      getPaginated.mockResolvedValue([
+        buildEventDto({ id: "e-recette", environment: "recette" }),
+        buildEventDto({ id: "e-prod", environment: "production" }),
+      ]);
+
+      const out = await strategy.getIssueLatestEvent("i1", "production");
+
+      expect(get).not.toHaveBeenCalled();
+      expect(out?.id).toBe("e-prod");
+    });
+
+    it("returns null when no event of that environment is in the scanned feed", async () => {
+      getPaginated.mockResolvedValue([
+        buildEventDto({ id: "e-recette", environment: "recette" }),
+      ]);
+
+      await expect(strategy.getIssueLatestEvent("i1", "production")).resolves.toBeNull();
     });
 
     it("returns null when the underlying call surfaces a 404", async () => {
@@ -251,7 +361,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
 
     it("forwards a custom limit and maps the events", async () => {
       get.mockResolvedValue([
-        { id: "e1", eventID: "x", dateCreated: "2026-05-28T00:00:00Z" },
+        { id: "e1", event_id: "x", date_created: "2026-05-28T00:00:00Z" },
       ]);
 
       const out = await strategy.getIssueEvents("i1", 5);
@@ -259,6 +369,37 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       expect(get.mock.calls[0][1]).toMatchObject({ limit: 5 });
       expect(out).toHaveLength(1);
       expect(out[0].id).toBe("e1");
+    });
+
+    it("keeps only the events tagged with the requested environment", async () => {
+      getPaginated.mockResolvedValue([
+        buildEventDto({ id: "e1", environment: "production" }),
+        buildEventDto({ id: "e2", environment: "recette" }),
+        buildEventDto({ id: "e3", environment: "production" }),
+        buildEventDto({ id: "e4" }),
+      ]);
+
+      const out = await strategy.getIssueEvents("i1", 25, "production");
+
+      expect(get).not.toHaveBeenCalled();
+      expect(getPaginated).toHaveBeenCalledWith(
+        "/api/0/issues/i1/events/",
+        {},
+        { maxItems: 100 },
+      );
+      expect(out.map((event) => event.id)).toEqual(["e1", "e3"]);
+    });
+
+    it("caps the filtered feed at the requested limit", async () => {
+      getPaginated.mockResolvedValue([
+        buildEventDto({ id: "e1", environment: "production" }),
+        buildEventDto({ id: "e2", environment: "production" }),
+        buildEventDto({ id: "e3", environment: "production" }),
+      ]);
+
+      const out = await strategy.getIssueEvents("i1", 2, "production");
+
+      expect(out.map((event) => event.id)).toEqual(["e1", "e2"]);
     });
   });
 

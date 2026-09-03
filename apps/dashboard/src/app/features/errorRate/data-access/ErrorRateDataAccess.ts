@@ -2,7 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { getErrorMonitorFactory } from "@/lib/errorMonitor/GetErrorMonitor";
 import type { Period } from "@/lib/shared/domain/Period";
-import type { ErrorRatePoint } from "../domain/ErrorRatePoint";
+import type { ErrorRatePoint, ErrorRateSeries } from "../domain/ErrorRatePoint";
 
 const HOUR_MS = 3_600_000;
 const PAST_HOURS = 24;
@@ -21,7 +21,7 @@ function formatHourLabel(date: Date): string {
   return `${hourPart}h`;
 }
 
-function toPoint(timestamp: string | Date, count: number | null): ErrorRatePoint {
+function toPoint(timestamp: string | Date, count: number): ErrorRatePoint {
   const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
   return {
     bucketEpoch: date.getTime(),
@@ -31,7 +31,7 @@ function toPoint(timestamp: string | Date, count: number | null): ErrorRatePoint
 }
 
 const fetchSeries = cache(
-  async (documentId: string, environment: string | null): Promise<ErrorRatePoint[]> => {
+  async (documentId: string, environment: string | null): Promise<ErrorRateSeries> => {
     const now = new Date();
     const period: Period = {
       from: new Date(now.getTime() - PAST_HOURS * HOUR_MS).toISOString(),
@@ -44,18 +44,21 @@ const fetchSeries = cache(
     const connection = await errorMonitorFactory.createConnection(documentId)
     const strategy =  errorMonitorFactory.createStrategy(connection)
 
-    const points = await strategy.getErrorStats(
+    const series = await strategy.getErrorStats(
       connection.projectId,
       period,
       environment ?? undefined,
     );
 
-    return points.map((p) => toPoint(p.timestamp, p.count));
+    return {
+      points: series.points.map((p) => toPoint(p.timestamp, p.count)),
+      truncated: series.truncated,
+    };
   },
 );
 
 export class ErrorRateDataAccess {
-  getSeries(documentId: string,  environment: string | null = null): Promise<ErrorRatePoint[]> {
+  getSeries(documentId: string,  environment: string | null = null): Promise<ErrorRateSeries> {
     return fetchSeries(documentId,  environment);
   }
 }

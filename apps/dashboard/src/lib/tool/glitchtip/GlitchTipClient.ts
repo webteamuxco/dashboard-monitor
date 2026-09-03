@@ -13,12 +13,17 @@ type RequestOverrides = Omit<RequestInit, "headers" | "cache"> & {
   headers?: Record<string, string>;
 };
 
-export interface PaginateOptions {
+export interface PaginateOptions<TItem = unknown> {
   // Stop once this many items have been collected across pages (honours an
   // explicit caller limit that can span more than one page).
   maxItems?: number;
   // Safety backstop against a server that never stops advertising a next page.
   maxPages?: number;
+  // Stop following cursors once a fetched item satisfies this. On a feed sorted
+  // newest-first, the first item outside the caller's time window ends the walk
+  // instead of draining the issue's whole history. Items are returned as
+  // fetched — the caller still filters.
+  stopWhen?: (item: TItem) => boolean;
 }
 
 const DEFAULT_MAX_PAGES = 50;
@@ -105,7 +110,7 @@ export class GlitchTipClient {
   async getPaginated<TItem>(
     path: string,
     query?: QueryParams,
-    options?: PaginateOptions,
+    options?: PaginateOptions<TItem>,
   ): Promise<TItem[]> {
     const maxItems = options?.maxItems ?? Infinity;
     const maxPages = options?.maxPages ?? DEFAULT_MAX_PAGES;
@@ -119,6 +124,7 @@ export class GlitchTipClient {
       items.push(...pageItems);
 
       if (items.length >= maxItems) return items.slice(0, maxItems);
+      if (options?.stopWhen && pageItems.some(options.stopWhen)) break;
 
       cursor = parseNextCursor(response.headers.get("Link"));
       if (!cursor) break;

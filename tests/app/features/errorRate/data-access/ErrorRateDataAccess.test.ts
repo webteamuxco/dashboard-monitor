@@ -29,7 +29,7 @@ describe("ErrorRateDataAccess.getSeries", () => {
   });
 
   it("calls getErrorStats with a 1h interval over the past 24h", async () => {
-    getErrorStatsMock.mockResolvedValue([]);
+    getErrorStatsMock.mockResolvedValue({ points: [], truncated: false });
     const da = new ErrorRateDataAccess();
 
     await da.getSeries("proj-1");
@@ -44,7 +44,7 @@ describe("ErrorRateDataAccess.getSeries", () => {
   });
 
   it("forwards the environment to getErrorStats when provided", async () => {
-    getErrorStatsMock.mockResolvedValue([]);
+    getErrorStatsMock.mockResolvedValue({ points: [], truncated: false });
 
     await new ErrorRateDataAccess().getSeries("proj-1", "staging");
 
@@ -52,35 +52,38 @@ describe("ErrorRateDataAccess.getSeries", () => {
   });
 
   it("maps each TimeSeriesPoint to ErrorRatePoint with bucketEpoch + French hour label", async () => {
-    getErrorStatsMock.mockResolvedValue([
-      { timestamp: "2026-05-28T08:00:00Z", count: 5 },
-      { timestamp: "2026-05-28T09:00:00Z", count: 0 },
-    ]);
+    getErrorStatsMock.mockResolvedValue({
+      points: [
+        { timestamp: "2026-05-28T08:00:00Z", count: 5 },
+        { timestamp: "2026-05-28T09:00:00Z", count: 0 },
+      ],
+      truncated: false,
+    });
     const da = new ErrorRateDataAccess();
 
     const out = await da.getSeries("p");
 
-    expect(out).toHaveLength(2);
-    expect(out[0].bucketEpoch).toBe(new Date("2026-05-28T08:00:00Z").getTime());
-    expect(out[0].count).toBe(5);
-    expect(out[0].label).toMatch(/^\d{2}h$/);
+    expect(out.points).toHaveLength(2);
+    expect(out.points[0].bucketEpoch).toBe(new Date("2026-05-28T08:00:00Z").getTime());
+    expect(out.points[0].count).toBe(5);
+    expect(out.points[0].label).toMatch(/^\d{2}h$/);
   });
 
-  it("preserves a null count without coercing it", async () => {
-    getErrorStatsMock.mockResolvedValue([
-      { timestamp: "2026-05-28T08:00:00Z", count: null as unknown as number },
-    ]);
-    const da = new ErrorRateDataAccess();
+  it("carries the monitor's truncation flag through to the view model", async () => {
+    // A silently shortened error rate reads as an improvement — the panel has
+    // to be able to say the chart is a floor.
+    getErrorStatsMock.mockResolvedValue({
+      points: [{ timestamp: "2026-05-28T08:00:00Z", count: 5 }],
+      truncated: true,
+    });
 
-    const out = await da.getSeries("p");
-
-    expect(out[0].count).toBeNull();
+    expect((await new ErrorRateDataAccess().getSeries("p")).truncated).toBe(true);
   });
 
-  it("returns an empty array when the monitor returns no points", async () => {
-    getErrorStatsMock.mockResolvedValue([]);
+  it("returns an empty, untruncated series when the monitor returns no points", async () => {
+    getErrorStatsMock.mockResolvedValue({ points: [], truncated: false });
     const da = new ErrorRateDataAccess();
 
-    expect(await da.getSeries("p")).toEqual([]);
+    expect(await da.getSeries("p")).toEqual({ points: [], truncated: false });
   });
 });

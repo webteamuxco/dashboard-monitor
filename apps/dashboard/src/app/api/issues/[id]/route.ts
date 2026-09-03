@@ -23,8 +23,10 @@ export async function GET(
     );
   }
 
+  const environment = request.nextUrl.searchParams.get("environment");
+
   try {
-    const data = await issuesDataAccess.getDetail(documentId, id);
+    const data = await issuesDataAccess.getDetail(documentId, id, environment);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

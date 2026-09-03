@@ -2,51 +2,69 @@ import "server-only";
 import type { ErrorMonitorStrategyInterface } from "../../strategy/ErrorMonitorStrategyInterface";
 import type { Issue, IssueFilters } from "../../domain/Issue";
 import type { Period } from "@/lib/shared/domain/Period";
-import type { TimeSeriesPoint } from "../../domain/TimeSeriesPoint";
+import type { TimeSeries } from "../../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../../domain/IssueEvent";
 import type { IssueComment, NewIssueComment } from "../../domain/IssueComment";
 import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { GlitchTipIssueDto } from "./dto/GlitchTipIssue";
-import type { GlitchTipStatsV2Dto } from "./dto/GlitchTipStatsV2";
-import type { GlitchTipEventDto } from "./dto/GlitchTipEvent";
+import type {
+  GlitchTipEventDto,
+  GlitchTipLatestEventDto,
+  GlitchTipListEventDto,
+} from "./dto/GlitchTipEvent";
 import type {
   GlitchTipCommentDto,
   GlitchTipCommentPayloadDto,
 } from "./dto/GlitchTipComment";
-import type {
-  GlitchTipIssueStatsDto,
-  GlitchTipStatsPeriod,
-} from "./dto/GlitchTipIssueStats";
 import { mapGlitchTipIssue } from "./mappers/IssueMapper";
-import { mapGlitchTipStatsV2 } from "./mappers/statsV2Mapper";
 import { mapGlitchTipEvent } from "./mappers/EventMapper";
 import { mapGlitchTipComment } from "./mappers/CommentMapper";
-import { mapGlitchTipIssueStats } from "./mappers/issueStatsMapper";
+import { mapGlitchTipEventSeries } from "./mappers/eventSeriesMapper";
 
-// GlitchTip's stats_v2 endpoint is a raw ingestion-volume counter: it ignores
-// `environment` (as a param and as a `query` token). The issues list, however,
-// does honour it — so an environment-scoped series is the sum of the per-issue
-// buckets of the issues seen in that environment, read from issues-stats.
-// Consequence: the scoping is per issue, not per event. An issue reported from
-// two environments contributes all its events to both series.
+// Nothing in GlitchTip aggregates per environment. `stats_v2` ignores the
+// filter and counts ingestion volume rather than events attached to issues;
+// `issues-stats` ignores it too; and scoping the *issues list* is per group, so
+// an issue with a single production event would hand its whole event volume to
+// the production series. The one per-event source is each issue's event feed,
+// where every event carries its own timestamp and `environment` tag — so both
+// the scoped and the unscoped series are built from it, and a total is always
+// the sum of its environments.
 const HOUR_MS = 3_600_000;
 const DAY_MS = 86_400_000;
 // The list is sorted by lastSeen descending, so the cap only ever drops issues
 // older than the ones already counted — never a bucket inside the window.
 const ISSUES_SCAN_LIMIT = 200;
-// Keeps the repeated `groups` params off the URL-length limit.
-const STATS_GROUPS_PER_REQUEST = 50;
+// Ceiling on the events read to build one series, across every issue. Reaching
+// it marks the series `truncated` instead of quietly under-reporting.
+const EVENT_SCAN_BUDGET = 2_000;
+// The per-issue event endpoints ignore `environment` — as a param *and* as a
+// `query` token, measured against GlitchTip 5.x — so an environment-scoped
+// event list is obtained by reading the feed and keeping the events whose
+// `environment` tag matches. The feed is sorted by date descending, so the cap
+// only ever drops events older than the ones already kept; an issue whose
+// recent activity is entirely in another environment can still come back short.
+const EVENTS_SCAN_LIMIT = 100;
 
-function chunk<T>(items: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
-  return chunks;
+function eventEnvironment(dto: GlitchTipEventDto): string | undefined {
+  return dto.tags?.find((tag) => tag.key === "environment")?.value;
 }
 
-function resolveStatsPeriod(spanMs: number): { statsPeriod: GlitchTipStatsPeriod; bucketMs: number } {
-  return spanMs <= 24 * HOUR_MS
-    ? { statsPeriod: "24h", bucketMs: HOUR_MS }
-    : { statsPeriod: "14d", bucketMs: DAY_MS };
+function resolveBucketMs(spanMs: number): number {
+  return spanMs <= 24 * HOUR_MS ? HOUR_MS : DAY_MS;
+}
+
+// The list is ordered by lastSeen descending: if even the oldest issue it
+// returned was still active inside the window, the cap hid others that were too.
+function hasUnreadActiveIssues(
+  issues: GlitchTipIssueDto[],
+  fromMs: number,
+): boolean {
+  const oldest = issues.at(-1);
+  return (
+    issues.length >= ISSUES_SCAN_LIMIT &&
+    !!oldest &&
+    Date.parse(oldest.lastSeen) >= fromMs
+  );
 }
 
 function buildIssueQuery(filters?: IssueFilters): string {
@@ -88,52 +106,60 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     projectId: string,
     period: Period,
     environment?: string,
-  ): Promise<TimeSeriesPoint[]> {
-    if (environment) {
-      return this.getErrorStatsForEnvironment(projectId, period, environment);
-    }
+  ): Promise<TimeSeries> {
+    const fromMs = Date.parse(period.from);
+    const toMs = Date.parse(period.to);
 
-    const dto = await this.client.get<GlitchTipStatsV2Dto>(
-      `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
-      {
-        category: "error",
-        interval: period.interval,
-        field: "sum(quantity)",
-        project: projectId,
-        start: period.from,
-        end: period.to,
-      },
-    );
-    return mapGlitchTipStatsV2(dto);
-  }
-
-  private async getErrorStatsForEnvironment(
-    projectId: string,
-    period: Period,
-    environment: string,
-  ): Promise<TimeSeriesPoint[]> {
+    // Listed without an environment filter on purpose: the filter is per group,
+    // so it would both admit issues whose window activity is in another
+    // environment and count them in full. The narrowing happens per event.
     const issues = await this.client.getPaginated<GlitchTipIssueDto>(
       `/api/0/organizations/${this.organizationSlug}/issues/`,
-      { project: projectId, environment, query: "" },
+      { project: projectId, query: "" },
       { maxItems: ISSUES_SCAN_LIMIT },
     );
 
-    const fromMs = Date.parse(period.from);
-    const toMs = Date.parse(period.to);
-    const { statsPeriod, bucketMs } = resolveStatsPeriod(toMs - fromMs);
+    const active = issues.filter((issue) => Date.parse(issue.lastSeen) >= fromMs);
 
-    const stats: GlitchTipIssueStatsDto[] = [];
+    const events: GlitchTipListEventDto[] = [];
+    let budget = EVENT_SCAN_BUDGET;
+    let truncated = hasUnreadActiveIssues(issues, fromMs);
+
     // Sequential on purpose: a burst of concurrent calls is what a self-hosted
     // GlitchTip answers with 500s.
-    for (const groups of chunk(issues.map((issue) => issue.id), STATS_GROUPS_PER_REQUEST)) {
-      const page = await this.client.get<GlitchTipIssueStatsDto[]>(
-        `/api/0/organizations/${this.organizationSlug}/issues-stats/`,
-        { groups, statsPeriod },
+    for (const issue of active) {
+      if (budget <= 0) {
+        truncated = true;
+        break;
+      }
+
+      const feed = await this.client.getPaginated<GlitchTipListEventDto>(
+        `/api/0/issues/${issue.id}/events/`,
+        {},
+        {
+          maxItems: budget,
+          stopWhen: (event) => Date.parse(event.date_created) < fromMs,
+        },
       );
-      stats.push(...page);
+
+      // The walk ended on the budget rather than on an event older than the
+      // window, so this issue still had events left to count.
+      const oldest = feed.at(-1);
+      if (feed.length >= budget && oldest && Date.parse(oldest.date_created) >= fromMs) {
+        truncated = true;
+      }
+
+      budget -= feed.length;
+      events.push(...feed);
     }
 
-    return mapGlitchTipIssueStats(stats, statsPeriod, { fromMs, toMs, bucketMs });
+    const points = mapGlitchTipEventSeries(
+      events,
+      { fromMs, toMs, bucketMs: resolveBucketMs(toMs - fromMs) },
+      environment,
+    );
+
+    return { points, truncated };
   }
 
   async getIssue(issueId: string): Promise<Issue> {
@@ -143,9 +169,20 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     return mapGlitchTipIssue(dto);
   }
 
-  async getIssueLatestEvent(issueId: string): Promise<IssueEvent | null> {
+  async getIssueLatestEvent(
+    issueId: string,
+    environment?: string,
+  ): Promise<IssueEvent | null> {
+    // `/events/latest/` is the whole group's latest event, all environments
+    // mixed, and it ignores the filter — so a scoped "latest" is the head of
+    // the scoped feed.
+    if (environment) {
+      const [latest] = await this.getIssueEvents(issueId, 1, environment);
+      return latest ?? null;
+    }
+
     try {
-      const dto = await this.client.get<GlitchTipEventDto>(
+      const dto = await this.client.get<GlitchTipLatestEventDto>(
         `/api/0/issues/${issueId}/events/latest/`,
       );
       return mapGlitchTipEvent(dto);
@@ -155,12 +192,29 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     }
   }
 
-  async getIssueEvents(issueId: string, limit = 25): Promise<IssueEvent[]> {
-    const dto = await this.client.get<GlitchTipEventDto[]>(
+  async getIssueEvents(
+    issueId: string,
+    limit = 25,
+    environment?: string,
+  ): Promise<IssueEvent[]> {
+    if (!environment) {
+      const dto = await this.client.get<GlitchTipListEventDto[]>(
+        `/api/0/issues/${issueId}/events/`,
+        { limit },
+      );
+      return dto.map(mapGlitchTipEvent);
+    }
+
+    const dto = await this.client.getPaginated<GlitchTipListEventDto>(
       `/api/0/issues/${issueId}/events/`,
-      { limit },
+      {},
+      { maxItems: EVENTS_SCAN_LIMIT },
     );
-    return dto.map(mapGlitchTipEvent);
+
+    return dto
+      .filter((event) => eventEnvironment(event) === environment)
+      .slice(0, limit)
+      .map(mapGlitchTipEvent);
   }
 
   async getIssueComments(issueId: string): Promise<IssueComment[]> {

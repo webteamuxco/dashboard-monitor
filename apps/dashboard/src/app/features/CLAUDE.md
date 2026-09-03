@@ -83,7 +83,8 @@ Export a single object whose methods return tuples typed `as const`:
 export const issuesKeys = {
   recent: (documentId: string, limit: number) =>
     ["issues", "recent", documentId, limit] as const,
-  detail: (issueId: string) => ["issues", "detail", issueId] as const,
+  detail: (issueId: string, environment: string | null = null) =>
+    ["issues", "detail", issueId, environment] as const,
 };
 ```
 

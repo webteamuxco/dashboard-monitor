@@ -54,13 +54,13 @@ Lists unresolved error issues and shows full details (events, stacktrace, commen
 
 - **Monitor consumed:** `errorMonitor` (`getIssues`, `getIssue`, `getIssueLatestEvent`, `getIssueEvents`, `getIssueComments`)
 - **Gated by strategy:** `error-monitor`
-- **API routes:** `GET /api/issues?documentId&limit&environment`, `GET /api/issues/[id]?documentId`
+- **API routes:** `GET /api/issues?documentId&limit&environment`, `GET /api/issues/[id]?documentId&environment`
 - **Domain types:** `IssueRow`, `IssueDetailView`
-- **Hooks:** `useIssues(panelId, limit, environment, intervalMs)`, `useIssueDetail(panelId, issueId)`, `useProjectStrategy(projectId, panelSlug, environment, intervalMs)`
+- **Hooks:** `useIssues(panelId, limit, environment, intervalMs)`, `useIssueDetail(panelId, issueId, environment)`, `useProjectStrategy(projectId, panelSlug, environment, intervalMs)`
 - **UI:** `IssuesPanel`, `IssueDetailSheet`, `IssuesKpi`
-- **Query keys:** `["issues", "recent", panelId, limit, environment]`, `["issues", "detail", issueId]`, `["issues", "isConfig", projectId, environment, panelSlug]`
+- **Query keys:** `["issues", "recent", panelId, limit, environment]`, `["issues", "detail", issueId, environment]`, `["issues", "isConfig", projectId, environment, panelSlug]`
 
-The detail sheet is only mounted when an issue is selected; the `useIssueDetail` hook is `enabled: !!issueId` so no fetch happens before the user clicks a row. `useProjectStrategy` is `enabled` only once a panel slug exists.
+The detail sheet is only mounted when an issue is selected; the `useIssueDetail` hook is `enabled: !!issueId` so no fetch happens before the user clicks a row. It reads the selected environment from the store and scopes the events feed to it — the group's own counters stay all-environment and are labelled as such, see [monitors.md](monitors.md#the-environment-filter-is-the-adapters-problem-not-the-providers). `useProjectStrategy` is `enabled` only once a panel slug exists.
 
 ### errorRate
 
@@ -71,12 +71,15 @@ Displays a 24-hour error count chart (one point per hour bucket) using Recharts.
 - **Monitor consumed:** `errorMonitor` (`getErrorStats` with a 24h period and a `1h` interval)
 - **Gated by strategy:** `error-monitor`
 - **API route:** `GET /api/error-rate?documentId&environment`
-- **Domain type:** `ErrorRatePoint { bucketEpoch: number; label: string; count: number | null }`
+- **Domain type:** `ErrorRateSeries { points: ErrorRatePoint[]; truncated: boolean }`, `ErrorRatePoint { bucketEpoch: number; label: string; count: number }`
 - **Hooks:** `useErrorRate(panelId, environment, intervalMs)`
 - **UI:** `ErrorRatePanel` (Recharts AreaChart)
 - **Query key:** `["errorRate", "series", panelId, environment]`
 
-A `null` count means "no data for that bucket" and is preserved as-is — it renders as a gap, not as a zero.
+Every bucket of the window carries a real count, zero-filled: the adapter enumerates
+the window itself, so an empty hour means "no error", not "no data". `truncated` says
+the adapter could not read the whole window and the chart is a floor — the panel
+labels it, see [monitors.md](monitors.md#the-environment-filter-is-the-adapters-problem-not-the-providers).
 
 ### reservations
 

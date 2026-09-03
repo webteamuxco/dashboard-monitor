@@ -90,6 +90,16 @@ describe("fetchIssueDetailClient", () => {
     expect(calledUrl(fetchMock)).toContain("/api/issues/a%2Fb?");
   });
 
+  it("adds the environment only when one is selected", async () => {
+    const fetchMock = mockOk({ issue: { id: "i1" } });
+
+    await fetchIssueDetailClient("panel-1", "i1", "production");
+    expect(calledParams(fetchMock)).toMatchObject({ environment: "production" });
+
+    await fetchIssueDetailClient("panel-1", "i1", null);
+    expect(calledParams(fetchMock)).not.toHaveProperty("environment");
+  });
+
   it("throws the BFF error message on failure", async () => {
     mockError(502, "GlitchTip request failed: 404");
 

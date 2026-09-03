@@ -4,7 +4,7 @@ export function getProjectsQuery(): GraphQlQuery {
     return {
         query: gql`
             query GetProjects {
-                projects {
+                projects(sort: "order") {
                     documentId
                     publishedAt
                     title

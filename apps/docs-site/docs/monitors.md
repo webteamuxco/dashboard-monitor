@@ -167,10 +167,10 @@ const strategy = factory.createStrategy(connection);
 ```typescript
 export interface ErrorMonitorStrategyInterface {
   getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]>;
-  getErrorStats(projectId: string, period: Period, environment?: string): Promise<TimeSeriesPoint[]>;
+  getErrorStats(projectId: string, period: Period, environment?: string): Promise<TimeSeries>;
   getIssue(issueId: string): Promise<Issue>;
-  getIssueLatestEvent(issueId: string): Promise<IssueEvent | null>;
-  getIssueEvents(issueId: string, limit?: number): Promise<IssueEvent[]>;
+  getIssueLatestEvent(issueId: string, environment?: string): Promise<IssueEvent | null>;
+  getIssueEvents(issueId: string, limit?: number, environment?: string): Promise<IssueEvent[]>;
   getIssueComments(issueId: string): Promise<IssueComment[]>;
 }
 ```
@@ -178,7 +178,58 @@ export interface ErrorMonitorStrategyInterface {
 - **Strapi strategy name:** `error-monitor`
 - **Entry point:** [GetErrorMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/GetErrorMonitor.ts) — `getErrorMonitorFactory(documentId)`
 - **Registered adapters:** `glitchtip` ([GlitchTipErrorMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorFactory.ts))
-- **Domain types:** `Issue`, `IssueEvent`, `IssueComment`, `TimeSeriesPoint`, `ErrorLevel`
+- **Domain types:** `Issue`, `IssueEvent`, `IssueComment`, `TimeSeries` / `TimeSeriesPoint`, `ErrorLevel`
+
+#### The environment filter is the adapter's problem, not the provider's
+
+Every read that can be scoped takes an optional `environment`, and an adapter must
+honour it **whether or not its provider does**. GlitchTip honours it in exactly one
+place, measured endpoint by endpoint (always with a bogus environment value — the only
+test that distinguishes "filtered" from "ignored"):
+
+| GlitchTip endpoint | Honours `environment` | Used for |
+|---|---|---|
+| `/organizations/{org}/issues/` | yes | the issues list and KPI |
+| `/issues/{id}/events/` | no — neither as a param nor as a `query` token | the detail feed, and the error-rate series |
+| `/issues/{id}/events/latest/` | no | nothing when an environment is set — the head of the scoped feed replaces it |
+| `/issues/{id}/` | no | the group's own counters, which span every environment |
+| `/organizations/{org}/stats_v2/` | no | **nothing — no longer used** |
+| `/organizations/{org}/issues-stats/` | no | **nothing — no longer used** |
+
+So every per-environment number is computed from **each event's own `environment`
+tag**, read off the issue event feed. That is the only per-event source GlitchTip
+exposes, and the reason the error-rate series is built from feeds rather than from a
+ready-made counter:
+
+- `stats_v2` ignores the filter, and counts *ingestion volume* rather than events
+  attached to issues — on a live project it read 11 where the feeds held 6.
+- `issues-stats` ignores it too.
+- Scoping the *issues list* and then summing whole issues is per group, not per
+  event: an issue with one production event hands its entire event volume to the
+  production series. On a live project that made the four environments total 16
+  events for 6 real ones, and reported activity in an environment that had none.
+
+Because it is one source, **a total is always the sum of its environments** — which is
+the property to check first when the numbers look wrong.
+
+Three consequences the UI has to state rather than hide:
+
+- **Scoping the issues list is per group, not per event.** An issue with a single
+  production event appears in the production list, carrying its all-environment
+  counters. The issue detail labels those counters accordingly.
+- **Filtering a feed is capped.** The detail scans at most `EVENTS_SCAN_LIMIT`
+  events per issue; since the feed is sorted by date descending, an issue whose recent
+  activity is entirely in another environment can legitimately come back with an empty
+  scoped list. The sheet says so instead of rendering nothing.
+- **A series says when it is incomplete.** `getErrorStats` reads at most
+  `EVENT_SCAN_BUDGET` events across every issue active in the window, and only reads
+  the feed of an issue whose `lastSeen` falls inside it. Exhausting the budget — or
+  capping the issues list while its oldest entry is still active — returns
+  `truncated: true`, and the panel labels the chart as a floor. Never drop that flag on
+  the way to the UI: a silently shortened error rate reads as an improvement.
+
+A new adapter must probe its provider the same way and compute per-event in the
+adapter for whatever the provider cannot filter.
 
 ### logMonitor
 

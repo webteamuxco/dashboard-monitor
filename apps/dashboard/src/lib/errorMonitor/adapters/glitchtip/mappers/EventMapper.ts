@@ -115,12 +115,20 @@ function pickRequest(entries: GlitchTipEntryDto[]): EventRequest | null {
   return mapRequest(entry.data as GlitchTipRequestDto);
 }
 
+function pickEventId(dto: GlitchTipEventDto): string {
+  return "eventID" in dto ? dto.eventID : dto.event_id;
+}
+
+function pickDateCreated(dto: GlitchTipEventDto): string {
+  return "dateCreated" in dto ? dto.dateCreated : dto.date_created;
+}
+
 export function mapGlitchTipEvent(dto: GlitchTipEventDto): IssueEvent {
   const entries = dto.entries ?? [];
   return {
     id: dto.id,
-    eventID: dto.eventID,
-    dateCreated: dto.date_created,
+    eventID: pickEventId(dto),
+    dateCreated: pickDateCreated(dto),
     message: dto.message ?? null,
     platform: dto.platform ?? null,
     culprit: dto.culprit ?? null,

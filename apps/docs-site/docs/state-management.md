@@ -141,8 +141,8 @@ Each feature owns a `queryKeys.ts` file. This avoids stringly-typed keys scatter
 export const issuesKeys = {
   recent: (documentId: string, limit: number, environment: string | null = null) =>
     ["issues", "recent", documentId, limit, environment] as const,
-  detail: (issueId: string) =>
-    ["issues", "detail", issueId] as const,
+  detail: (issueId: string, environment: string | null = null) =>
+    ["issues", "detail", issueId, environment] as const,
 };
 ```
 
@@ -155,7 +155,7 @@ Inventory (the id column says *which* Strapi id the key embeds):
 | `configKeys.pannels(id)` | `["config", "pannels", id]` | project |
 | `issuesKeys.isConfig(id, env, panelSlug)` | `["issues", "isConfig", id, env, panelSlug]` | project + panel slug |
 | `issuesKeys.recent(id, limit, env)` | `["issues", "recent", id, limit, env]` | panel |
-| `issuesKeys.detail(issueId)` | `["issues", "detail", issueId]` | — (provider issue id) |
+| `issuesKeys.detail(issueId, env)` | `["issues", "detail", issueId, env]` | — (provider issue id) |
 | `errorRateKeys.series(id, env)` | `["errorRate", "series", id, env]` | panel |
 | `reservationsKeys.series(id, win, env)` | `["reservations", "series", id, win, env]` | panel |
 | `visitorsKeys.timeline(id, win)` | `["visitors", "timeline", id, win]` | panel |
