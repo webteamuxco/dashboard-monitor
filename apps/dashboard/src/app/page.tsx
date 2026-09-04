@@ -17,6 +17,10 @@ import {
   LOG_MONITOR_STRATEGY_ENUM,
   TRACKER_MONITOR_STRATEGY_ENUM,
 } from "@/lib/shared/strategiesEnum";
+import {
+  SHOW_DEV_PANEL_QUERY_PARAM,
+  readDevelopmentPanelParam,
+} from "./features/utils/queryFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +35,11 @@ function ConfigMessage({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const fallbackRefreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS;
   const environment = resolveDefaultEnvironment();
 
@@ -46,10 +54,14 @@ export default async function Home() {
     );
   }
 
+  const showDevelopmentPanel = readDevelopmentPanelParam(
+    (await searchParams)[SHOW_DEV_PANEL_QUERY_PARAM],
+  );
+
   const initialDocumentId = projects[0].documentId;
   const [initialConfig, panels] = await Promise.all([
     configDataAccess.getProjectConfig(initialDocumentId),
-    configDataAccess.getProjectPanels(initialDocumentId),
+    configDataAccess.getProjectPanels(initialDocumentId, showDevelopmentPanel),
   ]);
 
   const { presets: initialWindowPresets, initialWindowMinutes } =
@@ -58,7 +70,7 @@ export default async function Home() {
   const queryClient = new QueryClient();
   queryClient.setQueryData(configKeys.projects(), projects);
   queryClient.setQueryData(configKeys.project(initialDocumentId), initialConfig);
-  queryClient.setQueryData(configKeys.pannels(initialDocumentId), panels);
+  queryClient.setQueryData(configKeys.pannels(initialDocumentId, showDevelopmentPanel), panels);
 
   // Strapi returns the panels sorted by `order`, and PannelSelector selects the
   // first one when nothing is persisted yet. Prefetching under any other id

@@ -50,9 +50,11 @@ export class StrapiClientStrategy {
 
       getProjectPanels(
         documentId: string,
+        showDevelopmentPanel: boolean
       ): Promise<DashboardPanel[] | null> {
         return this.getRepository().getProjectPanels(
-          documentId
+          documentId,
+          showDevelopmentPanel
         )
       }
 }

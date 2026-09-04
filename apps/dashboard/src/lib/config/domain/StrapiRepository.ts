@@ -75,9 +75,10 @@ export class StrapiRepository {
 
     async getProjectPanels(
         documentId: string,
+        showDevelopmentPanel: boolean
     ): Promise<DashboardPanel[] | null> {
         const body = await this.execute<{ dashboardPanels: DashboardPanelDto[] }>(
-            getPanelsByProjectIdQuery(documentId),
+            getPanelsByProjectIdQuery(documentId, showDevelopmentPanel),
         );
 
         if (!body.dashboardPanels.length) {

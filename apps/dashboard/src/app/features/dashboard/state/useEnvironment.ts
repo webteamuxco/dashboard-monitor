@@ -1,7 +1,6 @@
 "use client";
 
 import { create } from "zustand";
-import { resolveDefaultEnvironment } from "./environments";
 
 interface EnvironmentStore {
   environment: string | null;
@@ -9,6 +8,6 @@ interface EnvironmentStore {
 }
 
 export const useEnvironment = create<EnvironmentStore>((set) => ({
-  environment: resolveDefaultEnvironment(),
+  environment: null,
   setEnvironment: (environment) => set({ environment }),
 }));

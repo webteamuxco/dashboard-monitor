@@ -587,8 +587,11 @@ function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: 
               </span>
             </div>
             {e.message && (
-              <div className="truncate text-muted-foreground/80">{e.id}</div>
+              <div className="flex justify-between truncate text-muted-foreground/80">{e.id} 
+                <span>{e.tags.find(tag => tag.key === 'environment')?.value ?? ''}</span>
+              </div>
             )}
+            
           </li>
         ))}
       </ul>

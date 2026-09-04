@@ -25,6 +25,7 @@ function buildPanel(overrides: Partial<DashboardPanel> = {}): DashboardPanel {
     displayName: "Audience",
     icon: "users",
     order: 1,
+    isDevelopment: false,
     mappedTools: [],
     toolConfigurations: [
       {

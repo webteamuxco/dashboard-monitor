@@ -27,6 +27,7 @@ function buildPanel(overrides: Partial<DashboardPanel> = {}): DashboardPanel {
     displayName: "Production",
     icon: "activity",
     order: 1,
+    isDevelopment: false,
     ...overrides,
   };
 }
@@ -148,7 +149,7 @@ describe("useActivePanel", () => {
     );
 
     await waitFor(() =>
-      expect(fetchProjectPanelsMock).toHaveBeenCalledWith("project-1"),
+      expect(fetchProjectPanelsMock).toHaveBeenCalledWith("project-1", false),
     );
   });
 

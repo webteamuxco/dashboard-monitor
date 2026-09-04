@@ -69,7 +69,9 @@ export function DashboardHeader({ documentId, panelId, limit, intervalMs }: Dash
             <>
               <ProjectSelector fallbackDocumentId={documentId} />
               <PannelSelector fallbackDocumentId={documentId}></PannelSelector>
-              <EnvironmentSelector />
+              {/** 
+                <EnvironmentSelector />
+              */}
               <WindowSelector />
             </>
           )}

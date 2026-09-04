@@ -24,8 +24,8 @@ const fetchProjectStrategies = cache((projectId: string, selectedPanel?: string 
   return getConfigMonitor().getProjectStrategies(projectId, selectedPanel)
 });
 
-const fetchProjectPanels = cache((projectId: string): Promise<DashboardPanel[] | null> => {
-  return getConfigMonitor().getProjectPanels(projectId)
+const fetchProjectPanels = cache((projectId: string, showDevelopmentPanel: boolean): Promise<DashboardPanel[] | null> => {
+  return getConfigMonitor().getProjectPanels(projectId, showDevelopmentPanel)
 });
 
 
@@ -50,9 +50,10 @@ export class ConfigDataAccess {
   }
 
   getProjectPanels(
-    projectId: string
+    projectId: string,
+    showDevelopmentPanel: boolean
   ): Promise<DashboardPanel[] | null> {
-    return fetchProjectPanels(projectId);
+    return fetchProjectPanels(projectId, showDevelopmentPanel);
   }
 }
 

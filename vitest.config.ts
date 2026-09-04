@@ -11,6 +11,12 @@ export default defineConfig({
         __dirname,
         "./tests/shims/server-only.ts"
       ),
+      // `next` is only installed in apps/dashboard, so the suite cannot resolve
+      // — nor vi.mock — this specifier. See tests/shims/next-navigation.ts.
+      "next/navigation": path.resolve(
+        __dirname,
+        "./tests/shims/next-navigation.ts"
+      ),
     },
     // React, TanStack Query and Zustand live in apps/dashboard; the suite lives
     // here, so the root package.json devDependencies pin the same versions.

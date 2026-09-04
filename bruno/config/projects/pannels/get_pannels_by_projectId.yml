@@ -5,7 +5,11 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/config/projects/f20rkqy3w59m3k5kloosbwug/panels"
+  url: "{{url}}/api/config/projects/f20rkqy3w59m3k5kloosbwug/panels?showDevelopmentPanel=true"
+  params:
+    - name: showDevelopmentPanel
+      value: "true"
+      type: query
   auth: inherit
 
 settings:

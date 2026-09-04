@@ -74,6 +74,7 @@ const PANEL: DashboardPanel = {
   displayName: "Production",
   icon: "activity",
   order: 1,
+  isDevelopment: false,
 };
 
 function renderDashboard() {

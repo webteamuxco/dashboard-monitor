@@ -27,11 +27,13 @@ import { useProjectConfig } from "@/app/features/config/hooks/useProjectConfig";
 import { usePanels } from "@/app/features/config/hooks/usePannels";
 import { configKeys } from "@/app/features/config/queryKeys";
 import { renderQueryHook } from "../../../../helpers/renderHook";
+import { setTestSearchParams } from "../../../../shims/next-navigation";
 
 beforeEach(() => {
   fetchProjectsClientMock.mockReset();
   fetchProjectConfigClientMock.mockReset();
   fetchProjectPanelsMock.mockReset();
+  setTestSearchParams();
 });
 
 describe("useProjects", () => {
@@ -104,7 +106,7 @@ describe("useProjectConfig", () => {
 });
 
 describe("usePanels", () => {
-  it("fetches the panels of the given project", async () => {
+  it("fetches the panels of the given project, dev panels hidden", async () => {
     fetchProjectPanelsMock.mockResolvedValue([{ id: "panel-1" }]);
 
     const { result } = renderQueryHook(
@@ -115,7 +117,43 @@ describe("usePanels", () => {
     await waitFor(() =>
       expect(result.current.data).toEqual([{ id: "panel-1" }]),
     );
-    expect(fetchProjectPanelsMock).toHaveBeenCalledWith("project-1");
+    expect(fetchProjectPanelsMock).toHaveBeenCalledWith("project-1", false);
+    expect(configKeys.pannels("project-1", false)).toEqual([
+      "config",
+      "pannels",
+      "project-1",
+      false,
+    ]);
+  });
+
+  it("asks for the dev panels when ?showDevelopmentPanel=true", async () => {
+    setTestSearchParams({ showDevelopmentPanel: "true" });
+    fetchProjectPanelsMock.mockResolvedValue([{ id: "panel-dev" }]);
+
+    const { result } = renderQueryHook(
+      (documentId: string) => usePanels(documentId),
+      "project-1",
+    );
+
+    await waitFor(() =>
+      expect(result.current.data).toEqual([{ id: "panel-dev" }]),
+    );
+    expect(fetchProjectPanelsMock).toHaveBeenCalledWith("project-1", true);
+  });
+
+  it("treats any other value of the flag as off", async () => {
+    setTestSearchParams({ showDevelopmentPanel: "1" });
+    fetchProjectPanelsMock.mockResolvedValue([{ id: "panel-1" }]);
+
+    const { result } = renderQueryHook(
+      (documentId: string) => usePanels(documentId),
+      "project-1",
+    );
+
+    await waitFor(() =>
+      expect(result.current.data).toEqual([{ id: "panel-1" }]),
+    );
+    expect(fetchProjectPanelsMock).toHaveBeenCalledWith("project-1", false);
   });
 
   it("stays disabled without a project id", () => {

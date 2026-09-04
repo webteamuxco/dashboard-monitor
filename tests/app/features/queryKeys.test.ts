@@ -23,25 +23,35 @@ describe("configKeys", () => {
     ]);
   });
 
-  it("keys the panel list by the project documentId", () => {
+  it("keys the panel list by the project documentId and the dev-panel flag", () => {
     // Without the id, switching project served the previous project's panels
     // until the 5-minute staleTime expired.
-    expect(configKeys.pannels("project-1")).toEqual([
+    expect(configKeys.pannels("project-1", false)).toEqual([
       "config",
       "pannels",
       "project-1",
+      false,
     ]);
   });
 
   it("gives every config key the same prefix, so one invalidation covers all", () => {
     expect(configKeys.projects()[0]).toBe("config");
     expect(configKeys.project("p")[0]).toBe("config");
-    expect(configKeys.pannels("p")[0]).toBe("config");
+    expect(configKeys.pannels("p", false)[0]).toBe("config");
   });
 
   it("changes the panel-list key when the project changes", () => {
-    expect(configKeys.pannels("project-1")).not.toEqual(
-      configKeys.pannels("project-2"),
+    expect(configKeys.pannels("project-1", false)).not.toEqual(
+      configKeys.pannels("project-2", false),
+    );
+  });
+
+  it("changes the panel-list key when ?showDevelopmentPanel flips", () => {
+    // The flag narrows the Strapi query, so the two lists are different
+    // resources. Sharing one key served the filtered list to the dev view
+    // for the whole 5-minute staleTime.
+    expect(configKeys.pannels("project-1", true)).not.toEqual(
+      configKeys.pannels("project-1", false),
     );
   });
 });
@@ -156,14 +166,14 @@ describe("key layout invariants", () => {
     expect(reservationsKeys.series("panel-1", 30)[2]).toBe("panel-1");
     expect(visitorsKeys.timeline("panel-1", 60)[2]).toBe("panel-1");
     expect(configKeys.project("project-1")[2]).toBe("project-1");
-    expect(configKeys.pannels("project-1")[2]).toBe("project-1");
+    expect(configKeys.pannels("project-1", false)[2]).toBe("project-1");
   });
 
   it("starts every key with two constant segments", () => {
     const keys = [
       configKeys.projects(),
       configKeys.project("p"),
-      configKeys.pannels("p"),
+      configKeys.pannels("p", false),
       issuesKeys.recent("p", 1),
       issuesKeys.detail("i"),
       issuesKeys.isConfig("p"),

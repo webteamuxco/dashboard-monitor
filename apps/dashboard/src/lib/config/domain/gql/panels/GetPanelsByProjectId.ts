@@ -2,6 +2,7 @@ import { GraphQlQuery, gql } from "@/lib/shared/domain/GraphqlQuery";
 
 export function getPanelsByProjectIdQuery(
     projectId: string,
+    showDevelopmentPanel: boolean
 ): GraphQlQuery {
     return {
         query: gql`
@@ -13,6 +14,7 @@ export function getPanelsByProjectIdQuery(
                 slug
                 display_name
                 order
+                is_development
             }
             }
         `,
@@ -21,6 +23,12 @@ export function getPanelsByProjectIdQuery(
                 project: {
                     documentId: {  eq: projectId  },
                 },
+            ...(!showDevelopmentPanel
+            ? {
+                is_development: {
+                    eq: false,
+                },
+              }: {}),
             },
         },
     };

@@ -199,6 +199,7 @@ describe("StrapiRepository queries", () => {
           display_name: "Prod",
           icon: "activity",
           order: 1,
+          is_development: false,
         },
         {
           documentId: "panel-2",
@@ -207,27 +208,59 @@ describe("StrapiRepository queries", () => {
           display_name: "Staging",
           icon: "bug",
           order: 2,
+          is_development: false,
         },
       ],
     });
 
-    const panels = await buildRepository().getProjectPanels("project-1");
+    const panels = await buildRepository().getProjectPanels("project-1", false);
 
     const body = lastRequestBody(fetchMock);
     expect(body.query).toContain('sort: "order"');
-    expect(body.variables).toEqual({
+    expect(panels?.map((panel) => panel.id)).toEqual(["panel-1", "panel-2"]);
+  });
+
+  it("getProjectPanels excludes the development panels by default", async () => {
+    const fetchMock = mockGraphQl({ dashboardPanels: [{ documentId: "panel-1" }] });
+
+    await buildRepository().getProjectPanels("project-1", false);
+
+    expect(lastRequestBody(fetchMock).variables).toEqual({
+      panelProjectFilters: {
+        project: { documentId: { eq: "project-1" } },
+        is_development: { eq: false },
+      },
+    });
+  });
+
+  it("getProjectPanels drops the is_development filter when dev panels are asked for", async () => {
+    // No filter at all, not `eq: true` — the dev view shows both kinds.
+    const fetchMock = mockGraphQl({ dashboardPanels: [{ documentId: "panel-1" }] });
+
+    await buildRepository().getProjectPanels("project-1", true);
+
+    expect(lastRequestBody(fetchMock).variables).toEqual({
       panelProjectFilters: {
         project: { documentId: { eq: "project-1" } },
       },
     });
-    expect(panels?.map((panel) => panel.id)).toEqual(["panel-1", "panel-2"]);
+  });
+
+  it("getProjectPanels selects is_development — the DTO reads it", async () => {
+    // The query ↔ DTO coupling is an unchecked cast: dropping the field from
+    // the selection set silently makes panel.isDevelopment undefined.
+    const fetchMock = mockGraphQl({ dashboardPanels: [{ documentId: "panel-1" }] });
+
+    await buildRepository().getProjectPanels("project-1", false);
+
+    expect(lastRequestBody(fetchMock).query).toContain("is_development");
   });
 
   it("getProjectPanels returns null when the project has no panel", async () => {
     mockGraphQl({ dashboardPanels: [] });
 
     await expect(
-      buildRepository().getProjectPanels("project-1"),
+      buildRepository().getProjectPanels("project-1", false),
     ).resolves.toBeNull();
   });
 

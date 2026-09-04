@@ -9,6 +9,7 @@ The suite sits at the **monorepo root**, not inside `apps/dashboard`, even thoug
 - `root: __dirname` (repo root), `include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"]`
 - `@/...` → `apps/dashboard/src/...` (same meaning as at runtime)
 - `server-only` → [shims/server-only.ts](shims/server-only.ts), an empty module, so server-only code is importable from tests
+- `next/navigation` → [shims/next-navigation.ts](shims/next-navigation.ts) — see below
 - `dedupe: ["react", "react-dom", "@tanstack/react-query", "zustand"]` — these live in `apps/dashboard`, and the root `package.json` pins the *same versions* as devDependencies so the suite can import them. Deduping keeps a single instance: two React copies break every hook, two QueryClient copies break every provider lookup. **Bump them in both manifests at once.**
 - `setupFiles: ["./tests/setup/cleanup.ts"]` — unmounts components between tests
 - coverage `include` covers `.ts` and `.tsx`
@@ -40,12 +41,31 @@ Use jsdom for hooks, stores that touch `localStorage`, and components. Everythin
 | [helpers/queryClient.ts](helpers/queryClient.ts) | `createTestQueryClient()` — retries off, no caching, so one assertion means one fetch |
 | [helpers/fetchMock.ts](helpers/fetchMock.ts) | `mockOk` / `mockError` / `mockUnparseableError` stub `fetch` with the BFF envelopes; `calledUrl` / `calledParams` / `calledInit` read the last call |
 | [setup/cleanup.ts](setup/cleanup.ts) | global `afterEach(cleanup)` — see below |
+| [shims/next-navigation.ts](shims/next-navigation.ts) | `setTestSearchParams({ … })` sets what `useSearchParams()` returns — see below |
 
 Test files are written as `.ts`, never `.tsx`: components are instantiated with `createElement` so no test needs a JSX transform of its own.
 
 ### Cleanup is not optional
 
 With `globals: false`, testing-library registers no cleanup. Without [setup/cleanup.ts](setup/cleanup.ts), components mounted by one test survive into the next, their effects keep running, and they keep writing to the module-level Zustand stores — which shows up as baffling cross-test failures ("found multiple elements", a store holding another test's panel). Reset the stores you touch in `beforeEach` as well, and `localStorage.clear()` when the store is persisted.
+
+### `next/navigation` is aliased, not mocked
+
+**`vi.mock("next/navigation")` silently does nothing here.** `next` is installed in `apps/dashboard/node_modules` only, so the suite at the root cannot resolve that specifier and the mock is registered under a key no module ever matches — the real `useSearchParams` runs, returns `null` outside an app-router context, and the component crashes on `null.get`.
+
+The Vitest config aliases the specifier to [shims/next-navigation.ts](shims/next-navigation.ts) instead. Any test that renders something reading query params (`usePanels` reads `?showDevelopmentPanel`) sets them explicitly:
+
+```ts
+import { setTestSearchParams } from "../../../../shims/next-navigation";
+
+beforeEach(() => setTestSearchParams());          // no params
+
+it("…", () => {
+  setTestSearchParams({ showDevelopmentPanel: "true" });
+});
+```
+
+The shim's params are module state, so reset them in `beforeEach` like any store. The same reasoning applies to anything else `next` exports — alias a shim, don't `vi.mock` it.
 
 ## Layout — mirror `apps/dashboard/src/`
 
@@ -63,7 +83,8 @@ tests/
 ├── helpers/                     # test-only utilities (not discovered as tests)
 ├── setup/                       # setupFiles
 └── shims/
-    └── server-only.ts           # neutralizes the "server-only" guard during tests
+    ├── server-only.ts           # neutralizes the "server-only" guard during tests
+    └── next-navigation.ts       # useSearchParams a test can drive
 ```
 
 Test file naming: `<SourceFile>.test.ts`. A few files cover a whole contract across features instead of one source file, and are named for it: [queryKeys.test.ts](app/features/queryKeys.test.ts) (every key shape), [pollingContract.test.ts](app/features/pollingContract.test.ts) (`refetchInterval` for every data hook), [panelHooks.test.ts](app/features/panelHooks.test.ts).

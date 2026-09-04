@@ -117,13 +117,15 @@ describe("StrapiClientStrategy", () => {
     expect(spy).toHaveBeenCalledWith("project-1", "production");
   });
 
-  it("delegates getProjectPanels with the project documentId", async () => {
+  it("delegates getProjectPanels with the project documentId and the dev-panel flag", async () => {
     const spy = vi
       .spyOn(StrapiRepository.prototype, "getProjectPanels")
       .mockResolvedValue(null);
 
-    await new StrapiClientStrategy(client).getProjectPanels("project-1");
+    await new StrapiClientStrategy(client).getProjectPanels("project-1", false);
+    await new StrapiClientStrategy(client).getProjectPanels("project-2", true);
 
-    expect(spy).toHaveBeenCalledWith("project-1");
+    expect(spy).toHaveBeenNthCalledWith(1, "project-1", false);
+    expect(spy).toHaveBeenNthCalledWith(2, "project-2", true);
   });
 });

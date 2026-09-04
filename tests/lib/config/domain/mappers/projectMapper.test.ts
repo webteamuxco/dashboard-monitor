@@ -19,6 +19,7 @@ function buildPanelDto(overrides: Partial<DashboardPanelDto> = {}): DashboardPan
     display_name: "Production",
     icon: "panels-right-bottom",
     order: 1,
+    is_development: false,
     mapped_tools: [
       {
         documentId: "mt-1",
@@ -51,7 +52,14 @@ describe("mapDashboardPanel", () => {
       displayName: "Production",
       icon: "panels-right-bottom",
       order: 1,
+      isDevelopment: false,
     });
+  });
+
+  it("maps is_development to isDevelopment", () => {
+    const panel = mapDashboardPanel(buildPanelDto({ is_development: true }));
+
+    expect(panel.isDevelopment).toBe(true);
   });
 
   it("maps the mapped tools with their strategy names", () => {

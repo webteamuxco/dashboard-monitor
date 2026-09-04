@@ -38,7 +38,8 @@ export function mapDashboardPanel(dto: DashboardPanelDto): DashboardPanel {
        name: dto.name,
        order: dto.order,
        slug: dto.slug,
-       displayName: dto.display_name
+       displayName: dto.display_name,
+       isDevelopment: dto.is_development
     };
 }
 

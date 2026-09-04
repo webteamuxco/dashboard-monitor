@@ -4,6 +4,7 @@ import { fetchProjectConfigClient } from "@/app/features/config/data-access/fetc
 import { fetchProjectPanels } from "@/app/features/config/data-access/fetchProjectPannels";
 import {
   calledInit,
+  calledParams,
   calledUrl,
   mockError,
   mockOk,
@@ -79,8 +80,26 @@ describe("fetchProjectPanels", () => {
 
     await fetchProjectPanels("project-1");
 
-    expect(calledUrl(fetchMock)).toBe("/api/config/projects/project-1/panels");
+    expect(calledUrl(fetchMock)).toBe(
+      "/api/config/projects/project-1/panels?showDevelopmentPanel=false",
+    );
     expect(calledInit(fetchMock)).toMatchObject({ cache: "no-store" });
+  });
+
+  it("hides the development panels by default", async () => {
+    const fetchMock = mockOk([]);
+
+    await fetchProjectPanels("project-1");
+
+    expect(calledParams(fetchMock)).toEqual({ showDevelopmentPanel: "false" });
+  });
+
+  it("asks for the development panels when the flag is on", async () => {
+    const fetchMock = mockOk([]);
+
+    await fetchProjectPanels("project-1", true);
+
+    expect(calledParams(fetchMock)).toEqual({ showDevelopmentPanel: "true" });
   });
 
   it("keeps the Strapi order — the first panel is the default one", async () => {

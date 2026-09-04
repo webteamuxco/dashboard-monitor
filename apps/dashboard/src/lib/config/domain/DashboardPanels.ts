@@ -9,5 +9,6 @@ export interface DashboardPanel {
     id: string;
     icon: string;
     order: number;
-    slug: string
+    slug: string;
+    isDevelopment: boolean;
 }

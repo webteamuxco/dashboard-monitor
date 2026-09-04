@@ -58,23 +58,48 @@ describe("ConfigDataAccess", () => {
     ).resolves.toBeNull();
   });
 
-  it("getProjectPanels forwards the project documentId", async () => {
+  it("getProjectPanels forwards the project documentId and the dev-panel flag", async () => {
     getProjectPanelsMock.mockResolvedValue([{ id: "panel-1" }]);
 
     const panels = await new ConfigDataAccess().getProjectPanels(
       "panels-project-1",
+      false,
     );
 
-    expect(getProjectPanelsMock).toHaveBeenCalledWith("panels-project-1");
+    expect(getProjectPanelsMock).toHaveBeenCalledWith("panels-project-1", false);
     expect(panels).toEqual([{ id: "panel-1" }]);
+  });
+
+  it("getProjectPanels forwards the dev-panel flag when it is on", async () => {
+    getProjectPanelsMock.mockResolvedValue([{ id: "panel-dev" }]);
+
+    await new ConfigDataAccess().getProjectPanels("panels-project-dev", true);
+
+    expect(getProjectPanelsMock).toHaveBeenCalledWith("panels-project-dev", true);
   });
 
   it("getProjectPanels passes an empty project through as null", async () => {
     getProjectPanelsMock.mockResolvedValue(null);
 
     await expect(
-      new ConfigDataAccess().getProjectPanels("panels-project-empty"),
+      new ConfigDataAccess().getProjectPanels("panels-project-empty", false),
     ).resolves.toBeNull();
+  });
+
+  it("keeps the two dev-panel flags apart — cache() is keyed on both arguments", async () => {
+    getProjectPanelsMock.mockImplementation(
+      async (_projectId: string, showDevelopmentPanel: boolean) =>
+        showDevelopmentPanel
+          ? [{ id: "panel-prod" }, { id: "panel-dev" }]
+          : [{ id: "panel-prod" }],
+    );
+    const dataAccess = new ConfigDataAccess();
+
+    const withoutDev = await dataAccess.getProjectPanels("panels-project-c", false);
+    const withDev = await dataAccess.getProjectPanels("panels-project-c", true);
+
+    expect(withoutDev).toEqual([{ id: "panel-prod" }]);
+    expect(withDev).toEqual([{ id: "panel-prod" }, { id: "panel-dev" }]);
   });
 
   it("getProjectStrategies forwards the project id and the panel slug", async () => {

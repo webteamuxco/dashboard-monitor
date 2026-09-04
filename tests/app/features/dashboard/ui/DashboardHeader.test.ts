@@ -63,9 +63,18 @@ describe("DashboardHeader", () => {
 
     expect(screen.getByTestId("project-selector")).toBeDefined();
     expect(screen.getByTestId("panel-selector")).toBeDefined();
-    expect(screen.getByTestId("environment-selector")).toBeDefined();
     expect(screen.getByTestId("window-selector")).toBeDefined();
     expect(screen.getByRole("button", { name: /Rafraîchir/ })).toBeDefined();
+  });
+
+  it("does not mount the environment selector, even interactive", () => {
+    // The control is currently out of the header; the environment filter stays
+    // at null, meaning "every environment".
+    process.env[INTERACTIVITY] = "true";
+
+    renderHeader();
+
+    expect(screen.queryByTestId("environment-selector")).toBeNull();
   });
 
   it("hides every control on a read-only kiosk", () => {

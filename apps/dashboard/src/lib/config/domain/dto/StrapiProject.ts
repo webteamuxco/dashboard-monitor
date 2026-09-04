@@ -54,6 +54,7 @@ export interface DashboardPanelDto {
     order: number;
     slug: string;
     display_name: string;
+    is_development: boolean;
 }
 
 export interface ProjectSummaryDto {

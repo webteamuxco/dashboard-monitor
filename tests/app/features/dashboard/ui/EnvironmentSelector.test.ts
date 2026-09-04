@@ -50,14 +50,12 @@ describe("EnvironmentSelector", () => {
     ).toEqual(["Tous", "production", "staging"]);
   });
 
-  it("selects the resolved default on load", async () => {
+  it("starts on the 'all' entry — the store holds no environment yet", async () => {
     const { EnvironmentSelector } = await loadSelector("production,staging");
 
     render(createElement(EnvironmentSelector));
 
-    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe(
-      "production",
-    );
+    expect((screen.getByRole("combobox") as HTMLSelectElement).value).toBe("");
   });
 
   it("stores the picked environment", async () => {

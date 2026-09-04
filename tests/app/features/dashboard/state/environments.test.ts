@@ -108,7 +108,9 @@ describe("useEnvironment store", () => {
     delete process.env[ENV_DEFAULT];
   });
 
-  it("starts from the same resolver the server prefetch uses", async () => {
+  it("starts at null — unfiltered — whatever the env declares", async () => {
+    // The store no longer seeds itself from resolveDefaultEnvironment: the
+    // dashboard shows every environment until something picks one.
     process.env[ENV_LIST] = "production,staging";
     process.env[ENV_DEFAULT] = "staging";
     vi.resetModules();
@@ -116,13 +118,8 @@ describe("useEnvironment store", () => {
     const { useEnvironment } = await import(
       "@/app/features/dashboard/state/useEnvironment"
     );
-    const { resolveDefaultEnvironment } = await import(
-      "@/app/features/dashboard/state/environments"
-    );
 
-    expect(useEnvironment.getState().environment).toBe(
-      resolveDefaultEnvironment(),
-    );
+    expect(useEnvironment.getState().environment).toBeNull();
   });
 
   it("stores the selected environment, null meaning all", async () => {
