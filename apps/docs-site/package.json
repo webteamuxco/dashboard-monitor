@@ -1,6 +1,6 @@
 {
   "name": "docs-site",
-  "version": "2.1.1",
+  "version": "3.0.0",
   "private": true,
   "scripts": {
     "dev": "docusaurus start --port 3002",
