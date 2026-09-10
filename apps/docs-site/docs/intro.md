@@ -15,7 +15,7 @@ Currently ships with two adapters:
 
 The architecture is provider-agnostic: each monitor family (`errorMonitor`, `logMonitor`, `trackerMonitor`) is an interface backed by a Factory + Resolver. Adding a new backend (Sentry, Mixpanel, Datadog…) is a matter of dropping a new adapter under `apps/dashboard/src/lib/<family>/adapters/`.
 
-**Which adapter runs is decided per dashboard panel in Strapi admin**, not by an env var. A Strapi project owns an ordered list of panels, and each panel declares its mapped tools (`error-monitor` × `glitchtip`, `tracker-monitor` × `posthog`, …) and each tool's connection details. The environment only carries the API secrets. See [Panels](panels.md).
+**Which adapter runs is decided per dashboard element in Strapi admin**, not by an env var. A Strapi project owns an ordered list of panels; a panel owns KPI cards and blocks; and each of those declares one strategy (`error-monitor`, `log-monitor`, `tracker-monitor`) and one tool carrying the connection details. Two cards side by side can therefore read two different instances. The environment only carries the API secrets. See [Panels](panels.md).
 
 ## Monorepo
 
@@ -50,8 +50,9 @@ pnpm install
 cp apps/dashboard/.env.example apps/dashboard/.env.local
 # edit it: STRAPI_BASE_URL, STRAPI_TOKEN, GLITCHTIP_TOKEN, POSTHOG_PERSONAL_API_KEY
 
-# 3. Declare at least one published project with one dashboard panel in Strapi
-#    (mapped tools + tool configurations on the panel — see Getting started)
+# 3. Declare at least one published project with one dashboard panel in Strapi,
+#    and at least one KPI or block on that panel, each with a strategy and a
+#    tool (see Getting started)
 
 # 4. Run both apps
 pnpm dev
@@ -77,9 +78,9 @@ Scope a script to one app with `pnpm --filter dashboard-monitor <script>` or `pn
 
 - [Getting Started](getting-started.md) — install, env, Strapi setup, dev workflow, troubleshooting
 - [Architecture](architecture.md) — layered overview, context diagram, design rationale
-- [Panels](panels.md) — the panel system: content model, ids, selection, resolution
+- [Panels](panels.md) — the panel/element system: content model, ids, selection, resolution
 - [Monitors (Strategy/Factory)](monitors.md) — core pattern + guide to add a new adapter
-- [Features](features.md) — feature folders catalog (issues, errorRate, reservations, visitors, config…)
+- [Features](features.md) — feature folders catalog (kpis, blocks, issues, config, dashboard…)
 - [Data Flow](data-flow.md) — end-to-end sequence diagrams (UI → external API → render)
 - [State Management](state-management.md) — TanStack Query vs Zustand, query keys, conventions
 - [Configuration](configuration.md) — the Strapi / env split, all variables, where they are consumed
@@ -93,13 +94,13 @@ dashboard-monitor/
 │   ├── dashboard/
 │   │   ├── src/app/
 │   │   │   ├── api/            # Backend-for-frontend (one route per data view)
-│   │   │   ├── features/       # issues · errorRate · reservations · visitors · dashboard · config
-│   │   │   └── page.tsx        # Server Component: catalog + prefetch
+│   │   │   ├── features/       # kpis · blocks · issues · config · dashboard · components
+│   │   │   └── page.tsx        # Server Component: catalog + config hydration
 │   │   ├── src/lib/
 │   │   │   ├── errorMonitor/   # Strategy/Factory for error tracking
 │   │   │   ├── logMonitor/     # Strategy/Factory for log aggregation
 │   │   │   ├── trackerMonitor/ # Strategy/Factory for visitor analytics
-│   │   │   ├── config/         # Strapi: projects, panels, mapped tools, tool connections
+│   │   │   ├── config/         # Strapi: projects, panels, elements, tool wiring
 │   │   │   ├── shared/         # FactoryInterface + abstract vendor factories + shared domain
 │   │   │   └── tool/           # Low-level HTTP clients (glitchtip, posthog)
 │   │   ├── src/components/     # Reusable UI primitives (shadcn-derived)

@@ -5,9 +5,19 @@ title: Panels
 
 # Dashboard panels
 
-A **dashboard panel** is the unit that carries tool wiring. A Strapi project owns an ordered list of panels; each panel declares which tools back which monitor families and how to reach them. The kiosk shows one panel at a time, picked in the header.
+A **dashboard panel** is a view: a name, an icon, an order, and an ordered set of **elements** — the KPI cards and the blocks it shows. The kiosk displays one panel at a time, picked in the header.
 
-Before panels existed, a project mapped tools directly, so a project could show exactly one set of widgets from one set of providers. Panels split that: one project — one refresh cadence, one set of window presets — can now expose several views, each pointed at different provider projects.
+The panel itself carries **no wiring**. Each element does: a `DashboardKpi` or a `DashboardBlock` declares which monitor strategy answers it and which tool it reads from. Two blocks on the same panel can therefore read two different GlitchTip projects, and a KPI can be pointed at another instance than the block below it.
+
+That has moved twice — read this before touching a data path:
+
+| Era | What carried the wiring |
+|---|---|
+| first | the **project** (one project, one set of providers) |
+| then | the **panel** (`mapped_tools`, `tool_configuration` on the panel) |
+| **today** | the **element** (`strategy` + `tool` on each `DashboardKpi` / `DashboardBlock`) |
+
+Anything still describing `mapped_tools`, a `/strategies` route or `isPanelHasStrategy` predates the current model.
 
 ## The Strapi content model
 
@@ -16,10 +26,13 @@ erDiagram
     PROJECT ||--o{ DASHBOARD_PANEL : "dashboard_panels"
     PROJECT ||--o| DEFAULT_CONFIG : "default_config"
     PROJECT ||--o{ TIME_INTERVAL : "timeInterval"
-    DASHBOARD_PANEL ||--o{ MAPPED_TOOL : "mapped_tools"
-    DASHBOARD_PANEL ||--o{ TOOL_CONFIGURATION : "tool_configuration"
-    MAPPED_TOOL ||--o{ STRATEGY : "strategies"
-    MAPPED_TOOL ||--o| TOOL : "tool"
+    DASHBOARD_PANEL ||--o{ DASHBOARD_KPI : "dashboard_kpis"
+    DASHBOARD_PANEL ||--o{ DASHBOARD_BLOCK : "dashboard_blocks"
+    DASHBOARD_KPI ||--o| STRATEGY : "strategy (dynamic zone)"
+    DASHBOARD_KPI ||--o| TOOL : "tool (relation)"
+    DASHBOARD_BLOCK ||--o| STRATEGY : "strategy (dynamic zone)"
+    DASHBOARD_BLOCK ||--o| TOOL : "tool (relation)"
+    TOOL ||--o{ TOOL_CONFIGURATION : "configuration (dynamic zone)"
 
     PROJECT {
         string documentId
@@ -40,12 +53,29 @@ erDiagram
         string display_name
         string icon
         int order
+        bool is_development
     }
-    MAPPED_TOOL {
-        string name
+    DASHBOARD_KPI {
+        string documentId
+        string slug
+        string title
+        string icon
+        enum level
+        int order
+        enum type
+    }
+    DASHBOARD_BLOCK {
+        string documentId
+        string slug
+        string title
+        string icon
+        enum level
+        int order
+        enum type
     }
     STRATEGY {
-        string name
+        string __typename
+        string tags
     }
     TOOL {
         string slug
@@ -63,38 +93,43 @@ What lives where:
 | Level | Fields | Why there |
 |---|---|---|
 | Project | `default_config.DefaultRefreshIntervalMS`, `timeInterval[]` | the polling cadence and the window presets are the same whichever panel you look at |
-| Panel | `mapped_tools[]`, `tool_configuration[]` | this is the wiring — it is what differs between two views of the same project |
-| Panel | `slug`, `display_name`, `icon`, `order` | the header selector's entry |
+| Panel | `slug`, `display_name`, `icon`, `order`, `is_development` | the header selector's entry, nothing more |
+| Element | `strategy` (one of `error-monitor`, `log-monitor`, `tracker-monitor`), `tool` | the wiring — it is what differs between two cards |
+| Element | `type`, `level`, `title`, `description`, `icon`, `order` | how the card renders |
+| Tool | `configuration[]` — url, organization, provider project id | shared: ten elements can point at one `Tool` entry |
 
-## The two identifiers
+Two consequences of `tool` being a **relation** rather than an inline component: the instance URL is edited once for every element using it, and changing it moves every one of them at the same time.
 
-Both are Strapi `documentId`s and both are called `documentId` in most signatures. Getting them mixed up is the most common wiring bug in the codebase.
+`is_development` hides a panel unless the URL carries `?showDevelopmentPanel=true`, which is how a work-in-progress panel stays out of the kiosk rotation.
+
+## Three identifiers, one parameter name
+
+Everything is a Strapi `documentId` and most signatures call it `documentId`. Read the call site to know which one you hold.
 
 | Value | Read from | Consumed by |
 |---|---|---|
-| **project `documentId`** | `useSelectedProject` / the catalog | `/api/config/projects/*`, `defaultConfig`, `timeInterval`, the panel list, the strategy list |
-| **panel `documentId`** | `useSelectedPanel().pannelId` | **every data route** (`?documentId=`) and the whole monitor layer |
-| **panel `slug`** | `useSelectedPanel().panelSlug` | the GraphQL filter that lists a panel's strategies |
+| **project `documentId`** | `useSelectedProject` / the catalog | `/api/config/projects/*`, the cadence, the window presets, the panel list |
+| **panel `slug`** | `useSelectedPanel().panelSlug` | the GraphQL filter listing that panel's KPIs and blocks |
+| **element `documentId`** | the KPI or block being rendered | **every data route** and the whole monitor layer |
 
 ```mermaid
 flowchart LR
     Proj[project documentId] --> Cfg["/api/config/projects/:id"]
     Proj --> Panels["/api/config/projects/:id/panels"]
-    Proj --> Strat["/api/config/projects/:id/strategies?selectedPanel=slug"]
-    Slug[panel slug] --> Strat
-    PanelId[panel documentId] --> Data["/api/issues · /api/error-rate<br/>/api/reservations · /api/visitors/timeline"]
-    Data --> Mon["get&lt;Family&gt;Monitor(panelId)"]
-    Mon --> Conn["ToolConnection<br/>baseUrl · organization · provider projectId"]
+    Slug[panel slug] --> Elements["/api/config/dashboard-kpis?panelSlug<br/>/api/config/dashboard-blocks?panelSlug"]
+    ElemId[element documentId] --> Data["/api/kpis/:kpiId · /api/blocks/:blockId<br/>/api/kpis/issues · /api/blocks/:blockId/issues/:issueId"]
+    Data --> Wiring["loadToolWiring(kind, id) → ToolWiring"]
+    Wiring --> Conn["ToolConnection<br/>baseUrl · organization · provider projectId"]
 ```
 
-Hand a project id to the monitor layer and Strapi answers nothing, which surfaces as `Strapi panel "<id>" not found.`
+Pass the wrong id and the read fails with `Strapi dashboard-kpi "<id>" not found.` — the message names the collection that was searched, which is usually enough to spot which id you sent.
 
 ## Selecting a panel
 
 Two responsibilities, deliberately split:
 
 - **[useActivePanel](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/hooks/useActivePanel.ts)** *resolves* the active panel. Called by `DashboardContent`, so it runs on every kiosk.
-- **`PannelSelector`** only handles *user changes*. It is mounted solely in interactive mode, which is why resolution cannot live there — a read-only kiosk would otherwise select no panel at all and mount no widget.
+- **`PannelSelector`** only handles *user changes*. It is mounted solely in interactive mode, which is why resolution cannot live there — a read-only kiosk would otherwise select no panel and render nothing.
 
 This mirrors `useActiveProject` / `ProjectSelector` exactly.
 
@@ -110,102 +145,101 @@ sequenceDiagram
     Content->>Active: useActivePanel(projectDocumentId)
     Active->>Store: persist.rehydrate()
     Active->>Q: usePanels(projectDocumentId)
-    Note over Q: key configKeys.pannels(projectId)<br/>seeded by the server → cache hit
+    Note over Q: key configKeys.pannels(projectId, showDev)<br/>seeded by the server → cache hit
     Q-->>Active: DashboardPanel[] sorted by order
-    Note over Active: reconcile against the list:<br/>stored slug, else panels[0]
+    Note over Active: reconcile against the list:<br/>stored slug, else panels[0]<br/>empty list → clearPanel()
     Active->>Store: setPanelId · setPanelSlug · setPanelIcon
-    Active-->>Content: { panelId, panelSlug }
+    Active-->>Content: { panelId, panelSlug, panels }
     User->>Sel: pick another panel
     Sel->>Store: setPanelId · setPanelSlug · setPanelIcon
-    Store-->>Active: panelSlug changed
-    Active-->>Content: new panelId
-    Content->>Content: useProjectStrategy(projectId, panelSlug, …)
-    Note over Content: new strategy list → widgets remount<br/>new panel id → every data query key is a cache miss
+    Store-->>Content: panelSlug changed
+    Content->>Content: PanelKpi / PanelBlock re-list the elements
+    Note over Content: new slug → element lists are a cache miss<br/>new element ids → every measure key is too
 ```
 
 Details that matter:
 
-- **The selection is reconciled against the current project's panels**, never trusted as-is: the first panel by `order` is selected when nothing matches, and the id is re-resolved from the list when the stored *slug* belongs to another project — two projects can both have a `production` panel, and keeping the stale id would point the widgets at the wrong provider project.
+- **The selection is reconciled against the current project's panels**, never trusted as-is: the first panel by `order` is selected when nothing matches, and the id is re-resolved from the list when the stored *slug* belongs to another project — two projects can both have a `production` panel.
+- **A project with no panel clears the selection.** Holding the previous project's panel would keep its cards on screen, since the element lists are keyed on the slug. The hook distinguishes `undefined` (the list is still loading — keep the current frame rather than blanking the kiosk) from `[]` (the project has no panel), which is why `fetchProjectPanels` collapses the route's `null` into an empty list.
 - **The selector hides itself below two panels** (`if (panels.length < 2) return`) — resolution is unaffected, so a single-panel project works with no visible control.
-- **The panel list comes from the hydrated cache** on first load: the server seeds `configKeys.pannels(projectId)`, so the selection happens without a round-trip.
-- **The list key carries the project id** (`["config", "pannels", projectId]`). Without it, switching project served the previous project's panels until the 5-minute `staleTime` expired.
-- **The icon is a Strapi string** in kebab-case (`panels-right-bottom`), resolved against `lucide-react`'s `icons` map. An unknown name silently falls back to `Circle`.
+- **The list key carries the project id and the dev flag** (`["config", "pannels", projectId, showDevelopmentPanel]`). Without the project id, switching project served the previous project's panels until the 5-minute `staleTime` expired.
+- **The icon is a Strapi string** in kebab-case (`panels-right-bottom`), resolved against `lucide-react`'s `icons` map by `getLucideIcon()`. An unknown name silently falls back to `Circle`.
 
 ## What a panel renders
 
-`DashboardContent` asks for the selected panel's strategies and mounts only the matching widgets:
+The panel's **elements** decide, and it is the element's `type` — not its strategy — that picks the component:
 
 ```mermaid
 flowchart TB
-    Strat["Strategy[] for the selected panel"] --> Err{error-monitor?}
-    Strat --> Log{log-monitor?}
-    Strat --> Trk{tracker-monitor?}
-    Err -->|yes| E1[IssuesPanel]
-    Err -->|yes| E2[ErrorRatePanel]
-    Err -->|yes| E3[IssueKpi]
-    Log -->|yes| L1[ReservationsPanel]
-    Log -->|yes| L2[ReservationsKpiCard]
-    Trk -->|yes| T1[VisitorsPanel]
-    Trk -->|yes| T2[VisitorsKpi]
+    Panel["the selected panel (by slug)"] --> Kpis["dashboard_kpis[] → PanelKpi"]
+    Panel --> Blocks["dashboard_blocks[] → PanelBlock"]
+    Kpis --> K1[KpiCard]
+    Blocks --> T{block type}
+    T -->|list| B1[BlockList]
+    T -->|rate| B2[BlockRate]
+    T -->|bar| B3[BlockBar]
+    T -->|stackedBar| B4[StackedBlockBar]
 ```
 
-The strategy names come from `@/lib/shared/strategiesEnum` — the same constants the resolvers use as their `STRATEGY_RESOLVER`, so the UI and the monitor layer cannot drift apart.
+Every KPI renders a `KpiCard`; a block mounts one body out of the `type → { shape, body }` record in `BlockCardContent`. The element's `strategy.kind` only decides which monitor family answers the measure, server-side. Those strategy names come from `@/lib/shared/strategiesEnum` — the same constants the resolvers use as their `STRATEGY_RESOLVER`, so the wiring and the monitor layer cannot drift apart.
 
-The layout adapts: the left column is hidden and the grid drops to one column when the panel maps neither `error-monitor` nor `tracker-monitor`. A panel mapping no strategy at all renders an empty grid — no error, because nothing was requested. The loud failure happens one layer down, when a mounted widget's route resolves a factory and no tool supports it.
+A `DashboardKpi` reads its own `type` too: `interval` measures over the selected window preset, every other type reads a total and carries no window in its key at all.
 
-## Resolution: from panel to provider
+A panel with no element renders an empty grid — no error, because nothing was requested. The loud failure happens one layer down, when an element's data route resolves a factory that its tool does not support, and it is scoped to that one card.
+
+## Resolution: from element to provider
 
 ```mermaid
 sequenceDiagram
-    participant DA as Data access
+    participant Route as /api/blocks/:blockId
+    participant DA as BlocksDataAccess
+    participant Load as loadToolWiring
+    participant Strapi
     participant Get as getErrorMonitorFactory
     participant Res as ErrorMonitorResolver
     participant Fac as GlitchTipFactory
     participant Cfg as GlitchtipConfigurationStrategy
-    participant Repo as StrapiRepository
-    participant Strapi
 
-    DA->>Get: getErrorMonitorFactory(panelId)
-    Get->>Res: resolve(panelId)
-    Res->>Fac: support(panelId, "error-monitor")
-    Fac->>Cfg: isConfigure(panelId, "error-monitor", "glitchtip")
-    Cfg->>Repo: isPanelHasStrategy(panelId, "error-monitor", "glitchtip")
-    Repo->>Strapi: strategies(filters: mapped_tool.dashboard_panels.documentId == panelId)
-    Strapi-->>Repo: strategies[]
-    Repo-->>Fac: length > 0
+    Route->>DA: getMeasure(DASHBOARD_BLOCK, blockId, …)
+    DA->>Load: loadToolWiring(DASHBOARD_BLOCK, blockId)
+    Load->>Strapi: dashboardBlock(documentId) { strategy, tool { configuration } }
+    Strapi-->>Load: block
+    Load-->>DA: ToolWiring { id, strategy?, configuration? }
+
+    DA->>Get: getErrorMonitorFactory(wiring)
+    Get->>Res: resolve(wiring)
+    Res->>Fac: support(wiring, "error-monitor")
+    Fac->>Cfg: isConfigure(wiring, "error-monitor")
+    Note over Cfg: pure: strategy.kind === "error-monitor"<br/>&& configuration.kind === "glitchtip"
+    Cfg-->>Fac: true
     Res-->>DA: factory
 
-    DA->>Fac: createConnection(panelId)
-    Fac->>Cfg: resolveConnection(panelId)
-    Cfg->>Repo: getPanelById(panelId)
-    Repo->>Strapi: dashboardPanel(documentId: panelId) { tool_configuration }
-    Strapi-->>Repo: panel
-    Repo-->>Cfg: DashboardPanel
-    Cfg-->>DA: { baseUrl, organizationSlug, projectId }
+    DA->>Fac: createConnection(wiring)
+    Fac-->>DA: { baseUrl, organizationSlug, projectId }
+    DA->>Fac: createStrategy(connection)
+    Note over Fac: reads GLITCHTIP_TOKEN, builds the client
 ```
 
-Both Strapi lookups are wrapped in React `cache()`, so several widgets resolving the same panel during one request hit Strapi once per query.
+The single Strapi read is `loadToolWiring(kind, documentId)`, memoized per request with React `cache()`. Everything after it is **pure and synchronous**: the resolver, `support()` and `createConnection()` never touch the network. The vendor is read from the configuration component's `__typename` (mapped into `configuration.kind`), never from `tool.slug` — that slug is an editable label in admin and can drift.
 
-Note the asymmetry in the GraphQL filters: strategies are **listed** by panel `slug` (`getStrategiesByDocumentId(projectId, panelSlug)`, for the UI) but **checked** by panel `documentId` (`getSpecificStrategyByDocumentIdQuery`, for `support()`). Read the query before changing a call site.
+Adding a third element kind is one entry in the `loaders` record of [loadToolWiring.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/loadToolWiring.ts), one query and one repository method. Nothing in the monitor layer changes.
 
 ## Configuring a panel in Strapi
 
-For each panel of a project:
+1. **On the project** — `title`, `slug`; optionally `default_config.DefaultRefreshIntervalMS` (polling cadence) and `timeInterval[]` (window presets). Both are project-wide.
+2. **On each panel** — `name`, `slug`, `display_name` (what the selector shows), `icon` (a kebab-case lucide name), `order` (the list is sorted by it; the first one is the default), `is_development`.
+3. **On each element** (`DashboardKpi` / `DashboardBlock`) — attach it to the panel, then give it:
+   - `title`, `icon`, `level`, `order`, `description`
+   - `type` — `list` / `interval` for a KPI, `list` / `rate` / `bar` / `stackedBar` for a block
+   - `strategy` — exactly one of `error-monitor`, `log-monitor` (with its `tags`), `tracker-monitor`
+   - `tool` — the `Tool` entry whose `configuration` carries the url, the organization and the provider project id
+4. **On each tool** — `slug` plus one configuration component: GlitchTip (instance URL, organization slug, provider project id) or PostHog (instance URL, project id).
 
-1. **Identity** — `name`, `slug`, `display_name` (what the selector shows), `icon` (a kebab-case lucide name), `order` (the list is sorted by it; the first one is the default).
-2. **Mapped tools** — pair a strategy with a tool:
-   - `error-monitor` × `glitchtip`
-   - `log-monitor` × `glitchtip`
-   - `tracker-monitor` × `posthog`
-3. **Tool configurations** — the connection details for each mapped tool:
-   - GlitchTip: instance URL, organization slug, provider project id
-   - PostHog: instance URL, project id
-
-Only map what the panel should display. Three panels on one project might be, for example: *Production* (all three strategies), *Staging* (error monitor only, pointed at another GlitchTip project), *Audience* (tracker monitor only).
+An element attached to **no** panel is invisible: the element lists filter on `dashboard_panels.slug`, so a KPI whose relation is empty never reaches the dashboard even though it exists and is published. That is the first thing to check when a card you configured does not show up.
 
 ## Naming trap: `panel` vs `pannel`
 
-Both spellings exist and are load-bearing. Server-side names are correct (`DashboardPanel`, `getPanelById`, `dashboard_panels`, `/panels`); several client-side ones are not:
+Both spellings exist and are load-bearing. Server-side names are correct (`DashboardPanel`, `getProjectPanels`, `dashboard_panels`, `/panels`); several client-side ones are not:
 
 | Misspelled | Where |
 |---|---|
@@ -213,50 +247,42 @@ Both spellings exist and are load-bearing. Server-side names are correct (`Dashb
 | `usePannels.ts` | file name (the hook itself is `usePanels`) |
 | `fetchProjectPannels.ts` | file name (the function is `fetchProjectPanels`) |
 | `pannelId` | field of `useSelectedPanel` |
-| `configKeys.pannels(documentId)` | query key factory |
+| `configKeys.pannels(documentId, showDevelopmentPanel)` | query key factory |
 | `dashboard-selected-pannel` | `localStorage` key |
 
 Renaming them is a coordinated change — the `localStorage` key in particular resets every kiosk's persisted selection — so it belongs in its own commit, not slipped into an unrelated one.
 
-## The server prefetch resolves the default panel
+## What the server prefetch actually seeds
 
-Because the widget queries are keyed on the panel id, the server has to know *which* panel the client will land on before it can prefetch anything useful. [page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx) resolves it the same way the client does — the first panel by `order`:
+[page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx) is a Server Component, and what it hydrates is the **configuration**, not the measures:
 
 ```mermaid
 sequenceDiagram
     participant Page as page.tsx (Server Component)
     participant Cfg as ConfigDataAccess
     participant QC as QueryClient (server)
-    participant DA as Data access
 
-    Page->>Cfg: getProjectsList() → first project
+    Page->>Cfg: getProjectsList()
+    Note over Page: empty → "no project configured" screen
     par
-        Page->>Cfg: getProjectConfig(projectId)
+        Page->>Cfg: getProjectConfig(projects[0].documentId)
     and
-        Page->>Cfg: getProjectPanels(projectId)
+        Page->>Cfg: getProjectPanels(projects[0].documentId, showDev)
     end
-    Page->>QC: setQueryData(configKeys.projects / project / pannels)
-    Note over Page: initialPanel = panels[0] (Strapi sorts by `order`)
-    Page->>Cfg: getProjectStrategies(projectId, initialPanel.slug)
-    Page->>QC: setQueryData(issuesKeys.isConfig(projectId, env, slug), strategies)
-    Note over Page: prefetch only what those strategies map
-    Page->>QC: prefetchQuery(… initialPanel.id …)
-    QC->>DA: get<Family> data for the PANEL id
+    Page->>Page: presetsFromTimeInterval(config.timeInterval)
+    Page->>QC: setQueryData(configKeys.projects())
+    Page->>QC: setQueryData(configKeys.project(id))
+    Page->>QC: setQueryData(configKeys.pannels(id, showDev))
+    Page-->>Page: dehydrate → HydrationBoundary
 ```
 
-Three properties make the hydrated cache actually get read:
+So the catalog, the cadence, the presets and the panel list are on the first paint; each card's measure is fetched by its own hook after mount. That is a deliberate simplification of an older design that also prefetched every widget: the elements of a panel are only known once a panel is selected, and the selection is a client concern.
 
-1. **The panel list is seeded** under `configKeys.pannels(projectId)`, so `PannelSelector` can select `panels[0]` on its first effect without a round-trip.
-2. **The strategy list is seeded** under the exact key `useProjectStrategy` builds — hence `issuesKeys.isConfig(documentId, environment, panelSlug)` taking the slug as a third segment rather than the hook appending it by hand.
-3. **The widget queries are prefetched with `initialPanel.id`** and with `initialWindowMinutes` (the value `useDashboardWindow` will hold after `hydrateFromStrapi`), so the keys match segment for segment.
-
-The prefetch also mirrors `DashboardContent`'s strategy mapping: only the widgets the panel maps are prefetched. Prefetching an unmapped one would resolve no factory and throw on the server for nothing.
-
-If a panel is added, removed or reordered in Strapi between the server render and the client's selection, the keys stop matching and the affected widgets simply refetch on mount — the same graceful degradation as a project switch.
+If a panel is added, removed or reordered in Strapi between the server render and the client's selection, the seeded panel list is simply stale for one refetch — the same graceful degradation as a project switch.
 
 ## Persistence across reloads
 
-The selection survives a reload, the same way the project selection does. `useSelectedPanel` uses `persist` + `skipHydration: true`, and [useActivePanel](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/hooks/useActivePanel.ts) rehydrates it after mount:
+The selection survives a reload, the same way the project selection does. `useSelectedPanel` uses `persist` + `skipHydration: true`, and `useActivePanel` rehydrates it after mount:
 
 ```typescript
 useEffect(() => {
@@ -264,7 +290,7 @@ useEffect(() => {
 }, []);
 ```
 
-`skipHydration` is what makes that safe: the server render and the first client render both start from the empty selection, so they agree, and the stored panel is applied one tick later. If the restored panel is not `panels[0]`, its widget queries are simply a cache miss and refetch — exactly what happens for a restored project.
+`skipHydration` is what makes that safe: the server render and the first client render both start from the empty selection, so they agree, and the stored panel is applied one tick later.
 
 Clearing it:
 

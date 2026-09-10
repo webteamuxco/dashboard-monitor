@@ -11,7 +11,7 @@ This guide walks you from a fresh clone to a running dashboard.
 
 - **Node.js** ≥ 20 and ≤ 24 (declared in the root `engines`; Next.js 16 requires 20+)
 - **pnpm** 10 (the repo pins `packageManager: pnpm@10.33.3` and ships a `pnpm-lock.yaml`)
-- A reachable **Strapi** instance holding the dashboard's project catalog, with an API token that can read projects, dashboard panels, mapped tools, strategies and tool configurations
+- A reachable **Strapi** instance holding the dashboard's project catalog, with an API token that can read projects, dashboard panels, dashboard KPIs, dashboard blocks and tools
 - Access credentials for the backends you intend to use:
   - **GlitchTip:** API token (the instance URL, organization and project id come from Strapi)
   - **PostHog:** personal API key (host and project id come from Strapi)
@@ -51,13 +51,13 @@ GLITCHTIP_TOKEN=<your-token>
 POSTHOG_PERSONAL_API_KEY=<your-api-key>
 ```
 
-That is the whole provider configuration in the environment. Everything project- or panel-scoped lives in Strapi. See [configuration.md](configuration.md) for the full list and the Strapi/env split.
+That is the whole provider configuration in the environment. Everything project-, panel- or card-scoped lives in Strapi. See [configuration.md](configuration.md) for the full list and the Strapi/env split.
 
 > `STRAPI_BASE_URL` is the instance root, not the API path. A value ending in `/api` makes every GraphQL request fail with `405 Method Not Allowed`.
 
 ## 3. Configure the project in Strapi
 
-The dashboard renders nothing useful until at least one **published** project with at least one **dashboard panel** exists.
+The dashboard renders nothing useful until a **published** project has at least one panel, and that panel at least one KPI or block.
 
 ### On the project
 
@@ -67,20 +67,30 @@ The dashboard renders nothing useful until at least one **published** project wi
 
 ### On each dashboard panel
 
-Panels are what carry the provider wiring — a project with no panel shows an empty dashboard. For each one:
+A panel is presentation only — a label in the selector and a container for cards:
 
 1. **Identity** — `name`, `slug`, `display_name` (shown in the header selector), `icon` (a kebab-case [lucide](https://lucide.dev/icons/) name such as `panels-right-bottom`), `order` (the panel list is sorted by it; the first one is selected by default).
-2. **Mapped tools** — pair a strategy with a tool:
-   - `error-monitor` × `glitchtip`
-   - `log-monitor` × `glitchtip`
-   - `tracker-monitor` × `posthog`
-3. **Tool configurations** — the connection details for each mapped tool:
-   - GlitchTip: instance URL, organization slug, project id
-   - PostHog: instance URL, project id
+2. **`is_development`** — leave it off for a panel the kiosk should show; on, it only appears with `?showDevelopmentPanel=true`.
 
-Only the strategies a panel maps get rendered: `error-monitor` brings the issues list, the error-rate chart and the issues KPI; `log-monitor` the reservations panel and its KPI; `tracker-monitor` the visitors panel and KPI. A panel mapping nothing renders an empty grid. See [panels.md](panels.md).
+### On each tool
 
-A strategy that is mapped but whose tool has no registered adapter makes the matching panel fail loudly with `No <X>Factory supports type "<strategy>"` — by design, so a misconfiguration is visible rather than silent.
+A `Tool` is a shared entry, so create one per provider instance rather than one per card:
+
+- `slug` — a free label, for humans only. Nothing resolves on it.
+- one configuration component — GlitchTip (instance URL, organization slug, provider project id) or PostHog (instance URL, project id).
+
+### On each element — this is where the wiring lives
+
+Add a `DashboardKpi` or a `DashboardBlock`, **attach it to the panel**, then give it:
+
+1. **Identity** — `title`, `description`, `icon`, `level` (also the chart colour), `order`.
+2. **`type`** — what draws it: `interval` (measured over the selected window) or `list` for a KPI; `list`, `rate`, `bar` or `stackedBar` for a block.
+3. **`strategy`** — exactly one: `error-monitor`, `log-monitor` (with its `tags`, e.g. `reservation.sent`) or `tracker-monitor`.
+4. **`tool`** — the `Tool` it reads from.
+
+Two cards on one panel can therefore point at two different instances. A panel with no element renders an empty grid, and an element attached to **no** panel never shows up at all — the element lists filter on the panel slug. See [panels.md](panels.md).
+
+An element whose strategy and tool disagree — `tracker-monitor` on a GlitchTip tool, say — fails loudly with `No <X>Factory supports type "<strategy>"`, and only that card fails. By design: a misconfiguration should be visible rather than silent.
 
 ## 4. Run
 
@@ -108,17 +118,14 @@ pnpm start
 
 ## 5. Verify the wiring
 
-After the page loads you should see the KPI strip and the panels populated within ~1s — for the panel selected in the header, and only for the strategies that panel maps:
+After the page loads, the chrome is immediate (it comes from the server-hydrated config) and each card fills within ~1s, for the panel selected in the header:
 
-- **KPI row** — open issues, new visitors, returning visitors, reservations
-- **Issues** (left) — list of recent unresolved errors
-- **Error Rate** (right) — 24h area chart
-- **Reservations** (right) — sliding-window event timeline
-- **Visitors** (left) — new vs returning timeline
+- **the KPI strip** — one card per `DashboardKpi` attached to the panel, in `order`
+- **the blocks** — one card per `DashboardBlock`, in two columns split on `order` parity, each drawing what its `type` says
 
-The header carries the project selector, the panel selector, the window presets and — when `NEXT_PUBLIC_DASHBOARD_ENVIRONMENTS` is set — the environment selector. All of them only appear when `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY=true`; a read-only kiosk shows the first project and its first panel.
+The header carries the project selector, the panel selector and the window presets. All of them only appear when `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY=true`; a read-only kiosk shows the first project and its first panel. The panel selector additionally hides itself when the project has fewer than two panels.
 
-If a panel shows an error, check the server logs for the underlying cause. Most issues are a missing Strapi mapping on the panel or an incorrect credential — see [Troubleshooting](#troubleshooting).
+If a card shows an error, check the server logs for the underlying cause — and note that the failure is scoped to that card: the rest of the panel keeps polling. Most causes are a missing strategy or tool on the element, or an incorrect credential — see [Troubleshooting](#troubleshooting).
 
 ## 6. Quality gates
 
@@ -167,34 +174,52 @@ Neither can be omitted. Set both in `apps/dashboard/.env.local` (not at the repo
 
 The catalog query returned nothing. Either no project exists, or none is **published**, or the token lacks read access.
 
-### The dashboard loads but the grid is empty
+### The dashboard loads but the page is empty
 
-The selected panel maps no strategy, or the project has no panel at all. `/api/config/projects/<projectId>/panels` returning `null` and `/api/config/projects/<projectId>/strategies?selectedPanel=<slug>` returning `null` are both legitimate "nothing configured" answers, not errors — so nothing is rendered and nothing throws.
+The project has no panel, or the selected panel has no element. Both are legitimate "nothing configured" answers, not errors — so nothing is rendered and nothing throws.
 
-### "Strapi panel \"X\" not found."
+### A card you configured does not appear
 
-A **project** `documentId` reached the monitor layer where a **panel** `documentId` was expected. A stale persisted selection is *not* a cause — `useActivePanel` discards a stored panel that is missing from the project's list — so look at the call site: only `getPanelById` / `isPanelHasStrategy` and the data routes take a panel id.
+Check that the element is **attached to the panel**: the KPI and block lists filter on `dashboard_panels.slug`, so an element whose panel relation is empty is invisible even though it exists and is published. Two other silent cases: an unpublished draft, and a panel with `is_development` on while the URL has no `?showDevelopmentPanel=true`.
+
+If several cards share an `order` value, their relative order is whatever Strapi returns — number them distinctly to freeze the layout.
+
+### "Strapi dashboard-kpi \"X\" not found."
+
+An id reached `loadToolWiring` for a collection it does not belong to (a project id, a panel id, or a block id sent to the KPI route), or the element is not published. The message names the collection that was searched, which is usually enough to identify the wrong call site. A stale persisted selection is *not* a cause — `useActivePanel` discards a stored panel missing from the project's list.
 
 ### "No ErrorMonitorFactory supports type 'error-monitor'"
 
-The selected panel has no mapped tool pairing the `error-monitor` strategy with a registered tool. Either:
+The element declares `error-monitor` but its tool does not carry a configuration for a registered vendor — or it carries none at all. Either:
 
-- add the mapping on the panel in Strapi admin (currently supported tool: `glitchtip`), or
+- fix the element's `tool` in Strapi admin (currently supported: `glitchtip` for errors and logs, `posthog` for the tracker), or
 - add a new adapter and register it (see [monitors.md](monitors.md#adding-a-new-adapter)).
 
-The same message shape applies to `log-monitor` and `tracker-monitor`.
+Remember the vendor is read from the configuration component, not from the tool's `slug` — a tool named "glitchtip" with a PostHog configuration fails here.
+
+### "Strapi dashboard-block \"X\" declares no strategy. Map one in admin."
+
+The element exists and is attached, but its `strategy` dynamic zone is empty.
 
 ### "GlitchTip env var missing: GLITCHTIP_TOKEN is required."
 
-The panel maps GlitchTip but the token isn't set. Same for `POSTHOG_PERSONAL_API_KEY` on the visitors panels. The check runs lazily on first request.
+An element points at a GlitchTip tool but the token isn't set. Same for `POSTHOG_PERSONAL_API_KEY` on a PostHog one. The check runs lazily, when the client is built for the first request.
 
-### "GlitchTip configuration of Strapi panel X is incomplete"
+### "GlitchTip configuration of Strapi element X is incomplete"
 
-The panel's tool configuration exists but one of url / organization / projectId is empty. The message names what is required.
+The tool's configuration exists but one of url / organization / projectId is empty. The message names what is required.
 
-### Panels load but never refresh
+### A log-monitor card is empty, or shows one point
 
-The refresh cadence comes from the **project**'s `defaultConfig.DefaultRefreshIntervalMS` — not the panel's. A value of `0` disables polling; clear it to fall back to 30 s.
+Two distinct causes. If the element declares **several tags**, they are read one at a time — the provider ANDs the terms of a single query, so asking for all of them returns their intersection; use the tag selector in the card's header. If an **environment is selected**, GlitchTip can only scope an error series per hour, so a window under two hours yields one or two buckets: the card's header states the granularity it actually drew (`1h · 30m`). See [monitors.md](monitors.md#errormonitor).
+
+### Cards load but never refresh
+
+The refresh cadence comes from the **project**'s `defaultConfig.DefaultRefreshIntervalMS` — nothing at panel or element level overrides it. A value of `0` disables polling; clear it to fall back to 30 s.
+
+### The window presets don't match the project I selected
+
+They follow the active project through `useActiveWindow`. If they show the 30m / 1h / 12h / 24h defaults on a project that *does* declare intervals, the value never made it out of Strapi — check that `GetProjectById` still selects `timeInterval { duration interval }`, since the DTO cast will not tell you.
 
 ### The header selector shows no panel picker
 

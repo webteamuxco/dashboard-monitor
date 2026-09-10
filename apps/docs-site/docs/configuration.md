@@ -7,10 +7,10 @@ title: Configuration
 
 Configuration comes from **two places**:
 
-- **Strapi admin** — everything project- or panel-scoped: which projects exist, which panels they offer, which tool backs each monitor family of a panel, each tool's connection details, the refresh cadence, the window presets.
+- **Strapi admin** — everything project-, panel- or card-scoped: which projects exist, which panels they offer, which KPIs and blocks each panel holds, which tool backs each of those, each tool's connection details, the refresh cadence, the window presets.
 - **Environment variables** — the API secrets, plus a few display-only UI knobs.
 
-The rule of thumb: if a value differs per project or per panel, it belongs in Strapi. If it is a credential or a build-time UI toggle, it belongs in the environment.
+The rule of thumb: if a value differs per project, per panel or per element, it belongs in Strapi. If it is a credential or a build-time UI toggle, it belongs in the environment.
 
 The canonical env template lives in [apps/dashboard/.env.example](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/.env.example) (committed). Copy it to `apps/dashboard/.env.local` and fill it in — the file belongs to the dashboard app, not to the monorepo root:
 
@@ -38,7 +38,7 @@ flowchart LR
 
 ## Strapi admin (required)
 
-Without a reachable Strapi holding at least one published project, the dashboard renders a configuration message instead of the widgets. A project with no **dashboard panel** renders an empty grid — see [panels.md](panels.md).
+Without a reachable Strapi holding at least one published project, the dashboard renders a configuration message instead of the cards. A project with no **panel**, or a panel with no **element**, renders an empty page — legitimately, since nothing was requested. See [panels.md](panels.md).
 
 ### `STRAPI_BASE_URL`
 
@@ -50,27 +50,27 @@ Without a reachable Strapi holding at least one published project, the dashboard
 
 - **Type:** secret (server-only)
 - **Consumed by:** [StrapiClientFactory.ts:8](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/config/domain/StrapiClientFactory.ts#L8)
-- **Effect:** Bearer token for the Strapi GraphQL API. Needs read access to projects, dashboard panels, mapped tools, strategies and tool configurations.
+- **Effect:** Bearer token for the Strapi GraphQL API. Needs read access to projects, dashboard panels, dashboard KPIs, dashboard blocks and tools (with their configuration components).
 
 Both are validated together — missing either throws `Strapi env vars missing: STRAPI_BASE_URL, STRAPI_TOKEN`.
 
 ## Provider secrets
 
-These are the **only** provider values left in the environment. Instance URL, organization and project id come from the **panel's** tool configuration in Strapi.
+These are the **only** provider values left in the environment. Instance URL, organization and provider project id come from the `Tool` each **element** points at in Strapi.
 
 ### `GLITCHTIP_TOKEN`
 
 - **Type:** secret (server-only)
 - **Consumed by:** [AbstractGlitchtipFactory.ts:28](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/AbstractGlitchtipFactory.ts#L28)
-- **Effect:** Bearer token sent on every GlitchTip API call, for both the error and log monitors. Required as soon as a panel maps `glitchtip`.
+- **Effect:** Bearer token sent on every GlitchTip API call, for both the error and log monitors. Required as soon as one element points at a GlitchTip tool.
 
 ### `POSTHOG_PERSONAL_API_KEY`
 
 - **Type:** secret (server-only)
 - **Consumed by:** [AbstractPosthogFactory.ts:22](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/AbstractPosthogFactory.ts#L22)
-- **Effect:** PostHog personal API key, sent as Bearer on HogQL queries. Required as soon as a panel maps `posthog`.
+- **Effect:** PostHog personal API key, sent as Bearer on HogQL queries. Required as soon as one element points at a PostHog tool.
 
-One token per vendor, per deployment. Pointing two panels at two different GlitchTip instances is possible today only if the same token is valid on both.
+One token per vendor, per deployment. Pointing two elements at two different GlitchTip instances is possible today only if the same token is valid on both.
 
 ## Dashboard UI knobs (browser-exposed)
 
@@ -111,9 +111,14 @@ One token per vendor, per deployment. Pointing two panels at two different Glitc
 ### `NEXT_PUBLIC_DASHBOARD_ENVIRONMENTS`
 
 - **Example:** `production,staging`
-- **Default:** empty (selector hidden, no environment filter)
+- **Default:** empty (no environment filter)
 - **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/environments.ts)
-- **Effect:** comma-separated list shown in the header environment selector. Filters issues and error rate.
+- **Effect:** comma-separated list the environment selector offers. The selected value is part of every measure key and reaches the provider as an environment filter — on GlitchTip logs it is appended to the tag (`reservation.sent.production`), on issues it is a query param.
+
+:::note The environment selector is currently commented out in `DashboardHeader`
+
+So the environment is whatever `NEXT_PUBLIC_DASHBOARD_DEFAULT_ENVIRONMENT` resolves to, and nobody can change it at runtime. The store, the query keys and the provider plumbing are all still wired — uncommenting the one line brings the control back.
+:::
 
 ### `NEXT_PUBLIC_DASHBOARD_DEFAULT_ENVIRONMENT`
 
@@ -121,7 +126,7 @@ One token per vendor, per deployment. Pointing two panels at two different Glitc
 - **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/environments.ts) (`resolveDefaultEnvironment()`)
 - **Effect:** environment selected on load. Must be one of the values above, otherwise it falls back.
 
-> This resolver is deliberately isomorphic: `page.tsx` and the Zustand store must agree on the default, or the prefetched query keys would not match on hydration.
+> This resolver is deliberately isomorphic: every consumer must agree on the default, on the server as in the browser, or two callers would build two different query keys for the same card.
 
 ## What Strapi configures (not env)
 
@@ -132,11 +137,15 @@ One token per vendor, per deployment. Pointing two panels at two different Glitc
 | Window presets | **Project** → `timeInterval[]` (`duration` × `interval`) | [windowPresets.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/windowPresets.ts), falls back to 30m / 1h / 12h / 24h |
 | The panel list and its order | **Panel** → `order` | `PannelSelector`, `/api/config/projects/[projectId]/panels` |
 | Panel label and icon | **Panel** → `display_name`, `icon` (kebab-case lucide name) | `PannelSelector` — an unknown icon silently falls back to `Circle` |
-| Which widgets a panel renders | **Panel** → mapped tools → strategies (`error-monitor`, `log-monitor`, `tracker-monitor`) | `DashboardContent`, via `/api/config/projects/[projectId]/strategies?selectedPanel` |
-| Which tool backs a monitor family | **Panel** → mapped tools → strategy × tool slug | each family's Resolver, via `support()` |
-| Instance URL, organization, provider project id | **Panel** → tool configuration component | `createConnection()` of each factory |
+| Whether a panel is hidden from the kiosk | **Panel** → `is_development` | `usePanels`, unless the URL carries `?showDevelopmentPanel=true` |
+| Which cards a panel renders | **Panel** → `dashboard_kpis[]` / `dashboard_blocks[]` | `PanelKpi` / `PanelBlock`, via `/api/config/dashboard-kpis` and `.../dashboard-blocks` |
+| Which component draws a card | **Element** → `type` (`list` / `interval`, or `list` / `rate` / `bar` / `stackedBar`) | `KpiCard`, and the `BLOCK_BODIES` record for a block |
+| Card identity and colour | **Element** → `title`, `description`, `icon`, `level`, `order` | the card itself; `level` also picks the chart colour |
+| Which monitor family answers a card | **Element** → `strategy` (`error-monitor` with no extra field, `log-monitor` with its `tags`, `tracker-monitor`) | the data-access `switch`, then that family's Resolver |
+| Which vendor backs it | **Element** → `tool` → `configuration.__typename` | `support()` of each factory |
+| Instance URL, organization, provider project id | **Tool** → configuration component | `createConnection()` of each factory |
 
-Note which level owns what: the cadence and the presets are project-wide, everything about *what is displayed and where it comes from* is per panel. See [panels.md](panels.md).
+Note which level owns what: the cadence and the presets are project-wide, the panel is a label, and everything about *what is displayed and where it comes from* is per element. See [panels.md](panels.md).
 
 Neither the active project nor the active panel is configured server-side: both are chosen in the header and persisted client-side under the `localStorage` keys `dashboard-selected-project` and `dashboard-selected-pannel` (note the spelling). On a fresh browser the first project of the list and its first panel by `order` are used.
 
@@ -156,7 +165,7 @@ Everything else has a sensible default. The rest of the wiring is done in Strapi
 
 When you introduce a new `process.env.X`:
 
-1. First ask whether it belongs in Strapi instead. Anything project- or panel-scoped does.
+1. First ask whether it belongs in Strapi instead. Anything project-, panel- or element-scoped does.
 2. Add it to `apps/dashboard/.env.example` with an empty value and an English comment explaining its purpose and the supported values.
 3. Document it in this file under the relevant section, with a link to the file:line that consumes it.
 4. If the code can run without it, define a clear default inline (e.g. `?? 30`). Otherwise throw an explicit error early (`throw new Error("X is required")`) — silent failure is worse than a loud crash.
