@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // The selectors have their own tests; here only the interactivity gate matters.
 vi.mock("@/app/features/dashboard/ui/ProjectSelector", () => ({
@@ -114,10 +114,56 @@ describe("DashboardHeader", () => {
     expect(invalidateQueries.mock.calls[0]).toEqual([]);
   });
 
-  it("renders a placeholder for the last refresh — the header tracks none", () => {
+  it("renders a placeholder for the last refresh while the cache is empty", () => {
     renderHeader();
 
     expect(screen.getByText(/Dernier rafraîchissement: —/)).toBeDefined();
+  });
+
+  it("reports the freshest data across every query — the header owns none", () => {
+    const client = createTestQueryClient();
+    const older = new Date("2026-09-10T08:15:30Z").getTime();
+    const newer = new Date("2026-09-10T08:42:07Z").getTime();
+    client.setQueryData(["dashboardKpis", "measure"], { value: 1 }, { updatedAt: older });
+    client.setQueryData(["blocks", "measure"], { value: 2 }, { updatedAt: newer });
+
+    render(
+      createElement(DashboardHeader, {
+        documentId: "project-1",
+        intervalMs: 30_000,
+      }),
+      { wrapper: withQueryClient(client) },
+    );
+
+    const expected = new Date(newer).toLocaleTimeString("fr-FR");
+    expect(
+      screen.getByText(`Dernier rafraîchissement: ${expected}`),
+    ).toBeDefined();
+  });
+
+  it("picks up a query that resolves after it mounted", async () => {
+    // The cache notification is deferred to a microtask — a card building its
+    // query mid-render must not force an update on the header — so the label
+    // lands one tick later.
+    const client = createTestQueryClient();
+
+    render(
+      createElement(DashboardHeader, {
+        documentId: "project-1",
+        intervalMs: 30_000,
+      }),
+      { wrapper: withQueryClient(client) },
+    );
+
+    const updatedAt = new Date("2026-09-10T09:05:00Z").getTime();
+    client.setQueryData(["blocks", "measure"], { value: 3 }, { updatedAt });
+
+    const expected = new Date(updatedAt).toLocaleTimeString("fr-FR");
+    await waitFor(() =>
+      expect(
+        screen.getByText(`Dernier rafraîchissement: ${expected}`),
+      ).toBeDefined(),
+    );
   });
 
   it("links Admin and Documentation to their configured targets", () => {

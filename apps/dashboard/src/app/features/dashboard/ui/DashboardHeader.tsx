@@ -7,6 +7,7 @@ import { WindowSelector } from "./WindowSelector";
 import { ProjectSelector } from "./ProjectSelector";
 import { isDashboardInteractive } from "../state/useDashboardWindow";
 import { PannelSelector } from "./PannelSelector";
+import { useLastDataUpdate } from "../hooks/useLastDataUpdate";
 
 interface DashboardHeaderProps {
   documentId: string;
@@ -19,7 +20,7 @@ export function DashboardHeader({ documentId, intervalMs }: DashboardHeaderProps
   const docsSiteUrl = process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? '/docs'
   const developmentPanelUrl = process.env.NEXT_PUBLIC_DEVELOPEMENT_SITE_PANEL ?? '/?showDevelopmentPanel=true'
   const queryClient = useQueryClient();
-  const dataUpdatedAt = null;
+  const dataUpdatedAt = useLastDataUpdate();
   const isFetching = useIsFetching() > 0;
 
   const intervalSeconds = Math.round(intervalMs / 1000);
