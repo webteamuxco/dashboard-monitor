@@ -39,6 +39,7 @@ Use jsdom for hooks, stores that touch `localStorage`, and components. Everythin
 |---|---|
 | [helpers/renderHook.ts](helpers/renderHook.ts) | `renderQueryHook(hook, props)` renders a hook in a fresh `QueryClientProvider`; `renderWithQuery(element)` does the same for a component; `renderQueryHookWithClient` also hands back the client, and `refetchIntervalOf(client, key)` reads the resolved polling interval without racing timers |
 | [helpers/queryClient.ts](helpers/queryClient.ts) | `createTestQueryClient()` — retries off, no caching, so one assertion means one fetch |
+| [helpers/toolWiring.ts](helpers/toolWiring.ts) | `glitchtipWiring()` / `posthogWiring()` — a `ToolWiring` fixture with overrides, for everything below `Get<Family>Monitor` |
 | [helpers/fetchMock.ts](helpers/fetchMock.ts) | `mockOk` / `mockError` / `mockUnparseableError` stub `fetch` with the BFF envelopes; `calledUrl` / `calledParams` / `calledInit` read the last call |
 | [setup/cleanup.ts](setup/cleanup.ts) | global `afterEach(cleanup)` — see below |
 | [shims/next-navigation.ts](shims/next-navigation.ts) | `setTestSearchParams({ … })` sets what `useSearchParams()` returns — see below |
@@ -93,16 +94,17 @@ Test file naming: `<SourceFile>.test.ts`. A few files cover a whole contract acr
 
 | Layer | Test focus |
 |---|---|
-| `src/lib/<family>/Get<Family>Monitor.ts` | resolver wiring: which Factory comes back for a panel id, and the failure when none matches |
-| `src/lib/<family>/factory/...Resolver.ts` | `support(panelId, strategy)` dispatch, error when no factory matches |
+| `src/lib/<family>/Get<Family>Monitor.ts` | resolver wiring: which Factory comes back for a `ToolWiring`, and the failure when none matches |
+| `src/lib/<family>/factory/...Resolver.ts` | `support(wiring, strategy)` dispatch, error when no factory matches |
 | `src/lib/<family>/adapters/<provider>/<Provider>Factory.ts` | `support` / `createConnection` delegation to the config strategy, secret validation in `createStrategy` |
 | `src/lib/<family>/adapters/<provider>/` | strategy methods + DTO→domain mappers. **Mock the HTTP client**, not `fetch`. |
 | `src/lib/tool/{glitchtip,posthog}/*Client.ts` | URL building, auth header, status-code handling. Mock `fetch`. |
-| `src/lib/config/domain/mappers/projectMapper.ts` | DTO→domain renaming, including `mapDashboardPanel` (`display_name` → `displayName`, `documentId` → `id`) |
+| `src/lib/config/domain/mappers/projectMapper.ts` | DTO→domain renaming, including `mapDashboardPanel` (`documentId` → `id`, `is_development` → `isDevelopment`) |
+| `src/lib/config/domain/mappers/{monitorStrategyMapper,toolWiringMapper}.ts` | the dynamic-zone mapping: first entry wins, `null` holes dropped, `Error` throws, vendor read from `__typename` |
 | `src/app/features/*/data-access/...DataAccess.ts` | composition + view-model mapping. Mock the monitor family's `get<Family>Monitor`. |
 | `src/app/features/*/data-access/fetch*Client.ts` | `fetch` wrapper behavior: URL, params, `no-store`, `{ data }` unwrapping, `{ error }` and unparseable-body paths. Mock `fetch`. |
-| `src/lib/config/domain/StrapiRepository.ts` | endpoint + Bearer, GraphQL error paths, and **the variables each query sends**. Also guards the query ↔ DTO coupling (`timeInterval`, `__typename`). Mock `fetch`. |
-| `src/lib/config/domain/tool/*ConfigurationStrategy.ts` | `isConfigure` forwarding and every explicit `resolveConnection` failure. Mock `StrapiClientFactory`. |
+| `src/lib/config/domain/repositories/*.ts` | endpoint + Bearer and the GraphQL error paths (once, through any concrete repository), plus **the variables each query sends**. Also guards the query ↔ DTO coupling (`timeInterval`, `is_development`, `__typename`). Mock `fetch`. |
+| `src/lib/config/domain/tool/*ConfigurationStrategy.ts` | which wirings `isConfigure` accepts, and every explicit `resolveConnection` failure. No mock — both are pure. |
 | `src/app/features/*/queryKeys.ts` | key shapes — the contract between the server prefetch and the client hooks |
 | `src/app/features/*/hooks/use*.ts` | the key used, the fetcher arguments, `enabled` gating, `refetchInterval`. Mock the client fetcher, keep TanStack Query real. |
 | `src/app/features/dashboard/hooks/useActive*.ts` | rehydration and reconciliation against the fetched list |
@@ -130,9 +132,32 @@ Coverage excludes (see [vitest.config.ts](../vitest.config.ts)): `domain/**`, `d
 - **Env vars**: in `beforeEach`, `delete` the secrets you intend to test (`GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`) so cross-test pollution can't hide bugs. Set them per `it` block.
 - **No real network**. Ever. If a test hits a live vendor URL, fix the test.
 
-## The id under test is the panel id
+## What is under test is a `ToolWiring`, not an id
 
-Since the panel system landed, the `documentId` a factory, resolver or data-access method receives is the **panel**'s Strapi `documentId`, not the project's — the parameter name did not change (see the root [CLAUDE.md](../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path)). Fixtures like `"doc1"` are opaque strings so nothing breaks, but name them for what they are (`panelId`) in new tests, and assert the forwarded argument rather than assuming it.
+A factory, a resolver and a `Get<Family>Monitor` no longer take a `documentId`: they take a `ToolWiring` and are **synchronous**. Build one with [helpers/toolWiring.ts](helpers/toolWiring.ts) (`glitchtipWiring()` / `posthogWiring()`, both accepting overrides) rather than hand-rolling the shape, and assert `support()` was handed that exact object:
+
+```ts
+const wiring = glitchtipWiring();
+
+expect(getErrorMonitorFactory(wiring)).toBeInstanceOf(GlitchTipFactory);
+expect(isConfigureMock).toHaveBeenCalledWith(wiring, "error-monitor");
+```
+
+The `*ConfigurationStrategy` tests need **no mock at all** now — both methods are pure. If a test of yours still mocks `StrapiClientFactory` to reach them, the seam is wrong.
+
+A data-access test is the one place the id still appears, as the pair `(kind, documentId)`. Mock `@/lib/config/domain/loadToolWiring` there — otherwise the orchestrator reaches Strapi — and declare that mock with `vi.hoisted`, because the data-access module imports it eagerly enough to hit the temporal dead zone otherwise:
+
+```ts
+const { loadToolWiringMock } = vi.hoisted(() => ({ loadToolWiringMock: vi.fn() }));
+
+vi.mock("@/lib/config/domain/loadToolWiring", () => ({
+  DASHBOARD_KPI: "dashboard-kpi",
+  DASHBOARD_BLOCK: "dashboard-block",
+  loadToolWiring: loadToolWiringMock,
+}));
+```
+
+Then assert the id reached Strapi under the right collection: `expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "kpi-42")`.
 
 ## Template — server-side, `Get<Family>Monitor`
 
@@ -153,23 +178,25 @@ vi.mock("@/lib/config/domain/tool/GlitchtipConfigurationStrategy", () => ({
 
 import { getErrorMonitorFactory } from "@/lib/errorMonitor/GetErrorMonitor";
 import { GlitchTipFactory } from "@/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorFactory";
+import { glitchtipWiring } from "../../helpers/toolWiring";
 
 describe("getErrorMonitorFactory", () => {
   beforeEach(() => {
     isConfigureMock.mockReset();
   });
 
-  it("resolves the factory of the tool mapped to the panel", async () => {
-    isConfigureMock.mockResolvedValue(true);
+  it("resolves the factory of the tool the element wires", () => {
+    isConfigureMock.mockReturnValue(true);
+    const wiring = glitchtipWiring();
 
-    await expect(getErrorMonitorFactory("panel1")).resolves.toBeInstanceOf(GlitchTipFactory);
-    expect(isConfigureMock).toHaveBeenCalledWith("panel1", "error-monitor", "glitchtip");
+    expect(getErrorMonitorFactory(wiring)).toBeInstanceOf(GlitchTipFactory);
+    expect(isConfigureMock).toHaveBeenCalledWith(wiring, "error-monitor");
   });
 
-  it("rejects when nothing is mapped in admin", async () => {
-    isConfigureMock.mockResolvedValue(false);
+  it("throws when nothing is wired in admin", () => {
+    isConfigureMock.mockReturnValue(false);
 
-    await expect(getErrorMonitorFactory("panel1")).rejects.toThrow(
+    expect(() => getErrorMonitorFactory(glitchtipWiring())).toThrow(
       /No ErrorMonitorFactory supports type "error-monitor"/,
     );
   });

@@ -79,7 +79,7 @@ The long-form docs live in [`apps/docs-site/docs/`](apps/docs-site/docs/) and ar
 - [Architecture](apps/docs-site/docs/architecture.md) — layered overview, context diagram, design rationale
 - [Panels](apps/docs-site/docs/panels.md) — the panel system: content model, ids, selection, resolution
 - [Monitors (Strategy/Factory)](apps/docs-site/docs/monitors.md) — core pattern + guide to add a new adapter
-- [Features](apps/docs-site/docs/features.md) — feature folders catalog (issues, errorRate, reservations, visitors, config…)
+- [Features](apps/docs-site/docs/features.md) — feature folders catalog (blocks, kpis, issues, errorRate, visitors, config…)
 - [Data Flow](apps/docs-site/docs/data-flow.md) — end-to-end sequence diagrams (UI → external API → render)
 - [State Management](apps/docs-site/docs/state-management.md) — TanStack Query vs Zustand, query keys, conventions
 - [Configuration](apps/docs-site/docs/configuration.md) — the Strapi / env split, all variables, where they are consumed
@@ -95,7 +95,7 @@ dashboard-monitor/
 │   ├── dashboard/
 │   │   ├── src/app/
 │   │   │   ├── api/            # Backend-for-frontend (one route per data view)
-│   │   │   ├── features/       # issues · errorRate · reservations · visitors · dashboard · config
+│   │   │   ├── features/       # blocks · kpis · issues · errorRate · visitors · dashboard · config
 │   │   │   └── page.tsx        # Server Component: catalog + prefetch
 │   │   ├── src/lib/
 │   │   │   ├── errorMonitor/   # Strategy/Factory for error tracking
