@@ -4,7 +4,6 @@ import { createElement, useId } from "react";
 import { useSelectedProject } from "../state/useSelectedProject";
 import { useSelectedPanel } from "../state/useSelectedPanel";
 import { usePanels } from "../../config/hooks/usePannels";
-import { icons, type LucideIcon } from "lucide-react";
 import { getLucideIcon } from "../../utils/lucidIcon";
 interface ProjectSelectorProps {
   fallbackDocumentId: string;

@@ -31,8 +31,8 @@ export function PanelBlock ({
 
   const blocks = data ?? [];
   const columns = [
-    { side: "even", blocks: blocks.filter((_, index) => _.order % 2 === 0) },
-    { side: "odd", blocks: blocks.filter((_, index) => _.order % 2 === 1) },
+    { side: "even", blocks: blocks.filter((_) => _.order % 2 === 0) },
+    { side: "odd", blocks: blocks.filter((_) => _.order % 2 === 1) },
   ].filter((column) => column.blocks.length > 0);
 
     return (
