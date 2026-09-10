@@ -8,6 +8,7 @@ import { createElement } from "react";
 import { getLucideIcon } from "../../utils/lucidIcon";
 import { useKpi } from "../hooks/useKpi";
 import { useDashboardWindow } from "../../dashboard/state/useDashboardWindow";
+import { formatWindowLabel } from "../../dashboard/state/windowPresets";
 import { useEnvironment } from "../../dashboard/state/useEnvironment";
 
 type KpiAccent = Level;
@@ -74,7 +75,11 @@ export function KpiCard({ dashboardKpi, intervalMs }: KpiCardProps) {
       <div className={cn("font-mono text-3xl font-semibold leading-none", ACCENT_VALUE[dashboardKpi.level])}>
         {value}
       </div>
-      <div className="mt-1 font-mono font-bold text-[0.725rem] text-muted-foreground/60">{dashboardKpi.description}</div>
+      <div className="mt-1 font-mono font-bold text-[0.725rem] text-muted-foreground/60">{dashboardKpi.description}
+        {windowMinutes && (
+          <span> - {formatWindowLabel(windowMinutes)}</span>
+        )}
+      </div>
     </div>
   );
 }
