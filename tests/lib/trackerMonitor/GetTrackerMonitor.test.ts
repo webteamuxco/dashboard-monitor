@@ -12,23 +12,25 @@ vi.mock("@/lib/config/domain/tool/PosthogConfigurationStrategy", () => ({
 
 import { getTrackerMonitor } from "@/lib/trackerMonitor/GetTrackerMonitor";
 import { PostHogFactory } from "@/lib/trackerMonitor/adapters/posthog/PostHogFactory";
+import { posthogWiring } from "../../helpers/toolWiring";
 
 describe("getTrackerMonitor", () => {
   beforeEach(() => {
     isConfigureMock.mockReset();
   });
 
-  it("resolves the PostHog factory when the project maps posthog to the tracker monitor", async () => {
-    isConfigureMock.mockResolvedValue(true);
+  it("resolves the PostHog factory when the element wires posthog to the tracker monitor", () => {
+    isConfigureMock.mockReturnValue(true);
+    const wiring = posthogWiring();
 
-    await expect(getTrackerMonitor("doc1")).resolves.toBeInstanceOf(PostHogFactory);
-    expect(isConfigureMock).toHaveBeenCalledWith("doc1", "tracker-monitor", "posthog");
+    expect(getTrackerMonitor(wiring)).toBeInstanceOf(PostHogFactory);
+    expect(isConfigureMock).toHaveBeenCalledWith(wiring, "tracker-monitor");
   });
 
-  it("rejects when the project has no tracker monitor mapped in admin", async () => {
-    isConfigureMock.mockResolvedValue(false);
+  it("throws when the element has no tracker monitor wired in admin", () => {
+    isConfigureMock.mockReturnValue(false);
 
-    await expect(getTrackerMonitor("doc1")).rejects.toThrow(
+    expect(() => getTrackerMonitor(posthogWiring())).toThrow(
       /No TrackerMonitorFactory supports type "tracker-monitor"/,
     );
   });

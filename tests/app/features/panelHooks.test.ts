@@ -2,21 +2,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 
-const {
-  fetchErrorRateClientMock,
-  fetchReservationsClientMock,
-  fetchVisitorsTimelineClientMock,
-} = vi.hoisted(() => ({
-  fetchErrorRateClientMock: vi.fn(),
-  fetchReservationsClientMock: vi.fn(),
-  fetchVisitorsTimelineClientMock: vi.fn(),
-}));
+const { fetchErrorRateClientMock, fetchVisitorsTimelineClientMock } = vi.hoisted(
+  () => ({
+    fetchErrorRateClientMock: vi.fn(),
+    fetchVisitorsTimelineClientMock: vi.fn(),
+  }),
+);
 
 vi.mock("@/app/features/errorRate/data-access/fetchErrorRateClient", () => ({
   fetchErrorRateClient: fetchErrorRateClientMock,
-}));
-vi.mock("@/app/features/reservations/data-access/fetchReservationsClient", () => ({
-  fetchReservationsClient: fetchReservationsClientMock,
 }));
 vi.mock(
   "@/app/features/visitors/data-access/fetchVisitorsTimelineClient",
@@ -24,13 +18,11 @@ vi.mock(
 );
 
 import { useErrorRate } from "@/app/features/errorRate/hooks/useErrorRate";
-import { useReservations } from "@/app/features/reservations/hooks/useReservations";
 import { useVisitorsTimeline } from "@/app/features/visitors/hooks/useVisitorsTimeline";
 import { renderQueryHook } from "../../helpers/renderHook";
 
 beforeEach(() => {
   fetchErrorRateClientMock.mockReset();
-  fetchReservationsClientMock.mockReset();
   fetchVisitorsTimelineClientMock.mockReset();
 });
 
@@ -79,46 +71,6 @@ describe("useErrorRate", () => {
     );
 
     await waitFor(() => expect(result.current.isError).toBe(true));
-  });
-});
-
-describe("useReservations", () => {
-  it("fetches with the panel documentId, the window and the environment", async () => {
-    fetchReservationsClientMock.mockResolvedValue([{ count: 1 }]);
-
-    const { result } = renderQueryHook(
-      () => useReservations("panel-1", 30, "production", 30_000),
-      undefined,
-    );
-
-    await waitFor(() => expect(result.current.data).toEqual([{ count: 1 }]));
-    expect(fetchReservationsClientMock).toHaveBeenCalledWith(
-      "panel-1",
-      30,
-      "production",
-    );
-  });
-
-  it("refetches when the user picks another window preset", async () => {
-    fetchReservationsClientMock.mockImplementation(
-      async (_id: string, windowMinutes: number) => [{ windowMinutes }],
-    );
-
-    const { result, rerender } = renderQueryHook(
-      (windowMinutes: number) =>
-        useReservations("panel-1", windowMinutes, null, 30_000),
-      30,
-    );
-
-    await waitFor(() =>
-      expect(result.current.data).toEqual([{ windowMinutes: 30 }]),
-    );
-
-    rerender(720);
-
-    await waitFor(() =>
-      expect(result.current.data).toEqual([{ windowMinutes: 720 }]),
-    );
   });
 });
 

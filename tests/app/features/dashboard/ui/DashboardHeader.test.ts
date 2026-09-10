@@ -1,15 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createElement } from "react";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
-
-const { fetchIssuesClientMock } = vi.hoisted(() => ({
-  fetchIssuesClientMock: vi.fn(),
-}));
-
-vi.mock("@/app/features/issues/data-access/fetchIssuesClient", () => ({
-  fetchIssuesClient: fetchIssuesClientMock,
-}));
+import { fireEvent, render, screen } from "@testing-library/react";
 
 // The selectors have their own tests; here only the interactivity gate matters.
 vi.mock("@/app/features/dashboard/ui/ProjectSelector", () => ({
@@ -31,6 +23,7 @@ vi.mock("@/app/features/dashboard/ui/WindowSelector", () => ({
 
 import { DashboardHeader } from "@/app/features/dashboard/ui/DashboardHeader";
 import { renderWithQuery } from "../../../../helpers/renderHook";
+import { createTestQueryClient, withQueryClient } from "../../../../helpers/queryClient";
 
 const INTERACTIVITY = "NEXT_PUBLIC_DASHBOARD_INTERACTIVITY";
 
@@ -38,8 +31,6 @@ function renderHeader() {
   return renderWithQuery(
     createElement(DashboardHeader, {
       documentId: "project-1",
-      panelId: "panel-1",
-      limit: 20,
       intervalMs: 30_000,
     }),
   );
@@ -48,8 +39,6 @@ function renderHeader() {
 describe("DashboardHeader", () => {
   beforeEach(() => {
     delete process.env[INTERACTIVITY];
-    fetchIssuesClientMock.mockReset();
-    fetchIssuesClientMock.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -104,28 +93,28 @@ describe("DashboardHeader", () => {
     expect(screen.getByText(/polling 30s/)).toBeDefined();
   });
 
-  it("polls issues with the panel documentId, not the project's", async () => {
-    renderHeader();
-
-    await waitFor(() =>
-      expect(fetchIssuesClientMock).toHaveBeenCalledWith("panel-1", 20, null),
-    );
-  });
-
-  it("invalidates every query when the refresh button is clicked", async () => {
+  it("invalidates every query when the refresh button is clicked", () => {
+    // The header owns no query of its own: the button is a blanket
+    // invalidation, which is what refreshes every mounted card at once.
     process.env[INTERACTIVITY] = "true";
+    const client = createTestQueryClient();
+    const invalidateQueries = vi.spyOn(client, "invalidateQueries");
 
-    renderHeader();
+    render(
+      createElement(DashboardHeader, {
+        documentId: "project-1",
+        intervalMs: 30_000,
+      }),
+      { wrapper: withQueryClient(client) },
+    );
 
-    await waitFor(() => expect(fetchIssuesClientMock).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole("button", { name: /Rafraîchir/ }));
 
-    await waitFor(() => expect(fetchIssuesClientMock).toHaveBeenCalledTimes(2));
+    expect(invalidateQueries).toHaveBeenCalledTimes(1);
+    expect(invalidateQueries.mock.calls[0]).toEqual([]);
   });
 
-  it("renders a placeholder until the first refresh lands", () => {
-    fetchIssuesClientMock.mockImplementation(() => new Promise(() => {}));
-
+  it("renders a placeholder for the last refresh — the header tracks none", () => {
     renderHeader();
 
     expect(screen.getByText(/Dernier rafraîchissement: —/)).toBeDefined();

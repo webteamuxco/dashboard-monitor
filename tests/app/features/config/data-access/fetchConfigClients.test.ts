@@ -86,6 +86,14 @@ describe("fetchProjectPanels", () => {
     expect(calledInit(fetchMock)).toMatchObject({ cache: "no-store" });
   });
 
+  it("reads a project with no panel as an empty list, never null", async () => {
+    // getProjectPanels answers null when a project has no panel and the route
+    // forwards it; a null reaching useActivePanel would crash on `.length`.
+    mockOk(null);
+
+    expect(await fetchProjectPanels("project-1")).toEqual([]);
+  });
+
   it("hides the development panels by default", async () => {
     const fetchMock = mockOk([]);
 

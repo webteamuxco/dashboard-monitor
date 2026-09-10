@@ -18,16 +18,19 @@ import { useSelectedProject } from "@/app/features/dashboard/state/useSelectedPr
 import { renderWithQuery } from "../../../../helpers/renderHook";
 
 function buildPanel(overrides: Partial<DashboardPanel> = {}): DashboardPanel {
-  return {
+  const panel = {
     id: "panel-1",
     name: "production",
     slug: "production",
-    displayName: "Production",
     icon: "activity",
     order: 1,
     isDevelopment: false,
     ...overrides,
   };
+
+  // The label defaults to the name so a fixture reads the same either way; the
+  // test below is the one that proves which field the option renders.
+  return { displayName: panel.name, ...panel };
 }
 
 const PROD = buildPanel();
@@ -35,7 +38,6 @@ const STAGING = buildPanel({
   id: "panel-2",
   name: "staging",
   slug: "staging",
-  displayName: "Staging",
   icon: "bug",
   order: 2,
 });
@@ -56,7 +58,7 @@ describe("PannelSelector", () => {
     });
   });
 
-  it("renders one option per panel, labelled with its display name", async () => {
+  it("renders one option per panel", async () => {
     fetchProjectPanelsMock.mockResolvedValue([PROD, STAGING]);
 
     renderSelector();
@@ -64,7 +66,21 @@ describe("PannelSelector", () => {
     await waitFor(() => expect(screen.getByRole("combobox")).toBeDefined());
     expect(
       screen.getAllByRole("option").map((option) => option.textContent),
-    ).toEqual(["Production", "Staging"]);
+    ).toEqual(["production", "staging"]);
+  });
+
+  it("labels an option with the panel's display name, not its slug", async () => {
+    fetchProjectPanelsMock.mockResolvedValue([
+      buildPanel({ displayName: "Production" }),
+      STAGING,
+    ]);
+
+    renderSelector();
+
+    await waitFor(() => expect(screen.getByRole("combobox")).toBeDefined());
+    expect(
+      screen.getAllByRole("option").map((option) => option.textContent),
+    ).toEqual(["Production", "staging"]);
   });
 
   it("renders nothing below two panels — a single-panel project needs no control", async () => {

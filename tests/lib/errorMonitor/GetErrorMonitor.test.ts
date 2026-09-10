@@ -12,24 +12,34 @@ vi.mock("@/lib/config/domain/tool/GlitchtipConfigurationStrategy", () => ({
 
 import { getErrorMonitorFactory } from "@/lib/errorMonitor/GetErrorMonitor";
 import { GlitchTipFactory } from "@/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorFactory";
+import { glitchtipWiring } from "../../helpers/toolWiring";
 
 describe("getErrorMonitorFactory", () => {
   beforeEach(() => {
     isConfigureMock.mockReset();
   });
 
-  it("resolves the GlitchTip factory when the project maps glitchtip to the error monitor", async () => {
-    isConfigureMock.mockResolvedValue(true);
+  it("resolves the GlitchTip factory when the element wires glitchtip to the error monitor", () => {
+    isConfigureMock.mockReturnValue(true);
+    const wiring = glitchtipWiring();
 
-    await expect(getErrorMonitorFactory("doc1")).resolves.toBeInstanceOf(GlitchTipFactory);
-    expect(isConfigureMock).toHaveBeenCalledWith("doc1", "error-monitor", "glitchtip");
+    expect(getErrorMonitorFactory(wiring)).toBeInstanceOf(GlitchTipFactory);
+    expect(isConfigureMock).toHaveBeenCalledWith(wiring, "error-monitor");
   });
 
-  it("rejects when the project has no error monitor mapped in admin", async () => {
-    isConfigureMock.mockResolvedValue(false);
+  it("throws when the element has no error monitor wired in admin", () => {
+    isConfigureMock.mockReturnValue(false);
 
-    await expect(getErrorMonitorFactory("doc1")).rejects.toThrow(
+    expect(() => getErrorMonitorFactory(glitchtipWiring())).toThrow(
       /No ErrorMonitorFactory supports type "error-monitor"/,
+    );
+  });
+
+  it("names the element in the failure, so admin knows what to fix", () => {
+    isConfigureMock.mockReturnValue(false);
+
+    expect(() => getErrorMonitorFactory(glitchtipWiring({ id: "kpi-42" }))).toThrow(
+      /Strapi element "kpi-42"/,
     );
   });
 });

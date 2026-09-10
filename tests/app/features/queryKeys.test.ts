@@ -2,7 +2,8 @@ import { describe, it, expect } from "vitest";
 import { configKeys } from "@/app/features/config/queryKeys";
 import { issuesKeys } from "@/app/features/issues/queryKeys";
 import { errorRateKeys } from "@/app/features/errorRate/queryKeys";
-import { reservationsKeys } from "@/app/features/reservations/queryKeys";
+import { dashboardBlockKeys } from "@/app/features/blocks/queryKeys";
+import { dashboardKpiKeys } from "@/app/features/kpis/queryKeys";
 import { visitorsKeys } from "@/app/features/visitors/queryKeys";
 
 /**
@@ -58,22 +59,11 @@ describe("configKeys", () => {
 
 describe("issuesKeys", () => {
   it("keys the recent list broad to narrow", () => {
-    expect(issuesKeys.recent("panel-1", 20, "production")).toEqual([
+    expect(issuesKeys.recentKpi("open-issues", 20)).toEqual([
       "issues",
       "recent",
-      "panel-1",
+      "open-issues",
       20,
-      "production",
-    ]);
-  });
-
-  it("defaults the environment to null so the key stays stable", () => {
-    expect(issuesKeys.recent("panel-1", 20)).toEqual([
-      "issues",
-      "recent",
-      "panel-1",
-      20,
-      null,
     ]);
   });
 
@@ -81,28 +71,92 @@ describe("issuesKeys", () => {
     expect(issuesKeys.detail("i1")).toEqual(["issues", "detail", "i1"]);
   });
 
-  it("keys the strategy list by project, environment and panel slug", () => {
-    // The panel slug is a factory argument, not something the hook appends —
-    // that is what lets page.tsx seed the very same key.
-    expect(issuesKeys.isConfig("project-1", "production", "prod-panel")).toEqual(
-      ["issues", "isConfig", "project-1", "production", "prod-panel"],
-    );
-  });
-
-  it("defaults the strategy key's environment and panel slug to null", () => {
-    expect(issuesKeys.isConfig("project-1")).toEqual([
+  it("keys the strategy list by panel slug", () => {
+    expect(issuesKeys.isConfig("prod-panel")).toEqual([
       "issues",
       "isConfig",
-      "project-1",
+      "prod-panel",
+    ]);
+  });
+
+  it("defaults the strategy key's panel slug to null", () => {
+    expect(issuesKeys.isConfig()).toEqual(["issues", "isConfig", null]);
+  });
+
+  it("distinguishes two panels", () => {
+    expect(issuesKeys.isConfig("prod")).not.toEqual(
+      issuesKeys.isConfig("staging"),
+    );
+  });
+});
+
+describe("dashboardBlockKeys", () => {
+  it("keys a block measure by the element id, then the variables", () => {
+    expect(
+      dashboardBlockKeys.measure("block-1", 30, "production", 20, "tag-1"),
+    ).toEqual([
+      "dashboardBlocks",
+      "measure",
+      "block-1",
+      30,
+      "production",
+      20,
+      "tag-1",
+    ]);
+  });
+
+  it("defaults the environment, the row limit and the tag to null", () => {
+    expect(dashboardBlockKeys.measure("block-1", 30)).toEqual([
+      "dashboardBlocks",
+      "measure",
+      "block-1",
+      30,
+      null,
       null,
       null,
     ]);
   });
 
-  it("distinguishes two panels of the same project", () => {
-    expect(issuesKeys.isConfig("project-1", null, "prod")).not.toEqual(
-      issuesKeys.isConfig("project-1", null, "staging"),
+  it("gives each tag of a multi-tag block its own cache entry", () => {
+    expect(
+      dashboardBlockKeys.measure("block-1", 30, null, null, "tag-1"),
+    ).not.toEqual(
+      dashboardBlockKeys.measure("block-1", 30, null, null, "tag-2"),
     );
+  });
+
+  it("separates a windowed block from an unwindowed one", () => {
+    expect(dashboardBlockKeys.measure("block-1", 30)).not.toEqual(
+      dashboardBlockKeys.measure("block-1", null),
+    );
+  });
+
+  it("keys the block list by panel slug", () => {
+    expect(dashboardBlockKeys.config("prod-panel")).toEqual([
+      "dashboardBlocks",
+      "config",
+      "prod-panel",
+    ]);
+  });
+});
+
+describe("dashboardKpiKeys", () => {
+  it("keys a KPI measure by the element id, then the variables", () => {
+    expect(dashboardKpiKeys.measure("kpi-1", 30, "production")).toEqual([
+      "dashboardKpis",
+      "measure",
+      "kpi-1",
+      30,
+      "production",
+    ]);
+  });
+
+  it("keys the KPI list by panel slug", () => {
+    expect(dashboardKpiKeys.config("prod-panel")).toEqual([
+      "dashboardKpis",
+      "config",
+      "prod-panel",
+    ]);
   });
 });
 
@@ -126,28 +180,6 @@ describe("errorRateKeys", () => {
   });
 });
 
-describe("reservationsKeys", () => {
-  it("keys the series by panel id, window and environment", () => {
-    expect(reservationsKeys.series("panel-1", 30, "production")).toEqual([
-      "reservations",
-      "series",
-      "panel-1",
-      30,
-      "production",
-    ]);
-  });
-
-  it("defaults the environment to null", () => {
-    expect(reservationsKeys.series("panel-1", 30)).toEqual([
-      "reservations",
-      "series",
-      "panel-1",
-      30,
-      null,
-    ]);
-  });
-});
-
 describe("visitorsKeys", () => {
   it("keys the timeline by panel id and window", () => {
     expect(visitorsKeys.timeline("panel-1", 60)).toEqual([
@@ -161,9 +193,10 @@ describe("visitorsKeys", () => {
 
 describe("key layout invariants", () => {
   it("puts the id first among the variable segments of every data key", () => {
-    expect(issuesKeys.recent("panel-1", 20)[2]).toBe("panel-1");
+    expect(issuesKeys.recentKpi("open-issues", 20)[2]).toBe("open-issues");
     expect(errorRateKeys.series("panel-1")[2]).toBe("panel-1");
-    expect(reservationsKeys.series("panel-1", 30)[2]).toBe("panel-1");
+    expect(dashboardBlockKeys.measure("block-1", 30)[2]).toBe("block-1");
+    expect(dashboardKpiKeys.measure("kpi-1", 30)[2]).toBe("kpi-1");
     expect(visitorsKeys.timeline("panel-1", 60)[2]).toBe("panel-1");
     expect(configKeys.project("project-1")[2]).toBe("project-1");
     expect(configKeys.pannels("project-1", false)[2]).toBe("project-1");
@@ -174,11 +207,14 @@ describe("key layout invariants", () => {
       configKeys.projects(),
       configKeys.project("p"),
       configKeys.pannels("p", false),
-      issuesKeys.recent("p", 1),
+      issuesKeys.recentKpi("k", 1),
       issuesKeys.detail("i"),
       issuesKeys.isConfig("p"),
       errorRateKeys.series("p"),
-      reservationsKeys.series("p", 1),
+      dashboardBlockKeys.measure("b", 1),
+      dashboardBlockKeys.config("p"),
+      dashboardKpiKeys.measure("k", 1),
+      dashboardKpiKeys.config("p"),
       visitorsKeys.timeline("p", 1),
     ];
 

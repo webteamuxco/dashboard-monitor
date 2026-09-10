@@ -12,23 +12,25 @@ vi.mock("@/lib/config/domain/tool/GlitchtipConfigurationStrategy", () => ({
 
 import { getLogMonitor } from "@/lib/logMonitor/GetLogMonitor";
 import { GlitchTipLogMonitorFactory } from "@/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorFactory";
+import { glitchtipWiring } from "../../helpers/toolWiring";
 
 describe("getLogMonitor", () => {
   beforeEach(() => {
     isConfigureMock.mockReset();
   });
 
-  it("resolves the GlitchTip factory when the project maps glitchtip to the log monitor", async () => {
-    isConfigureMock.mockResolvedValue(true);
+  it("resolves the GlitchTip factory when the element wires glitchtip to the log monitor", () => {
+    isConfigureMock.mockReturnValue(true);
+    const wiring = glitchtipWiring();
 
-    await expect(getLogMonitor("doc1")).resolves.toBeInstanceOf(GlitchTipLogMonitorFactory);
-    expect(isConfigureMock).toHaveBeenCalledWith("doc1", "log-monitor", "glitchtip");
+    expect(getLogMonitor(wiring)).toBeInstanceOf(GlitchTipLogMonitorFactory);
+    expect(isConfigureMock).toHaveBeenCalledWith(wiring, "log-monitor");
   });
 
-  it("rejects when the project has no log monitor mapped in admin", async () => {
-    isConfigureMock.mockResolvedValue(false);
+  it("throws when the element has no log monitor wired in admin", () => {
+    isConfigureMock.mockReturnValue(false);
 
-    await expect(getLogMonitor("doc1")).rejects.toThrow(
+    expect(() => getLogMonitor(glitchtipWiring())).toThrow(
       /No LogMonitorFactory supports type "log-monitor"/,
     );
   });

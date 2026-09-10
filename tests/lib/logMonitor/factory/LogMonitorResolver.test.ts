@@ -3,6 +3,7 @@ import { LogMonitorResolver } from "@/lib/logMonitor/factory/LogMonitorResolver"
 import type { LogMonitorFactoryInterface } from "@/lib/logMonitor/factory/LogMonitorFactoryInterface";
 import type { LogMonitorStrategyInterface } from "@/lib/logMonitor/strategy/LogMonitorStrategyInterface";
 import type { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
+import { glitchtipWiring } from "../../../helpers/toolWiring";
 
 const CONNECTION: ToolConnection = { baseUrl: "https://gt", projectId: "p" };
 
@@ -15,39 +16,40 @@ function fakeFactory(
   strategy = fakeStrategy(),
 ): LogMonitorFactoryInterface<LogMonitorStrategyInterface> {
   return {
-    support: vi.fn(async () => supported),
-    createConnection: vi.fn(async () => CONNECTION),
+    support: vi.fn(() => supported),
+    createConnection: vi.fn(() => CONNECTION),
     createStrategy: () => strategy,
   };
 }
 
 describe("LogMonitorResolver", () => {
-  it("returns the first factory that supports the project", async () => {
+  it("returns the first factory that supports the element", () => {
     const supporting = fakeFactory(true);
     const resolver = new LogMonitorResolver([fakeFactory(false), supporting]);
 
-    await expect(resolver.resolve("doc1")).resolves.toBe(supporting);
+    expect(resolver.resolve(glitchtipWiring())).toBe(supporting);
   });
 
-  it("asks each factory for the project's 'log-monitor' strategy", async () => {
+  it("asks each factory for the 'log-monitor' strategy, handing it the wiring", () => {
     const factory = fakeFactory(true);
+    const wiring = glitchtipWiring();
 
-    await new LogMonitorResolver([factory]).resolve("doc1");
+    new LogMonitorResolver([factory]).resolve(wiring);
 
-    expect(factory.support).toHaveBeenCalledWith("doc1", "log-monitor");
+    expect(factory.support).toHaveBeenCalledWith(wiring, "log-monitor");
   });
 
-  it("rejects when no factory supports the project", async () => {
+  it("throws when no factory supports the element", () => {
     const resolver = new LogMonitorResolver([fakeFactory(false)]);
 
-    await expect(resolver.resolve("doc1")).rejects.toThrow(
+    expect(() => resolver.resolve(glitchtipWiring())).toThrow(
       /No LogMonitorFactory supports type "log-monitor"/,
     );
   });
 
-  it("rejects when no factories are registered", async () => {
-    await expect(new LogMonitorResolver([]).resolve("doc1")).rejects.toThrow(
-      /Please add missing Mapped tools in admin/,
+  it("throws when no factories are registered", () => {
+    expect(() => new LogMonitorResolver([]).resolve(glitchtipWiring())).toThrow(
+      /Please check its strategy and its tool in admin/,
     );
   });
 });
