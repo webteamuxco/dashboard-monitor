@@ -1,0 +1,15 @@
+info:
+  name: GET Issues
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{url}}/api/kpis/gm5w75zm2hzsgnimh2jx1cqy"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

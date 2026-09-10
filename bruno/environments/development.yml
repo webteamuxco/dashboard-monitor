@@ -1,7 +1,7 @@
 name: development
 variables:
   - name: url
-    value: http://localhost:3000
+    value: http://localhost:3001
   - name: projectId
     value: "1"
   - name: organizationSlug
