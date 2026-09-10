@@ -1,6 +1,6 @@
 # dashboard-monitor — Claude guide
 
-**pnpm + Turborepo monorepo.** Two apps: a Next.js 16 kiosk dashboard and a Docusaurus documentation site. The dashboard aggregates monitoring data (errors, logs, visitor analytics) behind a Strategy/Factory layer so providers (GlitchTip, PostHog, …) are swappable per **dashboard panel**, wired from Strapi admin.
+**pnpm + Turborepo monorepo.** Two apps: a Next.js 16 kiosk dashboard and a Docusaurus documentation site. The dashboard aggregates monitoring data (errors, logs, visitor analytics) behind a Strategy/Factory layer so providers (GlitchTip, PostHog, …) are swappable per **dashboard element** (a KPI, a block), wired from Strapi admin.
 
 Read this file first. Then load the nearest sub-`CLAUDE.md` for the area you're editing.
 
@@ -67,7 +67,7 @@ Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky's pre-comm
 - **Docs are written in English**, even when the conversation is in French. That covers `apps/docs-site/docs/**`, every `CLAUDE.md`, `README.md`, `.env.example` comments and the `.drawio` labels.
 - **No half-finished work.** No TODOs left in code, no commented-out code, no `_unused` shims.
 - **No comments unless the *why* is non-obvious.** Names carry intent. Reserve comments for hidden constraints (e.g. `force-dynamic` rationale, `skipHydration` rationale, env-var coupling).
-- **A GraphQL query and its DTO must mirror each other field for field.** `StrapiRepository.execute<T>()` is an unchecked cast: a field dropped from a query silently becomes `undefined` downstream. That is exactly how the window presets broke once — `timeInterval` was removed from `GetProjectById` while `mapProject` still read `dto.timeInterval`.
+- **A GraphQL query and its DTO must mirror each other field for field.** `AbstractStrapiRepository.execute<T>()` is an unchecked cast: a field dropped from a query silently becomes `undefined` downstream. That is exactly how the window presets broke once — `timeInterval` was removed from `GetProjectById` while `mapProject` still read `dto.timeInterval`.
 
 ## Sub-areas — load the relevant `CLAUDE.md`
 
@@ -81,39 +81,60 @@ Before pushing, run `pnpm typecheck && pnpm lint && pnpm test`. Husky's pre-comm
 
 ## The panel system — read this before touching any data path
 
-A Strapi **project** is no longer the unit that carries tool wiring. It owns an ordered list of **dashboard panels**, and *each panel* declares its own mapped tools and tool configurations:
+Tool wiring has moved twice: it used to live on the **project**, then on the **panel**, and it now lives on the individual **dashboard element** — a `DashboardKpi` or a `DashboardBlock`. A panel is presentation only: a name, an icon, an order.
 
 ```
 Project (documentId, slug, title)
 ├── default_config → DefaultRefreshIntervalMS      # polling cadence, project-wide
 ├── timeInterval[] → window presets                # project-wide
 └── dashboard_panels[]                             # ordered by `order`
-    ├── documentId · name · slug · display_name · icon · order
-    ├── mapped_tools[] → strategies[]              # error-monitor / log-monitor / tracker-monitor
-    └── tool_configuration[]                       # glitchtip{url,organization,projectId} | posthog{url,projectId}
+    ├── documentId · name · slug · icon · order · is_development
+    ├── dashboard_kpis[]                           # the KPI cards
+    └── dashboard_blocks[]                         # the bigger blocks
+
+DashboardKpi / DashboardBlock                      # each carries its own wiring
+├── documentId · slug · name · title · description · icon · level · order
+├── strategy[]  → error-monitor{type} | log-monitor{tags} | tracker-monitor
+└── tool        → Tool { slug, configuration[] }   # a relation: shared by many elements
+                    → glitchtip{url,organization,projectId} | posthog{url,projectId}
 ```
 
-### Two identifiers, one parameter name
+### Three identifiers, one parameter name
 
 | Value | Where it comes from | What it is used for |
 |---|---|---|
-| **project `documentId`** | `ProjectSummary.documentId` | project catalog, `defaultConfig`, `timeInterval`, listing panels, listing strategies |
-| **panel `documentId`** (`DashboardPanel.id`) | the selected panel | **every data route and the whole monitor layer** |
-| **panel `slug`** | the selected panel | GraphQL filter when listing a panel's strategies |
+| **project `documentId`** | `ProjectSummary.documentId` | project catalog, `defaultConfig`, `timeInterval`, listing panels |
+| **panel `slug`** | the selected panel | GraphQL filter when listing that panel's KPIs |
+| **element `documentId`** (a KPI's, a block's) | the KPI or block being rendered | **every data route and the whole monitor layer** |
 
-The monitor layer's `documentId` parameter now receives the **panel** id: `getErrorMonitorFactory(panelId)` → `support(panelId, "error-monitor")` → `isPanelHasStrategy(panelId, …)` → `getPanelById(panelId)`. The parameter kept its old name everywhere, so read the call site to know which id you hold. Passing a project id where a panel id is expected fails with `Strapi panel "<id>" not found.`
+The monitor layer no longer takes an id at all. A data route names the collection its id belongs to, the data-access layer turns the pair into a `ToolWiring`, and everything below is pure:
+
+```
+route:        issuesDataAccess.getRecent(DASHBOARD_KPI, kpiId, …)
+data-access:  loadToolWiring(DASHBOARD_KPI, kpiId)  →  getErrorMonitorFactory(wiring)
+```
+
+`documentId` is still the parameter name everywhere, so read the call site to know which id you hold. Passing the wrong one fails with `Strapi dashboard-kpi "<id>" not found.`
 
 ### What renders which panel
 
-`DashboardContent` asks `useProjectStrategy(projectDocumentId, panelSlug, …)` for the selected panel's strategy names, then mounts only the matching widgets:
+The panel's **elements** decide, and it is the element's `type` — not its strategy — that picks the component. Every KPI renders `KpiCard`; a block mounts one body out of `BLOCK_BODIES`:
 
-| Strategy name | Widgets |
-|---|---|
-| `error-monitor` | `IssuesPanel`, `ErrorRatePanel`, `IssueKpi` |
-| `log-monitor` | `ReservationsPanel`, `ReservationsKpiCard` |
-| `tracker-monitor` | `VisitorsPanel`, `VisitorsKpi` |
+| Block `type` | Body | Measure shape it reads |
+|---|---|---|
+| `list` | `BlockList` | `list` |
+| `rate` | `BlockRate` (area) | `series` |
+| `bar` | `BlockBar` | `series` |
+| `stackedBar` | `StackedBlockBar` | `series` |
 
-A panel mapping no strategy renders an empty grid — no error. The loud failure happens one layer down, when a widget's data route resolves a factory that no tool supports.
+A measure names its **data shape**, never its chart. `BlocksDataAccess` builds a `series` or a `list` and picks between them from `windowMinutes` alone, so a bar, a stacked bar and an area all read the very same payload — the provider family is irrelevant to the choice. Two consequences:
+
+- `isWindowedBlock` must list every series type. A type missing from it asks with no window, gets a list back and renders the shape-mismatch message instead of a chart.
+- the pairing lives in one record, `type → { shape, body }`, so wiring a body to the wrong shape is a compile error.
+
+Resolve the body by **component reference** — the exhaustiveness of that record is what makes a new Strapi type a compile error instead of a blank card. Never by name through `createElement("BlockBar")`: a string there means a DOM tag, so React renders an empty unknown element without complaining.
+
+A panel with no element renders an empty grid — no error. The loud failure happens one layer down, when an element's data route resolves a factory that its tool does not support, and it is scoped to that one card.
 
 ### Naming trap: `panel` vs `pannel`
 
@@ -123,7 +144,7 @@ The codebase carries both spellings and they are load-bearing — don't "fix" on
 - Store field: `useSelectedPanel().pannelId` (alongside `panelSlug`, `panelIcon`)
 - Query key: `configKeys.pannels(documentId)`
 - `localStorage` key: `dashboard-selected-pannel`
-- Everything server-side (`DashboardPanel`, `getPanelById`, `dashboard_panels`, `/panels`) uses the correct `panel`.
+- Everything server-side (`DashboardPanel`, `getProjectPanels`, `dashboard_panels`, `/panels`) uses the correct `panel`.
 
 Renaming these is a coordinated change (the `localStorage` key breaks persisted selections) — propose it, don't slip it into an unrelated commit.
 
@@ -134,7 +155,7 @@ Renaming these is a coordinated change (the `localStorage` key breaks persisted 
 - Anything under `src/lib/{errorMonitor,logMonitor,trackerMonitor}/`, `src/lib/config/` and `src/app/features/*/data-access/` is **server-only** — first line must be `import "server-only";`.
 - API secrets (`STRAPI_TOKEN`, `GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`) must never appear in code reachable from a client component. They live in env vars consumed inside the abstract vendor factories.
 - `NEXT_PUBLIC_*` env vars are intentionally non-sensitive (UI knobs only).
-- The only identifiers that cross to the client are Strapi `documentId`s — the project's and the panel's — plus the panel's `slug`, `icon` and `display_name`. Provider project ids, instance URLs and organization slugs are resolved server-side from the panel id.
+- The only identifiers that cross to the client are Strapi `documentId`s — the project's, the panel's, the element's — plus presentation fields (`slug`, `icon`, `name`, `title`, `level`) and the element's `strategy.kind`, which is what decides the widget. Provider project ids, instance URLs and organization slugs are resolved server-side from the element id, and the list projection of a KPI deliberately does **not** select its `tool`.
 
 ### Client data fetching
 
@@ -163,14 +184,14 @@ Renaming these is a coordinated change (the `localStorage` key breaks persisted 
 
 ## Configuration — Strapi first, env for secrets
 
-**Which adapter loads is decided per panel in Strapi admin, not by an env var.** A panel declares its mapped tools — a strategy name (`error-monitor`, `log-monitor`, `tracker-monitor`) paired with a tool slug (`glitchtip`, `posthog`) — plus each tool's connection details (url, organization, provider project id). Its parent project carries the refresh cadence and the window presets.
+**Which adapter loads is decided per dashboard element in Strapi admin, not by an env var.** A KPI (or a block) declares one strategy — `error-monitor`, `log-monitor`, `tracker-monitor` — and points at one `Tool`, which carries the connection details (url, organization, provider project id) and is shared by every element using it. Its project carries the refresh cadence and the window presets.
 
 The environment only carries secrets:
 
 - `STRAPI_BASE_URL` / `STRAPI_TOKEN` — the admin itself (base URL is the instance root, `/graphql` is appended)
 - `GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY` — validated inside the matching abstract vendor factory when it builds the client
 
-Rule of thumb: if a value differs per project or per panel, it belongs in Strapi. See [apps/dashboard/.env.example](apps/dashboard/.env.example) and [docs/configuration.md](apps/docs-site/docs/configuration.md).
+Rule of thumb: if a value differs per project, per panel or per element, it belongs in Strapi. See [apps/dashboard/.env.example](apps/dashboard/.env.example) and [docs/configuration.md](apps/docs-site/docs/configuration.md).
 
 ## Project documentation
 
