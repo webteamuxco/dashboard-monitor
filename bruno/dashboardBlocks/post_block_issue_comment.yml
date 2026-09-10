@@ -1,0 +1,19 @@
+info:
+  name: POST Block Issue Comment
+  type: http
+  seq: 3
+
+http:
+  method: POST
+  url: "{{url}}/api/blocks/t1lv940wmszrm6ketphh6rkc/issues/1/comments"
+  body:
+    type: json
+    data: |-
+      {"content": "comment from bruno"}
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

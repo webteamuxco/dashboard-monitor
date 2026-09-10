@@ -1,0 +1,27 @@
+info:
+  name: GET Block Measure
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{url}}/api/blocks/t1lv940wmszrm6ketphh6rkc?limit=20"
+  params:
+    - name: limit
+      value: "20"
+      type: query
+    - name: windowMinutes
+      value: "1440"
+      type: query
+      disabled: true
+    - name: environment
+      value: production
+      type: query
+      disabled: true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

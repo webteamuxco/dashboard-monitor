@@ -1,0 +1,15 @@
+info:
+  name: GET Block Issue Detail
+  type: http
+  seq: 2
+
+http:
+  method: GET
+  url: "{{url}}/api/blocks/t1lv940wmszrm6ketphh6rkc/issues/1"
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
