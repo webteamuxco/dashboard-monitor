@@ -3,6 +3,7 @@ import { ErrorMonitorResolver } from "./factory/ErrorMonitorResolver";
 import type { ErrorMonitorFactoryInterface } from "./factory/ErrorMonitorFactoryInterface";
 import type { ErrorMonitorStrategyInterface } from "./strategy/ErrorMonitorStrategyInterface";
 import { GlitchTipFactory } from "./adapters/glitchtip/GlitchTipErrorMonitorFactory";
+import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
 const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] = [
   new GlitchTipFactory(),
@@ -11,7 +12,7 @@ const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] =
 const resolver = new ErrorMonitorResolver(factories);
 
 export function getErrorMonitorFactory(
-  documentId: string
-): Promise<ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>> {
-  return resolver.resolve(documentId);
+  wiring: ToolWiring
+): ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface> {
+  return resolver.resolve(wiring);
 }

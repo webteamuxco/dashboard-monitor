@@ -1,6 +1,6 @@
 import type { Issue, IssueFilters } from "../domain/Issue";
 import type { Period } from "@/lib/shared/domain/Period";
-import type { TimeSeriesPoint } from "../domain/TimeSeriesPoint";
+import type { ErrorStatsSeries } from "../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../domain/IssueEvent";
 import type { IssueComment, NewIssueComment } from "../domain/IssueComment";
 
@@ -12,7 +12,7 @@ export interface ErrorMonitorStrategyInterface {
     projectId: string,
     period: Period,
     environment?: string,
-  ): Promise<TimeSeriesPoint[]>;
+  ): Promise<ErrorStatsSeries>;
   getIssue(issueId: string): Promise<Issue>;
   getIssueLatestEvent(issueId: string): Promise<IssueEvent | null>;
   getIssueEvents(issueId: string, limit?: number): Promise<IssueEvent[]>;

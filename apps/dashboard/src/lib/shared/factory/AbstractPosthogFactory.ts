@@ -4,17 +4,16 @@ import { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 
 import { PosthogConfigurationStrategy } from "@/lib/config/domain/tool/PosthogConfigurationStrategy";
 import { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
-
-const TOOL_RESOLVER = "posthog"
+import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
 export abstract class AbstractPostHogFactory {
 
-  async support(documentId: string, strategyResolver: string): Promise<boolean> {
-    return await new PosthogConfigurationStrategy().isConfigure(documentId, strategyResolver, TOOL_RESOLVER);
+  support(wiring: ToolWiring, strategyResolver: string): boolean {
+    return new PosthogConfigurationStrategy().isConfigure(wiring, strategyResolver);
   }
 
-  createConnection(documentId: string): Promise<ToolConnection> {
-    return new PosthogConfigurationStrategy().resolveConnection(documentId)
+  createConnection(wiring: ToolWiring): ToolConnection {
+    return new PosthogConfigurationStrategy().resolveConnection(wiring)
   }
 
   createPostHogClient(connection: ToolConnection): PostHogClient {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { visitorsTimelineDataAccess } from "@/app/features/visitors/data-access/VisitorsTimelineDataAccess";
+import { DASHBOARD_KPI } from "@/lib/config/domain/loadToolWiring";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const data = await visitorsTimelineDataAccess.getSeries(documentId, windowMinutes);
+    const data = await visitorsTimelineDataAccess.getSeries(DASHBOARD_KPI, documentId, windowMinutes);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

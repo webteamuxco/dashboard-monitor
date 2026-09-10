@@ -30,13 +30,24 @@ export function useActivePanel(documentId: string): ActivePanel {
   const setPanelId = useSelectedPanel((s) => s.setPanelId);
   const setPanelSlug = useSelectedPanel((s) => s.setPanelSlug);
   const setPanelIcon = useSelectedPanel((s) => s.setPanelIcon);
+  const clearPanel = useSelectedPanel((s) => s.clearPanel);
 
   useEffect(() => {
     void useSelectedPanel.persist.rehydrate();
   }, []);
 
   useEffect(() => {
-    if (!panels?.length) return;
+    // `undefined` is "still loading" and must keep the current selection —
+    // repainting the kiosk on every project switch would be worse than a stale
+    // frame. `null` / `[]` is an answer: the project has no panel, and holding
+    // the previous project's selection would keep its widgets on screen.
+    if (panels === undefined) return;
+
+    if (!panels.length) {
+      if (panelId === "" && panelSlug === null) return;
+      clearPanel();
+      return;
+    }
 
     const target = panels.find((panel) => panel.slug === panelSlug) ?? panels[0];
     if (target.id === panelId) return;
@@ -44,7 +55,15 @@ export function useActivePanel(documentId: string): ActivePanel {
     setPanelId(target.id);
     setPanelSlug(target.slug);
     setPanelIcon(target.icon);
-  }, [panels, panelSlug, panelId, setPanelId, setPanelSlug, setPanelIcon]);
+  }, [
+    panels,
+    panelSlug,
+    panelId,
+    setPanelId,
+    setPanelSlug,
+    setPanelIcon,
+    clearPanel,
+  ]);
 
   return { panelId, panelSlug, panels };
 }

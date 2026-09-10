@@ -1,6 +1,6 @@
 # src/app/features — Feature modules
 
-Each subfolder is a self-contained feature (issues, errorRate, reservations, visitors, dashboard, config). Features compose UI, client hooks, server-side data access, and view-model types.
+Each subfolder is a self-contained feature (blocks, kpis, issues, errorRate, visitors, dashboard, config). Features compose UI, client hooks, server-side data access, and view-model types.
 
 ## Layout
 
@@ -17,12 +17,26 @@ Not every feature uses every folder, but the names are fixed — don't invent ne
 
 ## Which id a feature receives
 
-Two Strapi ids circulate in this folder and both are called `documentId` in most signatures:
+Three Strapi ids circulate in this folder and most signatures call all of them `documentId`:
 
-- **project `documentId`** — the `config` feature and `dashboard`'s own hooks (`useActiveProject`, `usePanels`, `useProjectStrategy`). It resolves the catalog, the refresh cadence, the window presets, the panel list.
-- **panel `documentId`** — *every data feature* (`issues`, `errorRate`, `reservations`, `visitors`). `DashboardContent` reads it from `useSelectedPanel().pannelId` and passes it as the `documentId` prop of each widget, which forwards it to its hook, its client fetcher, its route, and finally to `get<Family>Monitor()`.
+- **project `documentId`** — the `config` feature and `dashboard`'s own hooks (`useActiveProject`, `usePanels`). It resolves the catalog, the refresh cadence, the window presets, the panel list.
+- **panel `slug`** — what lists a panel's dashboard KPIs (`useDashboardKpis(panelSlug)`); the GraphQL filter matches on the slug, not the id.
+- **dashboard element `documentId`** — *every data feature* (`blocks`, `kpis`, `issues`, `errorRate`, `visitors`). Today that is a `DashboardKpi` id, tomorrow a `DashboardBlock` id: it is the element that declares a strategy and a tool, so it is the only id a data route can resolve a provider from.
 
-So `useIssues(documentId, …)` wants a **panel** id, while `useProjectConfig(documentId)` wants a **project** id. Check where the value came from before threading it somewhere new — see the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
+Check where a value came from before threading it somewhere new — see the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
+
+### A server orchestrator turns that id into a `ToolWiring`
+
+Its public methods take the **element kind first**, then the id — the route supplies the kind because the URL is what says which collection it is:
+
+```ts
+const wiring = await loadToolWiring(kind, documentId);   // one memoized Strapi read
+const factory = getErrorMonitorFactory(wiring);          // pure, synchronous
+const connection = factory.createConnection(wiring);
+const strategy = factory.createStrategy(connection);
+```
+
+Keep `kind` and `documentId` as separate primitives all the way into the `cache()`d inner function: React's `cache()` keys on argument identity, so passing the resolved wiring object around instead would defeat the per-request dedup.
 
 ## Layer rules
 
@@ -98,17 +112,18 @@ Use these keys both in `useQuery` and in `invalidateQueries`. Never inline a que
 `features/dashboard/` owns the kiosk chrome and decides what the grid contains:
 
 1. `useActiveProject(initialDocumentId, fallbackRefreshIntervalMs)` resolves the **project** (persisted selection, reconciled against the catalog) and its `refreshIntervalMs`.
-2. `useActivePanel(documentId)` resolves the **panel** the same way — `persist.rehydrate()` after mount, then reconciliation against `usePanels(documentId)` — and returns `{ panelId, panelSlug, panels }`.
-3. `useProjectStrategy(projectDocumentId, panelSlug, environment, intervalMs)` returns the selected panel's `Strategy[]`.
-4. `DashboardContent` maps those strategy names to widgets, using the constants from `@/lib/shared/strategiesEnum`:
+2. `useActivePanel(documentId)` resolves the **panel** the same way — `persist.rehydrate()` after mount, then reconciliation against `usePanels(documentId)` — and returns `{ panelId, panelSlug, panels }`. A project with no panel **clears** the selection: the widgets are keyed on the slug, so holding the previous project's would keep its cards on screen. `undefined` (loading) and `[]` (no panel) must stay distinguishable for that.
+3. `useActiveWindow(documentId)` re-applies the project's window presets. `DashboardContent`'s `hydrateFromStrapi` initializer only ever sees the server-rendered project, so without this hook the presets — and the polling-independent window choice — stay those of the initial project after a switch.
+4. `PanelKpi(panelSlug)` and `PanelBlock(panelSlug)` list the panel's elements and mount one card each — `KpiCard` for every KPI, and for a block the body its `type` names:
 
-| Strategy | Widgets mounted |
+| Block `type` | Body |
 |---|---|
-| `error-monitor` | `IssuesPanel`, `ErrorRatePanel`, `IssueKpi` |
-| `log-monitor` | `ReservationsPanel`, `ReservationsKpiCard` |
-| `tracker-monitor` | `VisitorsPanel`, `VisitorsKpi` |
+| `list` | `BlockList` |
+| `rate` | `BlockRate` (area) |
+| `bar` | `BlockBar` |
+| `stackedBar` | `StackedBlockBar` |
 
-The left column collapses (`hidden`, `grid-cols-1`) when the panel maps neither `error-monitor` nor `tracker-monitor`. Add a strategy to the grid by extending that mapping — never by having a widget fetch its own strategy list.
+That record lives in `blocks/ui/card/BlockCardContent.tsx` and pairs each type with the measure shape it reads (`series` or `list`), so a body wired to the wrong shape does not compile. Add a chart by extending it and `isWindowedBlock` together — never by having a body fetch its own strategy.
 
 **Selection is resolved in hooks, never in the selector components.** `ProjectSelector`, `PannelSelector`, `WindowSelector` and `EnvironmentSelector` are all mounted behind `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY`, so anything a read-only kiosk needs has to live in `useActiveProject` / `useActivePanel`, which `DashboardContent` always calls. Putting the panel auto-selection back into `PannelSelector` would leave a non-interactive kiosk with no panel and therefore no widget.
 

@@ -1,8 +1,8 @@
 import "server-only";
 import type { ErrorMonitorStrategyInterface } from "../../strategy/ErrorMonitorStrategyInterface";
 import type { Issue, IssueFilters } from "../../domain/Issue";
-import type { Period } from "@/lib/shared/domain/Period";
-import type { TimeSeriesPoint } from "../../domain/TimeSeriesPoint";
+import type { Period, PeriodInterval } from "@/lib/shared/domain/Period";
+import type { ErrorStatsSeries } from "../../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../../domain/IssueEvent";
 import type { IssueComment, NewIssueComment } from "../../domain/IssueComment";
 import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
@@ -43,10 +43,18 @@ function chunk<T>(items: T[], size: number): T[][] {
   return chunks;
 }
 
-function resolveStatsPeriod(spanMs: number): { statsPeriod: GlitchTipStatsPeriod; bucketMs: number } {
+// issues-stats exposes hourly and daily buckets only, so the requested interval
+// cannot be honoured below the hour. The granularity travels back with the
+// series instead of being silently swapped: a 30-minute window asking for
+// minutes gets one hourly bucket, and the caller has to say so.
+function resolveStatsPeriod(spanMs: number): {
+  statsPeriod: GlitchTipStatsPeriod;
+  bucketMs: number;
+  interval: PeriodInterval;
+} {
   return spanMs <= 24 * HOUR_MS
-    ? { statsPeriod: "24h", bucketMs: HOUR_MS }
-    : { statsPeriod: "14d", bucketMs: DAY_MS };
+    ? { statsPeriod: "24h", bucketMs: HOUR_MS, interval: "1h" }
+    : { statsPeriod: "14d", bucketMs: DAY_MS, interval: "1d" };
 }
 
 function buildIssueQuery(filters?: IssueFilters): string {
@@ -88,7 +96,7 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     projectId: string,
     period: Period,
     environment?: string,
-  ): Promise<TimeSeriesPoint[]> {
+  ): Promise<ErrorStatsSeries> {
     if (environment) {
       return this.getErrorStatsForEnvironment(projectId, period, environment);
     }
@@ -104,14 +112,14 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
         end: period.to,
       },
     );
-    return mapGlitchTipStatsV2(dto);
+    return { interval: period.interval, points: mapGlitchTipStatsV2(dto) };
   }
 
   private async getErrorStatsForEnvironment(
     projectId: string,
     period: Period,
     environment: string,
-  ): Promise<TimeSeriesPoint[]> {
+  ): Promise<ErrorStatsSeries> {
     const issues = await this.client.getPaginated<GlitchTipIssueDto>(
       `/api/0/organizations/${this.organizationSlug}/issues/`,
       { project: projectId, environment, query: "" },
@@ -120,7 +128,7 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
 
     const fromMs = Date.parse(period.from);
     const toMs = Date.parse(period.to);
-    const { statsPeriod, bucketMs } = resolveStatsPeriod(toMs - fromMs);
+    const { statsPeriod, bucketMs, interval } = resolveStatsPeriod(toMs - fromMs);
 
     const stats: GlitchTipIssueStatsDto[] = [];
     // Sequential on purpose: a burst of concurrent calls is what a self-hosted
@@ -133,7 +141,14 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
       stats.push(...page);
     }
 
-    return mapGlitchTipIssueStats(stats, statsPeriod, { fromMs, toMs, bucketMs });
+    return {
+      interval,
+      points: mapGlitchTipIssueStats(stats, statsPeriod, {
+        fromMs,
+        toMs,
+        bucketMs,
+      }),
+    };
   }
 
   async getIssue(issueId: string): Promise<Issue> {

@@ -12,9 +12,9 @@ export function getPanelsByProjectIdQuery(
                 icon
                 name
                 slug
-                display_name
                 order
                 is_development
+                display_name
             }
             }
         `,

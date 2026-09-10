@@ -25,6 +25,11 @@
   --color-level-debug: var(--level-debug);
   --color-level-debug-bg: var(--level-debug-bg);
   --color-level-debug-border: var(--level-debug-border);
+  --color-level-trace: var(--level-trace);
+  --color-level-international: var(--level-international);
+  --color-level-critical: var(--level-critical);
+  --color-level-alert: var(--level-alert);
+  --color-level-emergency: var(--level-emergency);
   --color-status-live: var(--status-live);
   --color-status-live-bg: var(--status-live-bg);
   --color-sidebar-ring: var(--sidebar-ring);
@@ -148,6 +153,11 @@
   --level-debug: #8b949e;
   --level-debug-bg: rgba(139, 148, 158, 0.1);
   --level-debug-border: rgba(139, 148, 158, 0.2);
+  --level-trace: #6e7681;
+  --level-international: #a371f7;
+  --level-critical: #ff5c52;
+  --level-alert: #ff3860;
+  --level-emergency: #f0399e;
 
   --status-live: #3fb950;
   --status-live-bg: rgba(63, 185, 80, 0.1);

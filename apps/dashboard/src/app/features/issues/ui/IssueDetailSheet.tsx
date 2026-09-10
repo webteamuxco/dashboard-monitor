@@ -33,14 +33,14 @@ const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" |
 };
 
 interface IssueDetailSheetProps {
-  documentId: string;
+  blockId: string;
   issueId: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
-export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDetailSheetProps) {
+export function IssueDetailSheet({ blockId, issueId, onOpenChange }: IssueDetailSheetProps) {
   const open = !!issueId;
-  const { data, isPending, isError, error } = useIssueDetail(documentId, issueId);
+  const { data, isPending, isError, error } = useIssueDetail(blockId, issueId);
   
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -52,7 +52,7 @@ export function IssueDetailSheet({ documentId, issueId, onOpenChange }: IssueDet
         {open && isError && (
           <SheetError message={error instanceof Error ? error.message : "Erreur inconnue"} />
         )}
-        {open && data && <DetailBody documentId={documentId} detail={data} />}
+        {open && data && <DetailBody blockId={blockId} detail={data} />}
       </SheetContent>
     </Sheet>
   );
@@ -87,10 +87,10 @@ function SheetError({ message }: { message: string }) {
 }
 
 function DetailBody({
-  documentId,
+  blockId,
   detail,
 }: {
-  documentId: string;
+  blockId: string;
   detail: NonNullable<ReturnType<typeof useIssueDetail>["data"]>;
 }) {
   const { issue, latestEvent, events, comments } = detail;
@@ -156,7 +156,7 @@ function DetailBody({
 
           <div className="w-[25%] h-[70vh] max-h-[70vh] overflow-y-auto">
             <CommentsSection
-              documentId={documentId}
+              blockId={blockId}
               issueId={issue.id}
               comments={comments}
             />
@@ -600,11 +600,11 @@ function EventsSection({ events, selectedEventId, setSelectedEvent }: { events: 
 }
 
 function CommentsSection({
-  documentId,
+  blockId,
   issueId,
   comments,
 }: {
-  documentId: string;
+  blockId: string;
   issueId: string;
   comments: IssueComment[];
 }) {
@@ -640,7 +640,7 @@ function CommentsSection({
       </div>
 
       <CommentInput
-        documentId={documentId}
+        blockId={blockId}
         issueId={issueId}
         isOpen={edit}
         onSaved={() => isEdit(false)}
@@ -666,18 +666,18 @@ function CommentsSection({
 }
 
 function CommentInput({
-  documentId,
+  blockId,
   issueId,
   isOpen,
   onSaved,
 }: {
-  documentId: string;
+  blockId: string;
   issueId: string;
   isOpen: boolean;
   onSaved: () => void;
 }) {
   const [content, setContent] = useState<string>("");
-  const { mutate, isPending, isError, error } = useCreateIssueComment(documentId, issueId);
+  const { mutate, isPending, isError, error } = useCreateIssueComment(blockId, issueId);
 
   if(!isOpen) {
     return null

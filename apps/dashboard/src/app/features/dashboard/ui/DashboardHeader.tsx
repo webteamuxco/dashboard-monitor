@@ -3,28 +3,23 @@
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
 import { BookOpenText, CodeXml, LayoutDashboard, ListRestart, RotateCw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useIssues } from "@/app/features/issues/hooks/useIssues";
 import { WindowSelector } from "./WindowSelector";
 import { ProjectSelector } from "./ProjectSelector";
 import { isDashboardInteractive } from "../state/useDashboardWindow";
-import { useEnvironment } from "../state/useEnvironment";
 import { PannelSelector } from "./PannelSelector";
 
 interface DashboardHeaderProps {
   documentId: string;
-  panelId: string;
-  limit: number;
   intervalMs: number;
 }
 
-export function DashboardHeader({ documentId, panelId, limit, intervalMs }: DashboardHeaderProps) {
+export function DashboardHeader({ documentId, intervalMs }: DashboardHeaderProps) {
 
   const adminUrl = process.env.NEXT_PUBLIC_STRAPI_ADMIN_URL ?? '/admin'
   const docsSiteUrl = process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? '/docs'
   const developmentPanelUrl = process.env.NEXT_PUBLIC_DEVELOPEMENT_SITE_PANEL ?? '/?showDevelopmentPanel=true'
   const queryClient = useQueryClient();
-  const environment = useEnvironment((s) => s.environment);
-  const { dataUpdatedAt } = useIssues(panelId, limit, environment, intervalMs);
+  const dataUpdatedAt = null;
   const isFetching = useIsFetching() > 0;
 
   const intervalSeconds = Math.round(intervalMs / 1000);

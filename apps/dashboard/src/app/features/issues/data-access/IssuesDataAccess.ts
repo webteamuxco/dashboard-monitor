@@ -9,6 +9,12 @@ import type {
   NewIssueComment,
 } from "@/lib/errorMonitor/domain/IssueComment";
 import type { CommentDTO } from "../domain/commentsDto";
+import {
+  DashboardElementKind,
+  loadToolWiring,
+} from "@/lib/config/domain/loadToolWiring";
+import type { ErrorMonitorStrategyInterface } from "@/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface";
+import type { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
 
 const EVENTS_PAGE_SIZE = 25;
 
@@ -37,16 +43,29 @@ function toRow(issue: Issue): IssueRow {
   };
 }
 
+async function resolveMonitor(
+  kind: DashboardElementKind,
+  documentId: string,
+): Promise<{
+  strategy: ErrorMonitorStrategyInterface;
+  connection: ToolConnection;
+}> {
+  const wiring = await loadToolWiring(kind, documentId);
+  const factory = getErrorMonitorFactory(wiring);
+  const connection = factory.createConnection(wiring);
+
+  return { strategy: factory.createStrategy(connection), connection };
+}
+
 const fetchRecent = cache(
   async (
+    kind: DashboardElementKind,
     documentId: string,
     limit: number,
     environment: string | null,
   ): Promise<IssueRow[]> => {
-      const errorMonitorFactory = await getErrorMonitorFactory(documentId)
-      const connection = await errorMonitorFactory.createConnection(documentId)
-      const strategy =  errorMonitorFactory.createStrategy(connection)
-  
+      const { strategy, connection } = await resolveMonitor(kind, documentId);
+
       const issues = await strategy.getIssues(connection.projectId, {
         limit,
         environment: environment ?? undefined,
@@ -58,13 +77,13 @@ const fetchRecent = cache(
 
 const fetchRecentUnresolved = cache(
   async (
+    kind: DashboardElementKind,
     documentId: string,
     limit: number,
     environment: string | null,
   ): Promise<IssueRow[]> => {
-    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
-    const connection = await errorMonitorFactory.createConnection(documentId)
-    const strategy =  errorMonitorFactory.createStrategy(connection)
+    const { strategy, connection } = await resolveMonitor(kind, documentId);
+
     const issues = await strategy.getIssues(connection.projectId, {
       resolved: false,
       limit,
@@ -76,22 +95,23 @@ const fetchRecentUnresolved = cache(
 
 const postIssueComment =
   async (
+    kind: DashboardElementKind,
     documentId: string,
     issueId: string,
     dto: NewIssueComment,
   ): Promise<IssueComment> => {
-    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
-    const connection = await errorMonitorFactory.createConnection(documentId)
-    const strategy =  errorMonitorFactory.createStrategy(connection)
+    const { strategy } = await resolveMonitor(kind, documentId);
 
     return await strategy.createIssueComment(issueId, dto);
   }
 
 const fetchDetail = cache(
-  async (documentId: string, issueId: string): Promise<IssueDetailView> => {
-    const errorMonitorFactory = await getErrorMonitorFactory(documentId)
-    const connection = await errorMonitorFactory.createConnection(documentId)
-    const monitor =  errorMonitorFactory.createStrategy(connection)
+  async (
+    kind: DashboardElementKind,
+    documentId: string,
+    issueId: string,
+  ): Promise<IssueDetailView> => {
+    const { strategy: monitor } = await resolveMonitor(kind, documentId);
 
     const [issue, latestEvent, events, comments] = await Promise.all([
       monitor.getIssue(issueId),
@@ -116,31 +136,40 @@ const fetchDetail = cache(
 export class IssuesDataAccess {
 
   getRecent(
+    kind: DashboardElementKind,
     documentId: string,
     limit = 20,
     environment: string | null = null,
   ): Promise<IssueRow[]> {
-    return fetchRecent(documentId, limit, environment);
+    return fetchRecent(kind, documentId, limit, environment);
   }
 
   getRecentUnresolved(
+    kind: DashboardElementKind,
     documentId: string,
     limit = 20,
     environment: string | null = null,
   ): Promise<IssueRow[]> {
-    return fetchRecentUnresolved(documentId, limit, environment);
+    return fetchRecentUnresolved(kind, documentId, limit, environment);
   }
 
-  getDetail(documentId: string, issueId: string): Promise<IssueDetailView> {
-    return fetchDetail(documentId, issueId);
+  getDetail(
+    kind: DashboardElementKind,
+    documentId: string,
+    issueId: string,
+  ): Promise<IssueDetailView> {
+    return fetchDetail(kind, documentId, issueId);
   }
 
   postComment(
+    kind: DashboardElementKind,
     documentId: string,
     issueId: string,
     content: CommentDTO,
   ): Promise<IssueComment> {
-    return postIssueComment(documentId, issueId, { text: content.content });
+    return postIssueComment(kind, documentId, issueId, {
+      text: content.content,
+    });
   }
 }
 

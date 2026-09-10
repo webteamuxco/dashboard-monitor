@@ -1,10 +1,10 @@
+import { ToolWiring } from "../ToolWiring";
 import { ToolConnection } from "./ToolConnection";
 
 export interface ToolConfigurationStrategyInterface {
-      resolveConnection(documentId: string): Promise<ToolConnection>;
+      resolveConnection(wiring: ToolWiring): ToolConnection;
       isConfigure(
-            documentId: string,
-            strategyName: string, 
-            toolSlug: string
-      ): Promise<boolean>
+            wiring: ToolWiring,
+            strategyName: string
+      ): boolean
 }

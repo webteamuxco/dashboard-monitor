@@ -1,22 +1,8 @@
 import { HydrationBoundary, QueryClient, dehydrate } from "@tanstack/react-query";
-import { issuesDataAccess } from "./features/issues/data-access/IssuesDataAccess";
-import { issuesKeys } from "./features/issues/queryKeys";
-import { reservationsDataAccess } from "./features/reservations/data-access/ReservationsDataAccess";
-import { reservationsKeys } from "./features/reservations/queryKeys";
-import { errorRateDataAccess } from "./features/errorRate/data-access/ErrorRateDataAccess";
-import { errorRateKeys } from "./features/errorRate/queryKeys";
-import { visitorsTimelineDataAccess } from "./features/visitors/data-access/VisitorsTimelineDataAccess";
-import { visitorsKeys } from "./features/visitors/queryKeys";
 import { configDataAccess } from "./features/config/data-access/ConfigDataAccess";
 import { configKeys } from "./features/config/queryKeys";
 import { DashboardContent } from "./features/dashboard/ui/DashboardContent";
-import { resolveDefaultEnvironment } from "./features/dashboard/state/environments";
 import { presetsFromTimeInterval } from "./features/dashboard/state/windowPresets";
-import {
-  ERROR_MONITOR_STRATEGY_ENUM,
-  LOG_MONITOR_STRATEGY_ENUM,
-  TRACKER_MONITOR_STRATEGY_ENUM,
-} from "@/lib/shared/strategiesEnum";
 import {
   SHOW_DEV_PANEL_QUERY_PARAM,
   readDevelopmentPanelParam,
@@ -41,7 +27,6 @@ export default async function Home({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const fallbackRefreshIntervalMs = DEFAULT_REFRESH_INTERVAL_MS;
-  const environment = resolveDefaultEnvironment();
 
   const projects = await configDataAccess.getProjectsList();
 
@@ -71,72 +56,6 @@ export default async function Home({
   queryClient.setQueryData(configKeys.projects(), projects);
   queryClient.setQueryData(configKeys.project(initialDocumentId), initialConfig);
   queryClient.setQueryData(configKeys.pannels(initialDocumentId, showDevelopmentPanel), panels);
-
-  // Strapi returns the panels sorted by `order`, and PannelSelector selects the
-  // first one when nothing is persisted yet. Prefetching under any other id
-  // would build query keys the widgets never read.
-  const initialPanel = panels?.[0];
-
-  if (initialPanel) {
-    const strategies = await configDataAccess.getProjectStrategies(
-      initialDocumentId,
-      initialPanel.slug,
-    );
-
-    queryClient.setQueryData(
-      issuesKeys.isConfig(initialDocumentId, environment, initialPanel.slug),
-      strategies,
-    );
-
-    // Mirror of the strategy mapping in DashboardContent: prefetching a widget
-    // the panel does not map would resolve no factory and throw.
-    const strategyNames = strategies?.map((strategy) => strategy.name) ?? [];
-    const prefetches: Promise<void>[] = [];
-
-    if (strategyNames.includes(ERROR_MONITOR_STRATEGY_ENUM)) {
-      prefetches.push(
-        queryClient.prefetchQuery({
-          queryKey: issuesKeys.recent(initialPanel.id, DEFAULT_LIMIT, environment),
-          queryFn: () =>
-            issuesDataAccess.getRecent(initialPanel.id, DEFAULT_LIMIT, environment),
-        }),
-        queryClient.prefetchQuery({
-          queryKey: errorRateKeys.series(initialPanel.id, environment),
-          queryFn: () => errorRateDataAccess.getSeries(initialPanel.id, environment),
-        }),
-      );
-    }
-
-    if (strategyNames.includes(LOG_MONITOR_STRATEGY_ENUM)) {
-      prefetches.push(
-        queryClient.prefetchQuery({
-          queryKey: reservationsKeys.series(
-            initialPanel.id,
-            initialWindowMinutes,
-            environment,
-          ),
-          queryFn: () =>
-            reservationsDataAccess.getSeries(
-              initialPanel.id,
-              initialWindowMinutes,
-              environment,
-            ),
-        }),
-      );
-    }
-
-    if (strategyNames.includes(TRACKER_MONITOR_STRATEGY_ENUM)) {
-      prefetches.push(
-        queryClient.prefetchQuery({
-          queryKey: visitorsKeys.timeline(initialPanel.id, initialWindowMinutes),
-          queryFn: () =>
-            visitorsTimelineDataAccess.getSeries(initialPanel.id, initialWindowMinutes),
-        }),
-      );
-    }
-
-    await Promise.all(prefetches);
-  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

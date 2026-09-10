@@ -1,60 +1,81 @@
 import { StrapiClient } from "./StrapiClient";
-import { StrapiRepository } from "./StrapiRepository";
 import { Project } from "./Project";
 import { ProjectSummary } from "./ProjectSummary";
-import { Strategy } from "./Strategy";
 import { DashboardPanel } from "./DashboardPanels";
+import { ProjectRepository } from "./repositories/ProjectRepository";
+import { PanelRepository } from "./repositories/PanelRepository";
+import { DashboardKpiFilters } from "@/app/api/config/dashboard-kpis/filters";
+import { DashboardKpiRepository } from "./repositories/DashboardKpiRepository";
+import { DashboardBlockRepository } from "./repositories/DashboardBlockRepository";
+import { DashboardKpi } from "./DashboardKpi";
+import { ToolWiring } from "./ToolWiring";
+import { DashboardBlocksFilters } from "@/app/api/config/dashboard-blocks/filters";
+import { DashboardBlock } from "./DashboardBlock";
 
 export class StrapiClientStrategy {
-      constructor(
-        private readonly client: StrapiClient,
-      ) {}
 
-      getRepository(): StrapiRepository {
-        return new StrapiRepository(this.client)
-      }
+  readonly projectRepository: ProjectRepository
+  readonly panelRepository: PanelRepository
+  readonly dashboardKpiRepository: DashboardKpiRepository
+  readonly dashboardBlockRepository: DashboardBlockRepository
+
+
+  constructor(client: StrapiClient) {
+    this.projectRepository = new ProjectRepository(client)
+    this.panelRepository = new PanelRepository(client)
+    this.dashboardKpiRepository = new DashboardKpiRepository(client)
+    this.dashboardBlockRepository = new DashboardBlockRepository(client)
+  }
+
+      // PROJECTS
 
       getProjects(): Promise<ProjectSummary[]> {
-        return this.getRepository().getProjects()
+        return this.projectRepository.getProjects()
       }
 
       getProjectById(projectId: string): Promise<Project | null> {
-        return this.getRepository().getProjectById(projectId)
+        return this.projectRepository.getProjectById(projectId)
       }
 
-      getPanelById(panelId: string): Promise<DashboardPanel | null> {
-        return this.getRepository().getPanelById(panelId)
-      }
-
-      isPanelHasStrategy(
-        documentId: string,
-        strategyName: string,
-        toolSlug?: string | null,
-      ): Promise<boolean> {
-        return this.getRepository().isPanelHasStrategy(
-          documentId,
-          strategyName,
-          toolSlug,
-        )
-      }
-
-      getProjectStrategies(
-        documentId: string,
-        selectedPanel?: string | null
-      ): Promise<Strategy[] | null> {
-        return this.getRepository().getProjectStrategies(
-          documentId,
-          selectedPanel
-        )
-      }
+      // PANELS
 
       getProjectPanels(
         documentId: string,
         showDevelopmentPanel: boolean
       ): Promise<DashboardPanel[] | null> {
-        return this.getRepository().getProjectPanels(
+        return this.panelRepository.getProjectPanels(
           documentId,
           showDevelopmentPanel
         )
+      }
+
+      // KPIS
+
+      getDashboardKpis(
+        filters: DashboardKpiFilters
+      ): Promise<DashboardKpi[] | null> {
+        return this.dashboardKpiRepository.getDashboardKpi(
+          filters
+        )
+      }
+
+
+      getKpiWiring(kpiId: string): Promise<ToolWiring | null> {
+        return this.dashboardKpiRepository.getKpiWiring(kpiId)
+      }
+
+      // BLOCKS
+
+      getDashboardBlocks(
+        filters: DashboardBlocksFilters
+      ): Promise<DashboardBlock[] | null> {
+        return this.dashboardBlockRepository.getDashboardBlocks(
+          filters
+        )
+      }
+
+
+      getBlockWiring(blockId: string): Promise<ToolWiring | null> {
+        return this.dashboardBlockRepository.getBlockWiring(blockId)
       }
 }

@@ -4,17 +4,16 @@ import { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 
 import { GlitchtipConfigurationStrategy, GlitchtipConnection } from "@/lib/config/domain/tool/GlitchtipConfigurationStrategy";
 import { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
-
-const TOOL_RESOLVER = "glitchtip"
+import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
 export abstract class AbstractGlitchTipFactory {
-  
-  async support(documentId: string, strategyResolver: string): Promise<boolean> {
-    return await new GlitchtipConfigurationStrategy().isConfigure(documentId, strategyResolver, TOOL_RESOLVER);
+
+  support(wiring: ToolWiring, strategyResolver: string): boolean {
+    return new GlitchtipConfigurationStrategy().isConfigure(wiring, strategyResolver);
   }
 
-  createConnection(documentId: string): Promise<ToolConnection> {
-    return new GlitchtipConfigurationStrategy().resolveConnection(documentId)
+  createConnection(wiring: ToolWiring): ToolConnection {
+    return new GlitchtipConfigurationStrategy().resolveConnection(wiring)
   }
 
   isGlitchtipConnection(
