@@ -2,7 +2,6 @@ import { describe, it, expect } from "vitest";
 import {
   mapDashboardPanel,
   mapProject,
-  mapProjectStrategy,
   mapProjectSummary,
 } from "@/lib/config/domain/mappers/projectMapper";
 import type {
@@ -16,27 +15,10 @@ function buildPanelDto(overrides: Partial<DashboardPanelDto> = {}): DashboardPan
     documentId: "panel-1",
     name: "production",
     slug: "production",
-    display_name: "Production",
     icon: "panels-right-bottom",
     order: 1,
     is_development: false,
-    mapped_tools: [
-      {
-        documentId: "mt-1",
-        name: "GlitchTip",
-        strategies: [{ name: "error-monitor" }, { name: "log-monitor" }],
-      },
-    ],
-    tool_configuration: [
-      {
-        __typename: "ComponentConfigGlitchtipConfiguration",
-        id: "cfg-1",
-        url: "https://glitchtip.example",
-        projectId: "42",
-        organization: "uxco-group",
-        tool: { slug: "glitchtip" },
-      },
-    ],
+    display_name: "Production",
     ...overrides,
   };
 }
@@ -45,14 +27,14 @@ describe("mapDashboardPanel", () => {
   it("renames every Strapi field to the domain shape", () => {
     const panel = mapDashboardPanel(buildPanelDto());
 
-    expect(panel).toMatchObject({
+    expect(panel).toEqual({
       id: "panel-1",
       name: "production",
       slug: "production",
-      displayName: "Production",
       icon: "panels-right-bottom",
       order: 1,
       isDevelopment: false,
+      displayName: "Production",
     });
   });
 
@@ -62,83 +44,11 @@ describe("mapDashboardPanel", () => {
     expect(panel.isDevelopment).toBe(true);
   });
 
-  it("maps the mapped tools with their strategy names", () => {
+  it("carries no tool wiring — a panel no longer maps a tool, its elements do", () => {
     const panel = mapDashboardPanel(buildPanelDto());
 
-    expect(panel.mappedTools).toEqual([
-      {
-        documentId: "mt-1",
-        name: "GlitchTip",
-        strategies: [{ name: "error-monitor" }, { name: "log-monitor" }],
-      },
-    ]);
-  });
-
-  it("maps a GlitchTip configuration, taking the tool slug", () => {
-    const panel = mapDashboardPanel(buildPanelDto());
-
-    expect(panel.toolConfigurations).toEqual([
-      {
-        kind: "glitchtip",
-        id: "cfg-1",
-        url: "https://glitchtip.example",
-        projectId: "42",
-        organization: "uxco-group",
-        toolSlug: "glitchtip",
-      },
-    ]);
-  });
-
-  it("falls back to an empty tool slug when the relation is null", () => {
-    const panel = mapDashboardPanel(
-      buildPanelDto({
-        tool_configuration: [
-          {
-            __typename: "ComponentConfigGlitchtipConfiguration",
-            id: "cfg-1",
-            url: "https://glitchtip.example",
-            projectId: "42",
-            organization: "uxco-group",
-            tool: null,
-          },
-        ],
-      }),
-    );
-
-    expect(panel.toolConfigurations?.[0]).toMatchObject({ toolSlug: "" });
-  });
-
-  it("maps a PostHog configuration without organization", () => {
-    const panel = mapDashboardPanel(
-      buildPanelDto({
-        tool_configuration: [
-          {
-            __typename: "ComponentConfigPosthogConfiguration",
-            id: "cfg-2",
-            url: "https://eu.posthog.com",
-            projectId: "9001",
-          },
-        ],
-      }),
-    );
-
-    expect(panel.toolConfigurations).toEqual([
-      {
-        kind: "posthog",
-        id: "cfg-2",
-        url: "https://eu.posthog.com",
-        projectId: "9001",
-      },
-    ]);
-  });
-
-  it("leaves the optional relations undefined when Strapi omits them", () => {
-    const panel = mapDashboardPanel(
-      buildPanelDto({ mapped_tools: undefined, tool_configuration: undefined }),
-    );
-
-    expect(panel.mappedTools).toBeUndefined();
-    expect(panel.toolConfigurations).toBeUndefined();
+    expect(panel).not.toHaveProperty("toolConfigurations");
+    expect(panel).not.toHaveProperty("mappedTools");
   });
 });
 
@@ -203,21 +113,4 @@ describe("mapProjectSummary", () => {
 
     expect(mapProjectSummary(dto)).toEqual(dto);
   });
-});
-
-describe("mapProjectStrategy", () => {
-  it("maps the strategy name", () => {
-    // The name is the whole payload: the mapped tool is matched in the query's
-    // `variables`, so it never needs to be selected.
-    expect(mapProjectStrategy({ name: "tracker-monitor" })).toEqual({
-      name: "tracker-monitor",
-    });
-  });
-
-  it.each(["error-monitor", "log-monitor", "tracker-monitor"] as const)(
-    "maps %s",
-    (name) => {
-      expect(mapProjectStrategy({ name })).toEqual({ name });
-    },
-  );
 });

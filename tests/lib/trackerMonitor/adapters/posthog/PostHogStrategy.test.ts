@@ -69,3 +69,36 @@ describe("PostHogStrategy.getActiveUsersTimeline", () => {
     await expect(strategy.getActiveUsersTimeline("p1", 5)).rejects.toThrow("boom");
   });
 });
+
+describe("PostHogStrategy.getTotalVisitors", () => {
+  it("counts unique visitors with no time bound", async () => {
+    const { client, query } = makeClient({ results: [[1234]] });
+    const strategy = new PostHogStrategy(client);
+
+    const total = await strategy.getTotalVisitors();
+
+    expect(total).toBe(1234);
+    const hogQl: string = query.mock.calls[0][0];
+    expect(hogQl).toContain("uniqExact(distinct_id)");
+    expect(hogQl).not.toContain("subtractMinutes");
+  });
+
+  it("reads a string count as a number", async () => {
+    const { client } = makeClient({ results: [["42"]] });
+
+    await expect(new PostHogStrategy(client).getTotalVisitors()).resolves.toBe(42);
+  });
+
+  it("returns zero when the project has no event yet", async () => {
+    const { client } = makeClient({ results: [] });
+
+    await expect(new PostHogStrategy(client).getTotalVisitors()).resolves.toBe(0);
+  });
+
+  it("propagates client errors", async () => {
+    const query = vi.fn().mockRejectedValue(new Error("boom"));
+    const strategy = new PostHogStrategy({ query } as unknown as PostHogClient);
+
+    await expect(strategy.getTotalVisitors()).rejects.toThrow("boom");
+  });
+});

@@ -3,44 +3,38 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 
 const {
-  fetchIssuesClientMock,
+  fetchBlockMeasureClientMock,
+  fetchKpiMeasureClientMock,
   fetchErrorRateClientMock,
-  fetchReservationsClientMock,
   fetchVisitorsTimelineClientMock,
-  fetchProjectStrategyMock,
 } = vi.hoisted(() => ({
-  fetchIssuesClientMock: vi.fn(),
+  fetchBlockMeasureClientMock: vi.fn(),
+  fetchKpiMeasureClientMock: vi.fn(),
   fetchErrorRateClientMock: vi.fn(),
-  fetchReservationsClientMock: vi.fn(),
   fetchVisitorsTimelineClientMock: vi.fn(),
-  fetchProjectStrategyMock: vi.fn(),
 }));
 
-vi.mock("@/app/features/issues/data-access/fetchIssuesClient", () => ({
-  fetchIssuesClient: fetchIssuesClientMock,
+vi.mock("@/app/features/blocks/data-access/fetchBlockMeasureClient", () => ({
+  fetchBlockMeasureClient: fetchBlockMeasureClientMock,
+}));
+vi.mock("@/app/features/kpis/data-access/fetchKpiMeasureClient", () => ({
+  fetchKpiMeasureClient: fetchKpiMeasureClientMock,
 }));
 vi.mock("@/app/features/errorRate/data-access/fetchErrorRateClient", () => ({
   fetchErrorRateClient: fetchErrorRateClientMock,
-}));
-vi.mock("@/app/features/reservations/data-access/fetchReservationsClient", () => ({
-  fetchReservationsClient: fetchReservationsClientMock,
 }));
 vi.mock(
   "@/app/features/visitors/data-access/fetchVisitorsTimelineClient",
   () => ({ fetchVisitorsTimelineClient: fetchVisitorsTimelineClientMock }),
 );
-vi.mock("@/app/features/issues/data-access/fetchProjectStrategy", () => ({
-  fetchProjectStrategy: fetchProjectStrategyMock,
-}));
 
-import { useIssues } from "@/app/features/issues/hooks/useIssues";
+import { useBlock } from "@/app/features/blocks/hooks/useBlock";
+import { useKpi } from "@/app/features/kpis/hooks/useKpi";
 import { useErrorRate } from "@/app/features/errorRate/hooks/useErrorRate";
-import { useReservations } from "@/app/features/reservations/hooks/useReservations";
 import { useVisitorsTimeline } from "@/app/features/visitors/hooks/useVisitorsTimeline";
-import { useProjectStrategy } from "@/app/features/issues/hooks/useProjectStrategy";
-import { issuesKeys } from "@/app/features/issues/queryKeys";
+import { dashboardBlockKeys } from "@/app/features/blocks/queryKeys";
+import { dashboardKpiKeys } from "@/app/features/kpis/queryKeys";
 import { errorRateKeys } from "@/app/features/errorRate/queryKeys";
-import { reservationsKeys } from "@/app/features/reservations/queryKeys";
 import { visitorsKeys } from "@/app/features/visitors/queryKeys";
 import {
   refetchIntervalOf,
@@ -54,14 +48,24 @@ import {
  */
 const CASES = [
   {
-    name: "useIssues",
+    name: "useBlock",
     render: (intervalMs: number) =>
       renderQueryHookWithClient(
-        () => useIssues("panel-1", 20, null, intervalMs),
+        () => useBlock("block-1", 30, null, null, null, intervalMs),
         undefined,
       ),
-    key: issuesKeys.recent("panel-1", 20, null),
-    mock: fetchIssuesClientMock,
+    key: dashboardBlockKeys.measure("block-1", 30, null, null, null),
+    mock: fetchBlockMeasureClientMock,
+  },
+  {
+    name: "useKpi",
+    render: (intervalMs: number) =>
+      renderQueryHookWithClient(
+        () => useKpi("kpi-1", 30, null, intervalMs),
+        undefined,
+      ),
+    key: dashboardKpiKeys.measure("kpi-1", 30, null),
+    mock: fetchKpiMeasureClientMock,
   },
   {
     name: "useErrorRate",
@@ -74,16 +78,6 @@ const CASES = [
     mock: fetchErrorRateClientMock,
   },
   {
-    name: "useReservations",
-    render: (intervalMs: number) =>
-      renderQueryHookWithClient(
-        () => useReservations("panel-1", 30, null, intervalMs),
-        undefined,
-      ),
-    key: reservationsKeys.series("panel-1", 30, null),
-    mock: fetchReservationsClientMock,
-  },
-  {
     name: "useVisitorsTimeline",
     render: (intervalMs: number) =>
       renderQueryHookWithClient(
@@ -92,16 +86,6 @@ const CASES = [
       ),
     key: visitorsKeys.timeline("panel-1", 60),
     mock: fetchVisitorsTimelineClientMock,
-  },
-  {
-    name: "useProjectStrategy",
-    render: (intervalMs: number) =>
-      renderQueryHookWithClient(
-        () => useProjectStrategy("project-1", "production", null, intervalMs),
-        undefined,
-      ),
-    key: issuesKeys.isConfig("project-1", null, "production"),
-    mock: fetchProjectStrategyMock,
   },
 ];
 

@@ -12,6 +12,7 @@ vi.mock("@/lib/config/domain/tool/PosthogConfigurationStrategy", () => ({
 
 import { PostHogFactory } from "@/lib/trackerMonitor/adapters/posthog/PostHogFactory";
 import { PostHogStrategy } from "@/lib/trackerMonitor/adapters/posthog/PostHogStrategy";
+import { posthogWiring } from "../../../../helpers/toolWiring";
 
 const CONNECTION = { baseUrl: "https://ph", projectId: "1" };
 
@@ -26,26 +27,28 @@ describe("PostHogFactory", () => {
   });
 
   describe("support", () => {
-    it("asks Strapi whether the project maps posthog to the given strategy", async () => {
-      isConfigureMock.mockResolvedValue(true);
+    it("asks the configuration strategy whether the wiring names posthog", () => {
+      isConfigureMock.mockReturnValue(true);
+      const wiring = posthogWiring();
 
-      await expect(factory.support("doc1", "tracker-monitor")).resolves.toBe(true);
-      expect(isConfigureMock).toHaveBeenCalledWith("doc1", "tracker-monitor", "posthog");
+      expect(factory.support(wiring, "tracker-monitor")).toBe(true);
+      expect(isConfigureMock).toHaveBeenCalledWith(wiring, "tracker-monitor");
     });
 
-    it("returns false when the project does not map posthog", async () => {
-      isConfigureMock.mockResolvedValue(false);
+    it("returns false when the element does not wire posthog", () => {
+      isConfigureMock.mockReturnValue(false);
 
-      await expect(factory.support("doc1", "tracker-monitor")).resolves.toBe(false);
+      expect(factory.support(posthogWiring(), "tracker-monitor")).toBe(false);
     });
   });
 
   describe("createConnection", () => {
-    it("delegates to the PostHog configuration strategy", async () => {
-      resolveConnectionMock.mockResolvedValue(CONNECTION);
+    it("delegates to the PostHog configuration strategy", () => {
+      resolveConnectionMock.mockReturnValue(CONNECTION);
+      const wiring = posthogWiring();
 
-      await expect(factory.createConnection("doc1")).resolves.toEqual(CONNECTION);
-      expect(resolveConnectionMock).toHaveBeenCalledWith("doc1");
+      expect(factory.createConnection(wiring)).toEqual(CONNECTION);
+      expect(resolveConnectionMock).toHaveBeenCalledWith(wiring);
     });
   });
 

@@ -24,10 +24,10 @@ function buildPanel(overrides: Partial<DashboardPanel> = {}): DashboardPanel {
     id: "panel-1",
     name: "production",
     slug: "production",
-    displayName: "Production",
     icon: "activity",
     order: 1,
     isDevelopment: false,
+    displayName: "Production",
     ...overrides,
   };
 }
@@ -37,7 +37,6 @@ const STAGING = buildPanel({
   id: "panel-2",
   name: "staging",
   slug: "staging",
-  displayName: "Staging",
   icon: "bug",
   order: 2,
 });
@@ -138,6 +137,51 @@ describe("useActivePanel", () => {
 
     await waitFor(() => expect(result.current.panelId).toBe("panel-3"));
     expect(result.current.panelSlug).toBe("audience");
+  });
+
+  it("drops the selection when the project it switches to has no panel", async () => {
+    // Holding the previous project's panel would keep its KPIs and blocks on
+    // screen — the widgets are keyed on the panel slug, not on the project.
+    fetchProjectPanelsMock.mockImplementation(async (documentId: string) =>
+      documentId === "project-1" ? [PROD, STAGING] : [],
+    );
+
+    const { result, rerender } = renderQueryHook(
+      (documentId: string) => useActivePanel(documentId),
+      "project-1",
+    );
+
+    await waitFor(() => expect(result.current.panelSlug).toBe("production"));
+
+    rerender("project-2");
+
+    await waitFor(() => expect(result.current.panelSlug).toBeNull());
+    expect(result.current.panelId).toBe("");
+  });
+
+  it("keeps the current panel while the next project's list is loading", async () => {
+    let resolveSecond: ((panels: DashboardPanel[]) => void) | undefined;
+    fetchProjectPanelsMock.mockImplementation(async (documentId: string) =>
+      documentId === "project-1"
+        ? [PROD, STAGING]
+        : new Promise<DashboardPanel[]>((resolve) => {
+            resolveSecond = resolve;
+          }),
+    );
+
+    const { result, rerender } = renderQueryHook(
+      (documentId: string) => useActivePanel(documentId),
+      "project-1",
+    );
+
+    await waitFor(() => expect(result.current.panelSlug).toBe("production"));
+
+    rerender("project-2");
+
+    expect(result.current.panelSlug).toBe("production");
+
+    resolveSecond?.([buildPanel({ id: "panel-3", slug: "audience" })]);
+    await waitFor(() => expect(result.current.panelSlug).toBe("audience"));
   });
 
   it("fetches the panel list per project", async () => {

@@ -3,11 +3,12 @@ import { TrackerMonitorResolver } from "@/lib/trackerMonitor/factory/TrackerMoni
 import type { TrackerMonitorFactoryInterface } from "@/lib/trackerMonitor/factory/TrackerMonitorFactoryInterface";
 import type { TrackerMonitorStrategyInterface } from "@/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface";
 import type { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
+import { posthogWiring } from "../../../helpers/toolWiring";
 
 const CONNECTION: ToolConnection = { baseUrl: "https://ph", projectId: "1" };
 
 function fakeStrategy(): TrackerMonitorStrategyInterface {
-  return { getActiveUsersTimeline: vi.fn() };
+  return { getActiveUsersTimeline: vi.fn(), getTotalVisitors: vi.fn() };
 }
 
 function fakeFactory(
@@ -15,39 +16,40 @@ function fakeFactory(
   strategy = fakeStrategy(),
 ): TrackerMonitorFactoryInterface<TrackerMonitorStrategyInterface> {
   return {
-    support: vi.fn(async () => supported),
-    createConnection: vi.fn(async () => CONNECTION),
+    support: vi.fn(() => supported),
+    createConnection: vi.fn(() => CONNECTION),
     createStrategy: () => strategy,
   };
 }
 
 describe("TrackerMonitorResolver", () => {
-  it("returns the first factory that supports the project", async () => {
+  it("returns the first factory that supports the element", () => {
     const supporting = fakeFactory(true);
     const resolver = new TrackerMonitorResolver([fakeFactory(false), supporting]);
 
-    await expect(resolver.resolve("doc1")).resolves.toBe(supporting);
+    expect(resolver.resolve(posthogWiring())).toBe(supporting);
   });
 
-  it("asks each factory for the project's 'tracker-monitor' strategy", async () => {
+  it("asks each factory for the 'tracker-monitor' strategy, handing it the wiring", () => {
     const factory = fakeFactory(true);
+    const wiring = posthogWiring();
 
-    await new TrackerMonitorResolver([factory]).resolve("doc1");
+    new TrackerMonitorResolver([factory]).resolve(wiring);
 
-    expect(factory.support).toHaveBeenCalledWith("doc1", "tracker-monitor");
+    expect(factory.support).toHaveBeenCalledWith(wiring, "tracker-monitor");
   });
 
-  it("rejects when no factory supports the project", async () => {
+  it("throws when no factory supports the element", () => {
     const resolver = new TrackerMonitorResolver([fakeFactory(false)]);
 
-    await expect(resolver.resolve("doc1")).rejects.toThrow(
+    expect(() => resolver.resolve(posthogWiring())).toThrow(
       /No TrackerMonitorFactory supports type "tracker-monitor"/,
     );
   });
 
-  it("rejects when no factories are registered", async () => {
-    await expect(new TrackerMonitorResolver([]).resolve("doc1")).rejects.toThrow(
-      /Please add missing Mapped tools in admin/,
+  it("throws when no factories are registered", () => {
+    expect(() => new TrackerMonitorResolver([]).resolve(posthogWiring())).toThrow(
+      /Please check its strategy and its tool in admin/,
     );
   });
 });

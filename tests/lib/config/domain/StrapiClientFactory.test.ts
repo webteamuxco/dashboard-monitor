@@ -2,7 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { StrapiClientFactory } from "@/lib/config/domain/StrapiClientFactory";
 import { StrapiClientStrategy } from "@/lib/config/domain/StrapiStrategy";
 import { StrapiClient } from "@/lib/config/domain/StrapiClient";
-import { StrapiRepository } from "@/lib/config/domain/StrapiRepository";
+import { ProjectRepository } from "@/lib/config/domain/repositories/ProjectRepository";
+import { PanelRepository } from "@/lib/config/domain/repositories/PanelRepository";
+import { DashboardKpiRepository } from "@/lib/config/domain/repositories/DashboardKpiRepository";
+import { DashboardBlockRepository } from "@/lib/config/domain/repositories/DashboardBlockRepository";
+import { glitchtipWiring } from "../../../helpers/toolWiring";
 
 describe("StrapiClientFactory", () => {
   beforeEach(() => {
@@ -52,15 +56,18 @@ describe("StrapiClientStrategy", () => {
     vi.restoreAllMocks();
   });
 
-  it("exposes a repository built on its client", () => {
-    expect(new StrapiClientStrategy(client).getRepository()).toBeInstanceOf(
-      StrapiRepository,
-    );
+  it("builds one repository per content type on its client", () => {
+    const strategy = new StrapiClientStrategy(client);
+
+    expect(strategy.projectRepository).toBeInstanceOf(ProjectRepository);
+    expect(strategy.panelRepository).toBeInstanceOf(PanelRepository);
+    expect(strategy.dashboardKpiRepository).toBeInstanceOf(DashboardKpiRepository);
+    expect(strategy.dashboardBlockRepository).toBeInstanceOf(DashboardBlockRepository);
   });
 
   it("delegates getProjects", async () => {
     const spy = vi
-      .spyOn(StrapiRepository.prototype, "getProjects")
+      .spyOn(ProjectRepository.prototype, "getProjects")
       .mockResolvedValue([]);
 
     await expect(new StrapiClientStrategy(client).getProjects()).resolves.toEqual(
@@ -71,7 +78,7 @@ describe("StrapiClientStrategy", () => {
 
   it("delegates getProjectById with the project documentId", async () => {
     const spy = vi
-      .spyOn(StrapiRepository.prototype, "getProjectById")
+      .spyOn(ProjectRepository.prototype, "getProjectById")
       .mockResolvedValue(null);
 
     await new StrapiClientStrategy(client).getProjectById("project-1");
@@ -79,47 +86,9 @@ describe("StrapiClientStrategy", () => {
     expect(spy).toHaveBeenCalledWith("project-1");
   });
 
-  it("delegates getPanelById with the panel documentId", async () => {
-    const spy = vi
-      .spyOn(StrapiRepository.prototype, "getPanelById")
-      .mockResolvedValue(null);
-
-    await new StrapiClientStrategy(client).getPanelById("panel-1");
-
-    expect(spy).toHaveBeenCalledWith("panel-1");
-  });
-
-  it("delegates isPanelHasStrategy with all three arguments", async () => {
-    const spy = vi
-      .spyOn(StrapiRepository.prototype, "isPanelHasStrategy")
-      .mockResolvedValue(true);
-
-    await expect(
-      new StrapiClientStrategy(client).isPanelHasStrategy(
-        "panel-1",
-        "error-monitor",
-        "glitchtip",
-      ),
-    ).resolves.toBe(true);
-    expect(spy).toHaveBeenCalledWith("panel-1", "error-monitor", "glitchtip");
-  });
-
-  it("delegates getProjectStrategies with the project id and the panel slug", async () => {
-    const spy = vi
-      .spyOn(StrapiRepository.prototype, "getProjectStrategies")
-      .mockResolvedValue(null);
-
-    await new StrapiClientStrategy(client).getProjectStrategies(
-      "project-1",
-      "production",
-    );
-
-    expect(spy).toHaveBeenCalledWith("project-1", "production");
-  });
-
   it("delegates getProjectPanels with the project documentId and the dev-panel flag", async () => {
     const spy = vi
-      .spyOn(StrapiRepository.prototype, "getProjectPanels")
+      .spyOn(PanelRepository.prototype, "getProjectPanels")
       .mockResolvedValue(null);
 
     await new StrapiClientStrategy(client).getProjectPanels("project-1", false);
@@ -127,5 +96,25 @@ describe("StrapiClientStrategy", () => {
 
     expect(spy).toHaveBeenNthCalledWith(1, "project-1", false);
     expect(spy).toHaveBeenNthCalledWith(2, "project-2", true);
+  });
+
+  it("delegates getKpiWiring with the KPI documentId", async () => {
+    const spy = vi
+      .spyOn(DashboardKpiRepository.prototype, "getKpiWiring")
+      .mockResolvedValue(glitchtipWiring());
+
+    await new StrapiClientStrategy(client).getKpiWiring("kpi-1");
+
+    expect(spy).toHaveBeenCalledWith("kpi-1");
+  });
+
+  it("delegates getBlockWiring with the block documentId", async () => {
+    const spy = vi
+      .spyOn(DashboardBlockRepository.prototype, "getBlockWiring")
+      .mockResolvedValue(glitchtipWiring());
+
+    await new StrapiClientStrategy(client).getBlockWiring("block-1");
+
+    expect(spy).toHaveBeenCalledWith("block-1");
   });
 });

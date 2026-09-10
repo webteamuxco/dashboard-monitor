@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const getProjectsMock = vi.fn();
 const getProjectByIdMock = vi.fn();
-const getProjectStrategiesMock = vi.fn();
 const getProjectPanelsMock = vi.fn();
 
 vi.mock("@/lib/config/domain/StrapiClientFactory", () => ({
@@ -11,7 +10,6 @@ vi.mock("@/lib/config/domain/StrapiClientFactory", () => ({
       return {
         getProjects: getProjectsMock,
         getProjectById: getProjectByIdMock,
-        getProjectStrategies: getProjectStrategiesMock,
         getProjectPanels: getProjectPanelsMock,
       };
     }
@@ -27,7 +25,6 @@ describe("ConfigDataAccess", () => {
   beforeEach(() => {
     getProjectsMock.mockReset();
     getProjectByIdMock.mockReset();
-    getProjectStrategiesMock.mockReset();
     getProjectPanelsMock.mockReset();
   });
 
@@ -100,33 +97,6 @@ describe("ConfigDataAccess", () => {
 
     expect(withoutDev).toEqual([{ id: "panel-prod" }]);
     expect(withDev).toEqual([{ id: "panel-prod" }, { id: "panel-dev" }]);
-  });
-
-  it("getProjectStrategies forwards the project id and the panel slug", async () => {
-    getProjectStrategiesMock.mockResolvedValue([{ name: "error-monitor" }]);
-
-    const strategies = await new ConfigDataAccess().getProjectStrategies(
-      "strat-project-1",
-      "production",
-    );
-
-    expect(getProjectStrategiesMock).toHaveBeenCalledWith(
-      "strat-project-1",
-      "production",
-    );
-    expect(strategies).toEqual([{ name: "error-monitor" }]);
-  });
-
-  it("getProjectStrategies tolerates a null panel slug", async () => {
-    getProjectStrategiesMock.mockResolvedValue(null);
-
-    await expect(
-      new ConfigDataAccess().getProjectStrategies("strat-project-2", null),
-    ).resolves.toBeNull();
-    expect(getProjectStrategiesMock).toHaveBeenCalledWith(
-      "strat-project-2",
-      null,
-    );
   });
 
   it("keeps two projects apart — the cache() wrapper is keyed on its arguments", async () => {

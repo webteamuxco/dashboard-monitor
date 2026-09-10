@@ -12,6 +12,7 @@ vi.mock("@/lib/config/domain/tool/GlitchtipConfigurationStrategy", () => ({
 
 import { GlitchTipLogMonitorFactory } from "@/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorFactory";
 import { GlitchTipLogMonitorStrategy } from "@/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorStrategy";
+import { glitchtipWiring } from "../../../../helpers/toolWiring";
 
 const CONNECTION = { baseUrl: "https://gt", organizationSlug: "org", projectId: "p" };
 
@@ -26,26 +27,28 @@ describe("GlitchTipLogMonitorFactory", () => {
   });
 
   describe("support", () => {
-    it("asks Strapi whether the project maps glitchtip to the given strategy", async () => {
-      isConfigureMock.mockResolvedValue(true);
+    it("asks the configuration strategy whether the wiring names glitchtip", () => {
+      isConfigureMock.mockReturnValue(true);
+      const wiring = glitchtipWiring();
 
-      await expect(factory.support("doc1", "log-monitor")).resolves.toBe(true);
-      expect(isConfigureMock).toHaveBeenCalledWith("doc1", "log-monitor", "glitchtip");
+      expect(factory.support(wiring, "log-monitor")).toBe(true);
+      expect(isConfigureMock).toHaveBeenCalledWith(wiring, "log-monitor");
     });
 
-    it("returns false when the project does not map glitchtip", async () => {
-      isConfigureMock.mockResolvedValue(false);
+    it("returns false when the element does not wire glitchtip", () => {
+      isConfigureMock.mockReturnValue(false);
 
-      await expect(factory.support("doc1", "log-monitor")).resolves.toBe(false);
+      expect(factory.support(glitchtipWiring(), "log-monitor")).toBe(false);
     });
   });
 
   describe("createConnection", () => {
-    it("delegates to the GlitchTip configuration strategy", async () => {
-      resolveConnectionMock.mockResolvedValue(CONNECTION);
+    it("delegates to the GlitchTip configuration strategy", () => {
+      resolveConnectionMock.mockReturnValue(CONNECTION);
+      const wiring = glitchtipWiring();
 
-      await expect(factory.createConnection("doc1")).resolves.toEqual(CONNECTION);
-      expect(resolveConnectionMock).toHaveBeenCalledWith("doc1");
+      expect(factory.createConnection(wiring)).toEqual(CONNECTION);
+      expect(resolveConnectionMock).toHaveBeenCalledWith(wiring);
     });
   });
 

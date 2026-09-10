@@ -1,4 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { glitchtipWiring } from "../../../../helpers/toolWiring";
+
+// vi.mock is hoisted above every const, so the mock function it reads
+// has to be hoisted with it.
+const { loadToolWiringMock } = vi.hoisted(() => ({
+  loadToolWiringMock: vi.fn(),
+}));
+
+const WIRING = glitchtipWiring();
 
 const getIssuesMock = vi.fn();
 const getIssueMock = vi.fn();
@@ -7,14 +16,20 @@ const getIssueEventsMock = vi.fn();
 const getIssueCommentsMock = vi.fn();
 const createIssueCommentMock = vi.fn();
 
-const createConnectionMock = vi.fn(async () => ({
+const createConnectionMock = vi.fn(() => ({
   baseUrl: "https://gt",
   organizationSlug: "org",
   projectId: "gt-project",
 }));
 
+vi.mock("@/lib/config/domain/loadToolWiring", () => ({
+  DASHBOARD_KPI: "dashboard-kpi",
+  DASHBOARD_BLOCK: "dashboard-block",
+  loadToolWiring: loadToolWiringMock,
+}));
+
 vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
-  getErrorMonitorFactory: async () => ({
+  getErrorMonitorFactory: () => ({
     createConnection: createConnectionMock,
     createStrategy: () => ({
       getIssues: getIssuesMock,
@@ -29,6 +44,7 @@ vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
 }));
 
 import { IssuesDataAccess } from "@/app/features/issues/data-access/IssuesDataAccess";
+import { DASHBOARD_KPI } from "@/lib/config/domain/loadToolWiring";
 import type { Issue } from "@/lib/errorMonitor/domain/Issue";
 
 function buildIssue(overrides: Partial<Issue> = {}): Issue {
@@ -56,6 +72,9 @@ describe("IssuesDataAccess", () => {
     getIssueEventsMock.mockReset();
     getIssueCommentsMock.mockReset();
     createIssueCommentMock.mockReset();
+    loadToolWiringMock.mockReset();
+    loadToolWiringMock.mockResolvedValue(WIRING);
+    createConnectionMock.mockClear();
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
   });
@@ -70,7 +89,7 @@ describe("IssuesDataAccess", () => {
 
       // This is what /api/issues and the server prefetch both call, so the
       // first paint and the first poll must agree.
-      await new IssuesDataAccess().getRecent("doc-recent-1", 50);
+      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-1", 50);
 
       expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { limit: 50 });
     });
@@ -78,7 +97,7 @@ describe("IssuesDataAccess", () => {
     it("defaults limit to 20 when omitted", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecent("doc-recent-2");
+      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-2");
 
       expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { limit: 20 });
     });
@@ -86,7 +105,7 @@ describe("IssuesDataAccess", () => {
     it("forwards the environment into the issue filters", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecent("doc-recent-3", 20, "production");
+      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-3", 20, "production");
 
       expect(getIssuesMock).toHaveBeenCalledWith("gt-project", {
         limit: 20,
@@ -97,9 +116,10 @@ describe("IssuesDataAccess", () => {
     it("resolves the factory from the panel documentId it was given", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecent("panel-42", 20);
+      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "panel-42", 20);
 
-      expect(createConnectionMock).toHaveBeenCalledWith("panel-42");
+      expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "panel-42");
+      expect(createConnectionMock).toHaveBeenCalledWith(WIRING);
     });
 
     it("maps each Issue into an IssueRow", async () => {
@@ -107,7 +127,7 @@ describe("IssuesDataAccess", () => {
         buildIssue({ id: "i9", isResolved: true }),
       ]);
 
-      const out = await new IssuesDataAccess().getRecent("doc-recent-4", 10);
+      const out = await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-4", 10);
 
       expect(out[0]).toMatchObject({ id: "i9", isResolved: true });
       expect(out[0].lastSeenLabel).toBeTypeOf("string");
@@ -118,7 +138,7 @@ describe("IssuesDataAccess", () => {
     it("queries unresolved issues with the provided limit", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecentUnresolved("doc1", 50);
+      await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1", 50);
 
       expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { resolved: false, limit: 50 });
     });
@@ -126,7 +146,7 @@ describe("IssuesDataAccess", () => {
     it("defaults limit to 20 when omitted", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecentUnresolved("doc1");
+      await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1");
 
       expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { resolved: false, limit: 20 });
     });
@@ -134,7 +154,7 @@ describe("IssuesDataAccess", () => {
     it("forwards the environment into the issue filters", async () => {
       getIssuesMock.mockResolvedValue([]);
 
-      await new IssuesDataAccess().getRecentUnresolved("doc1", 20, "production");
+      await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1", 20, "production");
 
       expect(getIssuesMock).toHaveBeenCalledWith("gt-project", {
         resolved: false,
@@ -148,7 +168,7 @@ describe("IssuesDataAccess", () => {
         buildIssue({ id: "i1", lastSeen: "2026-05-28T08:29:00Z" }),
       ]);
 
-      const out = await new IssuesDataAccess().getRecentUnresolved("doc1", 10);
+      const out = await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1", 10);
 
       expect(out[0]).toMatchObject({
         id: "i1",
@@ -169,7 +189,7 @@ describe("IssuesDataAccess", () => {
       getIssueEventsMock.mockResolvedValue([]);
       getIssueCommentsMock.mockResolvedValue([]);
 
-      const out = await new IssuesDataAccess().getDetail("doc1", "i42");
+      const out = await new IssuesDataAccess().getDetail(DASHBOARD_KPI, "doc1", "i42");
 
       expect(getIssueMock).toHaveBeenCalledWith("i42");
       expect(getIssueLatestEventMock).toHaveBeenCalledWith("i42");
@@ -193,7 +213,7 @@ describe("IssuesDataAccess", () => {
       getIssueEventsMock.mockResolvedValue([evt, evt]);
       getIssueCommentsMock.mockResolvedValue([{ id: "c1" }]);
 
-      const out = await new IssuesDataAccess().getDetail("doc1", "i");
+      const out = await new IssuesDataAccess().getDetail(DASHBOARD_KPI, "doc1", "i");
 
       expect(out.latestEvent).toEqual(evt);
       expect(out.events).toHaveLength(2);
@@ -205,17 +225,18 @@ describe("IssuesDataAccess", () => {
     it("resolves the factory from the panel documentId it was given", async () => {
       createIssueCommentMock.mockResolvedValue({ id: "c1" });
 
-      await new IssuesDataAccess().postComment("panel-42", "i1", {
+      await new IssuesDataAccess().postComment(DASHBOARD_KPI, "panel-42", "i1", {
         content: "on it",
       });
 
-      expect(createConnectionMock).toHaveBeenCalledWith("panel-42");
+      expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "panel-42");
+      expect(createConnectionMock).toHaveBeenCalledWith(WIRING);
     });
 
     it("renames the DTO's content into the domain's text", async () => {
       createIssueCommentMock.mockResolvedValue({ id: "c1" });
 
-      await new IssuesDataAccess().postComment("doc1", "i42", {
+      await new IssuesDataAccess().postComment(DASHBOARD_KPI, "doc1", "i42", {
         content: "on it",
       });
 
@@ -233,7 +254,7 @@ describe("IssuesDataAccess", () => {
         authorEmail: null,
       });
 
-      const out = await new IssuesDataAccess().postComment("doc1", "i1", {
+      const out = await new IssuesDataAccess().postComment(DASHBOARD_KPI, "doc1", "i1", {
         content: "on it",
       });
 
@@ -246,7 +267,7 @@ describe("IssuesDataAccess", () => {
       );
 
       await expect(
-        new IssuesDataAccess().postComment("doc1", "i1", { content: "on it" }),
+        new IssuesDataAccess().postComment(DASHBOARD_KPI, "doc1", "i1", { content: "on it" }),
       ).rejects.toThrow(/403/);
     });
 
@@ -254,8 +275,8 @@ describe("IssuesDataAccess", () => {
       createIssueCommentMock.mockResolvedValue({ id: "c1" });
 
       const dataAccess = new IssuesDataAccess();
-      await dataAccess.postComment("doc1", "i1", { content: "ping" });
-      await dataAccess.postComment("doc1", "i1", { content: "ping" });
+      await dataAccess.postComment(DASHBOARD_KPI, "doc1", "i1", { content: "ping" });
+      await dataAccess.postComment(DASHBOARD_KPI, "doc1", "i1", { content: "ping" });
 
       expect(createIssueCommentMock).toHaveBeenCalledTimes(2);
     });

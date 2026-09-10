@@ -125,7 +125,10 @@ describe("GlitchTipErrorMonitorStrategy", () => {
           end: "2026-05-29T00:00:00Z",
         }),
       );
-      expect(out).toEqual([{ timestamp: "2026-05-28T00:00:00Z", count: 3 }]);
+      expect(out).toEqual({
+        interval: "1h",
+        points: [{ timestamp: "2026-05-28T00:00:00Z", count: 3 }],
+      });
     });
 
     it("does not send the environment to stats_v2 (it is ignored there)", async () => {
@@ -165,9 +168,44 @@ describe("GlitchTipErrorMonitorStrategy", () => {
         "/api/0/organizations/my-org/issues-stats/",
         { groups: ["1", "2"], statsPeriod: "24h" },
       );
-      const at = (iso: string) => out.find((point) => point.timestamp === iso)?.count;
+      const at = (iso: string) =>
+        out.points.find((point) => point.timestamp === iso)?.count;
       expect(at("2026-07-03T09:00:00.000Z")).toBe(3); // 2 + 1 on the same hour
       expect(at("2026-07-03T08:00:00.000Z")).toBe(0); // zero-filled
+    });
+
+    it("reports the hourly granularity it served, not the one asked for", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "1" })]);
+      get.mockResolvedValue([
+        { id: "1", count: "0", stats: { "24h": [], "14d": null } },
+      ]);
+
+      const out = await strategy.getErrorStats(
+        "p",
+        { from: "2026-07-03T09:10:00Z", to: "2026-07-03T09:40:00Z", interval: "1m" },
+        "production",
+      );
+
+      // issues-stats has no sub-hour series: a 30-minute window asking for
+      // minutes gets one hourly bucket, and says so rather than passing a
+      // near-empty minute series off as the truth.
+      expect(out.interval).toBe("1h");
+      expect(out.points).toHaveLength(1);
+    });
+
+    it("reports the daily granularity beyond 24h", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "1" })]);
+      get.mockResolvedValue([
+        { id: "1", count: "0", stats: { "24h": null, "14d": [] } },
+      ]);
+
+      const out = await strategy.getErrorStats(
+        "p",
+        { from: "2026-07-01T00:00:00Z", to: "2026-07-05T00:00:00Z", interval: "1h" },
+        "production",
+      );
+
+      expect(out.interval).toBe("1d");
     });
 
     it("asks for daily buckets when the period spans more than 24h", async () => {
@@ -193,7 +231,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       );
 
       expect(get).not.toHaveBeenCalled();
-      expect(out.map((point) => point.count)).toEqual([0, 0, 0]);
+      expect(out.points.map((point) => point.count)).toEqual([0, 0, 0]);
     });
   });
 

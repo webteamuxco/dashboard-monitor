@@ -3,6 +3,7 @@ import { ErrorMonitorResolver } from "@/lib/errorMonitor/factory/ErrorMonitorRes
 import type { ErrorMonitorFactoryInterface } from "@/lib/errorMonitor/factory/ErrorMonitorFactoryInterface";
 import type { ErrorMonitorStrategyInterface } from "@/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface";
 import type { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
+import { glitchtipWiring } from "../../../helpers/toolWiring";
 
 const CONNECTION: ToolConnection = { baseUrl: "https://gt", projectId: "p" };
 
@@ -23,39 +24,40 @@ function fakeFactory(
   strategy = fakeStrategy(),
 ): ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface> {
   return {
-    support: vi.fn(async () => supported),
-    createConnection: vi.fn(async () => CONNECTION),
+    support: vi.fn(() => supported),
+    createConnection: vi.fn(() => CONNECTION),
     createStrategy: () => strategy,
   };
 }
 
 describe("ErrorMonitorResolver", () => {
-  it("returns the first factory that supports the project", async () => {
+  it("returns the first factory that supports the element", () => {
     const supporting = fakeFactory(true);
     const resolver = new ErrorMonitorResolver([fakeFactory(false), supporting]);
 
-    await expect(resolver.resolve("doc1")).resolves.toBe(supporting);
+    expect(resolver.resolve(glitchtipWiring())).toBe(supporting);
   });
 
-  it("asks each factory for the project's 'error-monitor' strategy", async () => {
+  it("asks each factory for the 'error-monitor' strategy, handing it the wiring", () => {
     const factory = fakeFactory(true);
+    const wiring = glitchtipWiring();
 
-    await new ErrorMonitorResolver([factory]).resolve("doc1");
+    new ErrorMonitorResolver([factory]).resolve(wiring);
 
-    expect(factory.support).toHaveBeenCalledWith("doc1", "error-monitor");
+    expect(factory.support).toHaveBeenCalledWith(wiring, "error-monitor");
   });
 
-  it("rejects when no factory supports the project", async () => {
+  it("throws when no factory supports the element", () => {
     const resolver = new ErrorMonitorResolver([fakeFactory(false)]);
 
-    await expect(resolver.resolve("doc1")).rejects.toThrow(
+    expect(() => resolver.resolve(glitchtipWiring())).toThrow(
       /No ErrorMonitorFactory supports type "error-monitor"/,
     );
   });
 
-  it("rejects when no factories are registered", async () => {
-    await expect(new ErrorMonitorResolver([]).resolve("doc1")).rejects.toThrow(
-      /Please add missing Mapped tools in admin/,
+  it("throws when no factories are registered", () => {
+    expect(() => new ErrorMonitorResolver([]).resolve(glitchtipWiring())).toThrow(
+      /Please check its strategy and its tool in admin/,
     );
   });
 });
