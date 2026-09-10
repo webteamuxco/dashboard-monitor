@@ -1,12 +1,11 @@
 import type { IssueDetailView } from "../domain/IssueDetailView";
 
 export async function fetchIssueDetailClient(
-  documentId: string,
+  blockId: string,
   issueId: string,
 ): Promise<IssueDetailView> {
-  const params = new URLSearchParams({ documentId });
   const res = await fetch(
-    `/api/issues/${encodeURIComponent(issueId)}?${params.toString()}`,
+    `/api/blocks/${encodeURIComponent(blockId)}/issues/${encodeURIComponent(issueId)}`,
     { cache: "no-store" },
   );
 

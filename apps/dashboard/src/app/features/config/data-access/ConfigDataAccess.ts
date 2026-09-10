@@ -4,8 +4,11 @@ import { StrapiClientFactory } from "@/lib/config/domain/StrapiClientFactory";
 import { StrapiClientStrategy } from "@/lib/config/domain/StrapiStrategy";
 import { Project } from "@/lib/config/domain/Project";
 import { ProjectSummary } from "@/lib/config/domain/ProjectSummary";
-import { Strategy } from "@/lib/config/domain/Strategy";
 import { DashboardPanel } from "@/lib/config/domain/DashboardPanels";
+import { DashboardKpiFilters } from "@/app/api/config/dashboard-kpis/filters";
+import { DashboardKpi } from "@/lib/config/domain/DashboardKpi";
+import { DashboardBlocksFilters } from "@/app/api/config/dashboard-blocks/filters";
+import { DashboardBlock } from "@/lib/config/domain/DashboardBlock";
 
 function getConfigMonitor(): StrapiClientStrategy {
     const factory = new StrapiClientFactory()
@@ -20,8 +23,12 @@ const fetchProjectList = cache((): Promise<ProjectSummary[]> => {
   return getConfigMonitor().getProjects()
 });
 
-const fetchProjectStrategies = cache((projectId: string, selectedPanel?: string | null): Promise<Strategy[] | null> => {
-  return getConfigMonitor().getProjectStrategies(projectId, selectedPanel)
+const fetchDashboardKpis = cache((filters: DashboardKpiFilters): Promise<DashboardKpi[] | null> => {
+  return getConfigMonitor().getDashboardKpis(filters)
+});
+
+const fetchDashboardBlock = cache((filters: DashboardBlocksFilters): Promise<DashboardBlock[] | null> => {
+  return getConfigMonitor().getDashboardBlocks(filters)
 });
 
 const fetchProjectPanels = cache((projectId: string, showDevelopmentPanel: boolean): Promise<DashboardPanel[] | null> => {
@@ -42,18 +49,23 @@ export class ConfigDataAccess {
     return fetchProject(projectId);
   }
 
-  getProjectStrategies(
-    projectId: string,
-    selectedPanel?: string | null
-  ): Promise<Strategy[] | null> {
-    return fetchProjectStrategies(projectId, selectedPanel);
-  }
-
-  getProjectPanels(
+   getProjectPanels(
     projectId: string,
     showDevelopmentPanel: boolean
-  ): Promise<DashboardPanel[] | null> {
-    return fetchProjectPanels(projectId, showDevelopmentPanel);
+   ) {
+      return fetchProjectPanels(projectId, showDevelopmentPanel);
+   }
+
+  getDashboardKpis(
+    filter: DashboardKpiFilters,
+  ): Promise<DashboardKpi[] | null> {
+    return fetchDashboardKpis(filter);
+  }
+
+  getDashboardBlocks(
+    filter: DashboardBlocksFilters,
+  ): Promise<DashboardBlock[] | null> {
+    return fetchDashboardBlock(filter);
   }
 }
 

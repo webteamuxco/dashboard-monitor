@@ -3,7 +3,10 @@ import type { TrackerMonitorStrategyInterface } from "../../strategy/TrackerMoni
 import type { VisitorsTimeSeriesPoint } from "../../domain/VisitorsTimeSeriesPoint";
 import type { PostHogClient } from "@/lib/tool/posthog/PostHogClient";
 import type { PostHogQueryResponseDto } from "./dto/PostHogQueryResponse";
-import { mapPostHogVisitorsTimeline } from "./mappers/VisitorsTimelineMapper";
+import {
+  mapPostHogVisitorsTimeline,
+  mapPostHogVisitorsTotal,
+} from "./mappers/VisitorsTimelineMapper";
 
 const SESSION_DURATION_MINUTES = 30;
 
@@ -33,5 +36,17 @@ export class PostHogStrategy implements TrackerMonitorStrategyInterface {
     const dto = await this.client.query<PostHogQueryResponseDto>(hogQl);
 
     return mapPostHogVisitorsTimeline(dto, win);
+  }
+
+  // The project is baked into the client, so the contract's `projectId` is not
+  // read here — hence the shorter signature.
+  async getTotalVisitors(): Promise<number> {
+    // No time bound on purpose: the KPI asking for this reads a total, so the
+    // only horizon is the project's own event retention.
+    const hogQl = `SELECT uniqExact(distinct_id) AS visitors FROM events`;
+
+    const dto = await this.client.query<PostHogQueryResponseDto>(hogQl);
+
+    return mapPostHogVisitorsTotal(dto);
   }
 }

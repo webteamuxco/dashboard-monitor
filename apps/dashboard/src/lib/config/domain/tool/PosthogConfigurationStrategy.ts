@@ -1,12 +1,12 @@
-
 import "server-only";
-import { cache } from "react";
-import { StrapiClientFactory } from "@/lib/config/domain/StrapiClientFactory";
 import { ToolConfigurationStrategyInterface } from "./ToolConfigurationStrategyInterface";
 import { ToolConnection } from "./ToolConnection";
+import { ToolWiring } from "../ToolWiring";
+
+const TOOL_KIND = "posthog";
 
 export type PosthogConfiguration = {
-    kind: "posthog";
+    kind: typeof TOOL_KIND;
     id: string;
     url: string;
     projectId: string;
@@ -14,49 +14,37 @@ export type PosthogConfiguration = {
 
 export class PosthogConfigurationStrategy implements ToolConfigurationStrategyInterface {
 
-    isConfigure = cache(
-        async (
-            documentId: string,
-            strategyName: string, 
-            toolSlug: string
-        ): Promise<boolean> => {
-            return await new StrapiClientFactory().create().isPanelHasStrategy(documentId, strategyName, toolSlug);
-        }
-    )
+    isConfigure(wiring: ToolWiring, strategyName: string): boolean {
+        return (
+            wiring.strategy?.kind === strategyName &&
+            wiring.configuration?.kind === TOOL_KIND
+        );
+    }
 
     /**
-     * Resolves the PostHog connection (instance URL, project id) from the Strapi
-     * project's `tool_configuration`. The API key stays in env — only the
+     * Shapes the PostHog connection (instance URL, project id) out of the
+     * element's tool configuration. The API key stays in env — only the
      * non-secret connection details live in Strapi.
      */
-    resolveConnection = cache(
-        async (documentId: string): Promise<ToolConnection> => {
-            const panel = await new StrapiClientFactory().create().getPanelById(documentId);
-            if (!panel) {
-            throw new Error(`Strapi project "${documentId}" not found.`);
-            }
+    resolveConnection(wiring: ToolWiring): ToolConnection {
+        const posthog = wiring.configuration;
 
-            const posthog = panel.toolConfigurations?.find(
-                (configuration) => configuration.kind === "posthog",
-            );
-
-            if (!posthog) {
-                throw new Error(
-                    `Strapi panel "${documentId}" has no PostHog configuration.`,
-                );
-            }
-
-            if (!posthog.url || !posthog.projectId) {
+        if (posthog?.kind !== TOOL_KIND) {
             throw new Error(
-                `PostHog configuration of Strapi panel "${documentId}" is incomplete ` +
-                "(url and projectId are both required).",
+                `Strapi element "${wiring.id}" has no PostHog configuration.`,
             );
-            }
+        }
 
-            return {
+        if (!posthog.url || !posthog.projectId) {
+            throw new Error(
+                `PostHog configuration of Strapi element "${wiring.id}" is incomplete ` +
+                    "(url and projectId are both required).",
+            );
+        }
+
+        return {
             baseUrl: posthog.url,
             projectId: posthog.projectId,
-            };
-        },
-    );
+        };
+    }
 }

@@ -2,13 +2,12 @@ import type { IssueComment } from "@/lib/errorMonitor/domain/IssueComment";
 import type { CommentDTO } from "../domain/commentsDto";
 
 export async function postIssueCommentClient(
-  documentId: string,
+  blockId: string,
   issueId: string,
   dto: CommentDTO,
 ): Promise<IssueComment> {
-  const params = new URLSearchParams({ documentId });
   const res = await fetch(
-    `/api/issues/${encodeURIComponent(issueId)}/comments?${params.toString()}`,
+    `/api/blocks/${encodeURIComponent(blockId)}/issues/${encodeURIComponent(issueId)}/comments`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },

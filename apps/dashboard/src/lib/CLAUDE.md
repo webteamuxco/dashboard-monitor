@@ -9,7 +9,7 @@ src/lib/
 ├── errorMonitor/         # Strategy/Factory for error tracking
 ├── logMonitor/           # Strategy/Factory for log aggregation
 ├── trackerMonitor/       # Strategy/Factory for visitor analytics
-├── config/domain/        # Strapi admin: projects, dashboard panels, mapped tools, tool connections
+├── config/domain/        # Strapi admin: projects, panels, dashboard KPIs/blocks, tool connections
 ├── tool/glitchtip/       # Low-level GlitchTip HTTP client (transport only)
 ├── tool/posthog/         # Low-level PostHog HTTP client (transport only)
 ├── shared/domain/        # Cross-monitor domain types (e.g. Period, GraphQlQuery)
@@ -21,14 +21,14 @@ Each `<family>Monitor/` folder follows the **same** structure:
 
 ```
 <family>Monitor/
-├── Get<Family>Monitor.ts           # Composition root: resolves the Factory for a panel id
+├── Get<Family>Monitor.ts           # Composition root: resolves the Factory for a ToolWiring
 ├── <Family>MonitorTypeEnums.ts     # Tool slug constants (e.g. GLITCHTIP = "glitchtip")
 ├── domain/                         # Provider-agnostic types (Issue, IssueEvent, …)
 ├── strategy/
 │   └── <Family>MonitorStrategyInterface.ts
 ├── factory/
 │   ├── <Family>MonitorFactoryInterface.ts   # alias of FactoryInterface<TStrategy>
-│   └── <Family>MonitorResolver.ts           # picks factory by support(documentId, strategy)
+│   └── <Family>MonitorResolver.ts           # picks factory by support(wiring, strategy)
 └── adapters/
     └── <provider>/
         ├── <Provider>Factory.ts             # extends the shared abstract vendor factory
@@ -37,59 +37,61 @@ Each `<family>Monitor/` folder follows the **same** structure:
         └── mappers/                         # DTO → domain
 ```
 
-## The id this layer speaks: the panel documentId
+## This layer does not speak ids — it speaks `ToolWiring`
 
-**Every `documentId` parameter in this folder is a Strapi *dashboard panel* `documentId`**, not a project's. Tool wiring moved from the project to the panel, so the panel is what answers "which tool, at which URL, for which provider project".
+**Nothing in `errorMonitor/`, `logMonitor/` or `trackerMonitor/` fetches anything from Strapi.** They receive a [`ToolWiring`](config/domain/ToolWiring.ts) — `{ id, strategy?, configuration? }` — and everything below `Get<Family>Monitor` is pure and synchronous.
+
+The wiring is carried by a **dashboard element**: a `DashboardKpi` or a `DashboardBlock`. Both Strapi content types declare the same `strategy` dynamic zone and the same `tool` relation, so both project onto one `ToolWiring`. A **panel** carries none of this any more — it is a name, an icon and an order.
 
 ```
-getErrorMonitorFactory(panelId)
-  → ErrorMonitorResolver.resolve(panelId)
-    → factory.support(panelId, "error-monitor")
-      → GlitchtipConfigurationStrategy.isConfigure(panelId, "error-monitor", "glitchtip")
-        → StrapiRepository.isPanelHasStrategy(panelId, …)   # filters strategies by panel documentId
-  → factory.createConnection(panelId)
-      → GlitchtipConfigurationStrategy.resolveConnection(panelId)
-        → StrapiRepository.getPanelById(panelId)            # reads the panel's tool_configuration
+data-access                              # the only layer that knows which collection an id belongs to
+  loadToolWiring(DASHBOARD_KPI, kpiId)   # one Strapi read, memoized per request
+    → getErrorMonitorFactory(wiring)     # pure
+      → ErrorMonitorResolver.resolve(wiring)
+        → factory.support(wiring, "error-monitor")
+          → GlitchtipConfigurationStrategy.isConfigure(wiring, "error-monitor")
+    → factory.createConnection(wiring)   # pure — validates and shapes the connection
+    → factory.createStrategy(connection) # reads the API secret from env
 ```
 
-The parameter name was left as `documentId` throughout, which is the single easiest thing to get wrong here. Hand a **project** id to any of these and Strapi answers nothing: `Strapi panel "<id>" not found.`
+Adding a third element kind is one entry in `loaders` inside [config/domain/loadToolWiring.ts](config/domain/loadToolWiring.ts), one query and one repository method. **Nothing in the monitor layer changes.**
 
-Only `StrapiRepository.getProjectById` / `getProjects` / `getProjectPanels` / `getProjectStrategies` take a **project** `documentId`.
+## Resolution flow — the element drives the adapter
 
-## Resolution flow — Strapi drives the adapter
+`FactoryInterface<TStrategy>` ([shared/factory/FactoryInterface.ts](shared/factory/FactoryInterface.ts)) is the contract: `support(wiring, strategyResolver)`, `createConnection(wiring)`, `createStrategy(connection)`. The first two are synchronous: no network, no env, nothing to await.
 
-A family exposes three calls, in this order:
+`support()` is answered by the wiring itself, matching a **strategy name** (`error-monitor`, `log-monitor`, `tracker-monitor` — the `STRATEGY_RESOLVER` constant of each resolver, sourced from [shared/strategiesEnum.ts](shared/strategiesEnum.ts)) against the **vendor of the element's tool configuration**:
 
 ```ts
-const factory = await getErrorMonitorFactory(panelId)      // asks Strapi which tool the panel maps
-const connection = await factory.createConnection(panelId) // url / org / projectId from the panel
-const strategy = factory.createStrategy(connection)        // reads the API secret from env
+wiring.strategy?.kind === strategyName && wiring.configuration?.kind === TOOL_KIND
 ```
 
-`FactoryInterface<TStrategy>` ([shared/factory/FactoryInterface.ts](shared/factory/FactoryInterface.ts)) is the contract: `support(documentId, strategyResolver)`, `createConnection(documentId)`, `createStrategy(connection)`.
-
-`support()` is answered by the panel's Strapi mapped tools, matching a **strategy name** (`error-monitor`, `log-monitor`, `tracker-monitor` — the `STRATEGY_RESOLVER` constant of each resolver, sourced from [shared/strategiesEnum.ts](shared/strategiesEnum.ts)) against a **tool slug** (`glitchtip`, `posthog` — the `TOOL_RESOLVER` constant of each abstract vendor factory). A panel with no matching mapped tool makes the resolver throw — that is the intended visible failure, not a fallback.
+That vendor comes from the configuration component's `__typename`, mapped into `configuration.kind` — **never from `tool.slug`**, which is an editable label in admin and can drift. An element whose strategy and tool disagree makes the resolver throw, naming the element: that is the intended visible failure, not a fallback. Its blast radius is one KPI card, not the panel.
 
 Vendor plumbing lives once per vendor in `shared/factory/Abstract<Vendor>Factory.ts`: it owns `support()`, `createConnection()`, the connection type guard, and the client construction (including the env secret check). A family adapter only implements `createStrategy()`.
 
 ## `config/domain/` — the Strapi layer
 
-The folder that answers `support()` and `createConnection()`. Same DTO / domain split as an adapter:
+The folder that reads Strapi and hands the monitor layer its `ToolWiring`. Same DTO / domain split as an adapter:
 
 ```
 config/domain/
 ├── gql/
 │   ├── projects/         # GetProjects, GetProjectById
-│   ├── panels/           # GetPanelsByProjectId (list), GetPanelsById (one panel + its wiring)
-│   └── strategies/       # GetStrategiesByDocumentId, GetSpecificStrategyByDocumentId
+│   ├── panels/           # GetPanelsByProjectId (the selector's list)
+│   ├── kpis/             # GetDashboardKpis (list, client-facing) · GetDashboardKpiById (wiring)
+│   └── blocks/           # GetDashboardBlockById (wiring)
 ├── dto/                  # Raw Strapi response shapes (*Dto, Strapi field names)
 ├── mappers/              # DTO → domain
-├── tool/                 # <Vendor>ConfigurationStrategy + ToolConnection
+├── repositories/         # AbstractStrapiRepository (transport) + one per content type
+├── tool/                 # <Vendor>ConfigurationStrategy + ToolConnection + ToolConfiguration
 ├── Project.ts            # documentId, slug, defaultConfig, timeInterval
-├── DashboardPanels.ts    # id, name, slug, displayName, icon, order, mappedTools, toolConfigurations
-├── Strategy.ts, ProjectSummary.ts, ProjectConfiguration.ts, TimeInterval.ts
-├── StrapiClient.ts / StrapiClientFactory.ts / StrapiStrategy.ts
-└── StrapiRepository.ts   # Runs a query, returns domain types
+├── DashboardPanels.ts    # id, name, slug, icon, order, isDevelopment
+├── DashboardKpi.ts       # the client projection: identity + strategy, never the tool
+├── MonitorStrategy.ts    # error-monitor{blocType} | log-monitor{tags} | tracker-monitor
+├── ToolWiring.ts         # { id, strategy?, configuration? } — what the monitor layer consumes
+├── loadToolWiring.ts     # DASHBOARD_KPI / DASHBOARD_BLOCK → the memoized read
+└── StrapiClient.ts / StrapiClientFactory.ts / StrapiStrategy.ts
 ```
 
 ### The Strapi content model
@@ -99,35 +101,49 @@ Project
 ├── default_config.DefaultRefreshIntervalMS    # polling cadence (project-wide)
 ├── timeInterval[] { duration, interval }      # window presets (project-wide)
 └── dashboard_panels[]                         # ordered by `order`
-    ├── documentId, name, slug, display_name, icon, order
-    ├── mapped_tools[] { documentId, name, strategies[{ name }] }
-    └── tool_configuration[]                   # the polymorphic component union
+    ├── documentId, name, slug, icon, order, is_development
+    ├── dashboard_kpis[]                       # the KPI cards
+    └── dashboard_blocks[]                     # the bigger blocks
+
+DashboardKpi / DashboardBlock                  # both carry their own wiring
+├── documentId, slug, name, title, description, icon, level, order
+├── strategy[]  → ComponentStrategy{ErrorMonitor|LogMonitor|TrackerMonitor} | Error
+└── tool        → Tool { slug, configuration[] }
+                    → ComponentConfig{Glitchtip|Posthog}Configuration | Error
 ```
+
+Three things the live schema decides for us, and the DTOs mirror them:
+
+- **`strategy` and `configuration` are dynamic zones** — lists, whose first entry is the one we read (an element declares exactly one of each), and whose members include Strapi's own `Error` type. The mappers `throw` on `Error` rather than returning `undefined`.
+- **`tool` is a relation, not an inline component.** Ten KPI cards pointing at the same GlitchTip share one `Tool` entry, so the URL and organization are edited once.
+- **`organization` and `ComponentStrategyErrorMonitor.type` are nullable**, so `GlitchtipConfiguration.organization` and `MonitorStrategy.blocType` are too. `resolveConnection` is what refuses a null organization, loudly.
 
 `Project` intentionally does **not** carry its panels: nothing consumes them from there, and the panel queries are the single source. `ProjectDto` mirrors that — don't re-add a `dashboard_panels` selection to `GetProjectById`.
 
 ### Repository surface
 
+Transport lives once in `repositories/AbstractStrapiRepository.ts`; each content type gets a repository, and [StrapiStrategy.ts](config/domain/StrapiStrategy.ts) is the façade that delegates.
+
 | Method | Takes | Returns |
 |---|---|---|
 | `getProjects()` | — | `ProjectSummary[]` (catalog) |
 | `getProjectById(projectId)` | project id | `Project` — `defaultConfig`, `timeInterval` |
-| `getProjectPanels(projectId)` | project id | `DashboardPanel[]` sorted by `order`, or `null` when empty |
-| `getProjectStrategies(projectId, panelSlug?)` | project id + panel **slug** | `Strategy[]` — what the UI mounts, or `null` when empty |
-| `getPanelById(panelId)` | panel id | `DashboardPanel` with `toolConfigurations` + `mappedTools` |
-| `isPanelHasStrategy(panelId, strategyName, toolSlug?)` | panel id | `boolean` — backs `support()` |
+| `getProjectPanels(projectId, showDevelopmentPanel)` | project id | `DashboardPanel[]` sorted by `order`, or `null` when empty |
+| `getDashbioardKpi(filters)` | panel **slug** | `DashboardKpi[]` — the client projection, sorted by `order` |
+| `getKpiWiring(kpiId)` | KPI id | `ToolWiring`, or `null` when unknown |
+| `getBlockWiring(blockId)` | block id | `ToolWiring`, or `null` when unknown |
 
-Note the asymmetry: strategies are listed by panel **slug** (`getProjectStrategies`) but checked by panel **documentId** (`isPanelHasStrategy`). Both are how the corresponding GraphQL filters are written — read the query before changing a call site.
+**Two projections of the same content type, and they must not be merged.** The list projection crosses to the browser and therefore carries no `tool`: an instance URL, an organization slug and a provider project id would land in the client bundle, and it is repolled at `refreshIntervalMs` for nothing. The wiring projection is server-only and read one element at a time.
 
 ### Rules
 
-- **Strapi field names stay in `dto/`.** `mapped_tools`, `tool_configuration`, `dashboard_panels`, `display_name`, `DefaultRefreshIntervalMS` must not appear in the types at the root of `config/domain/` — `mapProject` / `mapDashboardPanel` / `mapProjectSummary` rename them. The dependency runs `dto → mappers → domain`; a `dto/` file never imports from the root.
+- **Strapi field names stay in `dto/`.** `dashboard_panels`, `is_development`, `DefaultRefreshIntervalMS`, `__typename` must not appear in the types at the root of `config/domain/` — `mapProject` / `mapDashboardPanel` / `mapProjectSummary` / `mapToolWiring` / `mapMonitorStrategy` rename them. The dependency runs `dto → mappers → domain`; a `dto/` file never imports from the root. That is also why `MonitorBlocType` is redeclared in the domain instead of reusing the DTO's `BlocType`.
 - **One operation per file in `gql/`**, exporting `get<Name>Query()` returning `GraphQlQuery`. The document is a **static literal** tagged with `gql` ([shared/domain/GraphqlQuery.ts](shared/domain/GraphqlQuery.ts)) — an identity tag whose only job is to let the language server configured in [graphql.config.yml](../../graphql.config.yml) validate it against the live Strapi schema. Never assemble a selection set by concatenation: it blinds the editor and any future codegen.
 - **`StrapiRepository.execute<T>()` is an unchecked assertion.** The envelope passed to it (`{ project: ProjectDto | null }`, `{ dashboardPanel: DashboardPanelDto | null }`, …) must mirror the query's selection set field for field — nothing validates it at runtime. It cuts both ways:
   - A field **dropped from the query** turns into `undefined` downstream with no error. That is how the window presets silently fell back to their defaults once, after `timeInterval` was removed from `GetProjectById`.
   - A field **kept in the DTO but no longer selected** is a lie the compiler will happily propagate. `StrategyDto` declared a `mapped_tool` with a `projects` relation while both strategy queries had moved to `dashboard_panels`; nothing read it, so nothing broke, but the type asserted a shape that never arrived.
-- **Select only what the DTO declares — and only what something reads.** Filtering happens in a query's `variables`, not in its selection set: the strategy queries match a panel through `mapped_tool.dashboard_panels` in the filters, so their selection is just `{ name }`. Selecting the relation "for context" only creates a shape to keep in sync.
-- **A polymorphic component needs `__typename` in the selection set.** `mapToolConfiguration` switches on it; without it every tool configuration maps to `undefined`.
+- **Select only what the DTO declares — and only what something reads.** Filtering happens in a query's `variables`, not in its selection set: `GetDashboardKpis` matches its panel through `dashboard_panels.slug` in the filters, so the panel is never selected. Selecting a relation "for context" only creates a shape to keep in sync.
+- **A dynamic zone needs `__typename` in the selection set.** `mapMonitorStrategy` and `mapToolConfiguration` switch on it; without it every member maps to `undefined`. Select the `... on Error { code message }` fragment too — it is a real member of both unions, and the mappers report its `code`.
 
 ## Invariants — do not break
 
@@ -137,13 +153,14 @@ Note the asymmetry: strategies are listed by panel **slug** (`getProjectStrategi
 4. **DTOs stay inside the adapter.** Every adapter has its own `dto/` and `mappers/`. Never import `adapters/X/dto/...` from another adapter or from `domain/`.
 5. **Factories own env validation.** The only provider env vars are the API secrets (`GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`), read in the abstract vendor factory's client builder. If one is missing → throw immediately with a message naming it. Never read provider env vars from a strategy or HTTP client. Everything else (url, organization, projectId) comes from Strapi via `createConnection()`.
 6. **HTTP clients are transport only.** `GlitchTipClient` / `PostHogClient` know about auth headers, JSON parsing, URL composition — nothing about monitor families or domain types.
-7. **The resolver picks via `support(documentId, strategy)`.** Adding a provider = new adapter folder + register its Factory in `Get<Family>Monitor.ts`'s `factories` array + add the tool slug to the enum file + map the tool to the **panel** in Strapi admin. The resolver code does not change.
-8. **`connection.projectId` is the provider's project id**, never a Strapi id. Only factories and resolvers speak `documentId`.
+7. **The resolver picks via `support(wiring, strategy)`.** Adding a provider = new adapter folder + register its Factory in `Get<Family>Monitor.ts`'s `factories` array + add the tool slug to the enum file + wire the tool to the target **KPI or block** in Strapi admin. The resolver code does not change.
+8. **The monitor layer never reads Strapi.** No `StrapiClientFactory`, no `cache()`, nothing to await in `support()` / `createConnection()`. Whoever knows which collection an id belongs to loads the wiring and passes it in — that is the data-access layer, via `loadToolWiring`.
+9. **`connection.projectId` is the provider's project id**, never a Strapi id. Only `loadToolWiring` and the repositories speak `documentId`.
 
 ## Adding a new adapter (e.g. Sentry for errorMonitor)
 
 1. Add a constant in `errorMonitor/ErrorMonitorTypeEnums.ts`: `export const SENTRY = "sentry"` and append to `toolList`.
-2. If Sentry is a new vendor, add `shared/factory/AbstractSentryFactory.ts` with its `TOOL_RESOLVER = "sentry"`, its `support()` / `createConnection()` backed by a `SentryConfigurationStrategy`, and its client builder reading `SENTRY_TOKEN`.
+2. If Sentry is a new vendor, add `shared/factory/AbstractSentryFactory.ts` with its `support()` / `createConnection()` backed by a `SentryConfigurationStrategy` (whose `TOOL_KIND = "sentry"` matches the mapped `configuration.kind`), and its client builder reading `SENTRY_TOKEN`.
 3. Create `errorMonitor/adapters/sentry/`:
    - `SentryErrorMonitorFactory.ts` extending `AbstractSentryFactory` and implementing `ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>` — only `createStrategy(connection)`.
    - `SentryStrategy.ts` implementing `ErrorMonitorStrategyInterface`.
@@ -158,8 +175,8 @@ Note the asymmetry: strategies are listed by panel **slug** (`getProjectStrategi
    ];
    ```
 
-5. Add the Sentry component to the Strapi `tool_configuration` union, its DTO (with `__typename`), its `mapToolConfiguration` case, and the `... on ComponentConfigSentryConfiguration` fragment in `gql/panels/GetPanelsById.ts`.
-6. Document the new secret in `apps/dashboard/.env.example`, and map the tool to the target **panel** in Strapi admin.
+5. Add the Sentry component to the Strapi `ToolConfigurationDynamicZone`, its DTO in `dto/StrapiTool.ts` (with `__typename`), its `mapToolConfiguration` case, and the `... on ComponentConfigSentryConfiguration` fragment in **both** wiring queries (`gql/kpis/GetDashboardKpiById.ts` and `gql/blocks/GetDashboardBlockById.ts`) — they share a DTO, so they must share a selection set.
+6. Document the new secret in `apps/dashboard/.env.example`, and wire the tool to the target **KPI or block** in Strapi admin.
 7. Add tests under `tests/lib/errorMonitor/adapters/sentry/` (see [tests/CLAUDE.md](../../../../tests/CLAUDE.md)).
 
 If a Sentry field has no equivalent in the existing domain type, **discuss before extending the domain**: extending it impacts every adapter.

@@ -1,38 +1,8 @@
-export interface MappedToolStrategyDto {
-    name: string;
-}
-
 export type ALLOWED_INTERVAL = "seconds" | "minutes" | "days" | "hours"
 export interface TimeIntervalDto {
     duration: number;
     interval: ALLOWED_INTERVAL
 }
-
-export interface MappedToolDto {
-    documentId: string;
-    name: string;
-    strategies: MappedToolStrategyDto[];
-}
-
-export interface GlitchtipConfigurationDto {
-    __typename: "ComponentConfigGlitchtipConfiguration";
-    id: string;
-    url: string;
-    projectId: string;
-    organization: string;
-    tool: { slug: string } | null;
-}
-
-export interface PosthogConfigurationDto {
-    __typename: "ComponentConfigPosthogConfiguration";
-    id: string;
-    url: string;
-    projectId: string;
-}
-
-export type ToolConfigurationDto =
-    | GlitchtipConfigurationDto
-    | PosthogConfigurationDto;
 
 export interface DefaultConfigDto {
     DefaultRefreshIntervalMS: number | null;
@@ -46,15 +16,13 @@ export interface ProjectDto {
 }
 
 export interface DashboardPanelDto {
-    tool_configuration?: ToolConfigurationDto[];
-    mapped_tools?: MappedToolDto[];
     documentId: string;
     name: string;
     icon: string;
     order: number;
     slug: string;
-    display_name: string;
     is_development: boolean;
+    display_name: string;
 }
 
 export interface ProjectSummaryDto {

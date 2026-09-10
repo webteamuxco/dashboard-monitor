@@ -10,6 +10,7 @@ interface SelectedPanelStore {
   setPanelId: (setPanelId: string) => void;
   setPanelSlug: (setPanelSlug: string) => void;
   setPanelIcon: (setPanelIcon: string | null) => void;
+  clearPanel: () => void;
 }
 
 // skipHydration: the persisted value is applied on the client after mount by
@@ -25,6 +26,7 @@ export const useSelectedPanel = create<SelectedPanelStore>()(
       setPanelId: (pannelId) => set({ pannelId }),
       setPanelSlug: (panelSlug) => set({ panelSlug }),
       setPanelIcon: (panelIcon) => set({ panelIcon }),
+      clearPanel: () => set({ pannelId: "", panelSlug: null, panelIcon: null }),
     }),
     {
       name: "dashboard-selected-pannel",

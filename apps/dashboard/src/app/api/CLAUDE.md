@@ -6,33 +6,57 @@ Thin Next.js route handlers. One route per data view consumed by a feature. The 
 
 ```
 src/app/api/
-├── config/projects/
-│   ├── route.ts                        # the project catalog
-│   └── [projectId]/
-│       ├── route.ts                    # one project: defaultConfig, timeInterval
-│       ├── panels/route.ts             # the project's dashboard panels, ordered
-│       └── strategies/route.ts         # ?selectedPanel=<panelSlug> → the panel's strategies
+├── config/
+│   ├── projects/
+│   │   ├── route.ts                    # the project catalog
+│   │   └── [projectId]/
+│   │       ├── route.ts                # one project: defaultConfig, timeInterval
+│   │       └── panels/route.ts         # the project's dashboard panels, ordered
+│   ├── dashboard-kpis/route.ts         # ?panelSlug=<slug> → the panel's KPIs
+│   └── dashboard-blocks/route.ts       # ?panelSlug=<slug> → the panel's blocks
+├── kpis/
+│   ├── [kpiId]/route.ts                # one KPI's measure
+│   └── issues/route.ts
+├── blocks/
+│   └── [blockId]/
+│       ├── route.ts                    # one block's measure (list or series)
+│       └── issues/[issueId]/
+│           ├── route.ts                # the detail of one row of a list block
+│           └── comments/route.ts       # POST a comment on that issue
 ├── error-rate/route.ts
-├── issues/
-│   ├── route.ts
-│   └── [id]/route.ts
-├── reservations/route.ts
 └── visitors/timeline/route.ts
 ```
 
-One folder per feature. Use `[param]` segments for resource ids, never query strings for ids — the `config` routes follow this; the data routes below are the documented exception.
+One folder per feature. Use `[param]` segments for resource ids, never query strings for ids — the `config`, `kpis` and `blocks` routes follow this; the remaining data routes are the documented exception.
 
 ## Which id each route expects
 
-| Route | `documentId` / `[projectId]` is a… |
+| Route | the id is a… |
 |---|---|
 | `/api/config/projects` | — |
 | `/api/config/projects/[projectId]` | **project** id |
 | `/api/config/projects/[projectId]/panels` | **project** id |
-| `/api/config/projects/[projectId]/strategies?selectedPanel` | **project** id + panel **slug** |
-| `/api/issues`, `/api/issues/[id]`, `/api/error-rate`, `/api/reservations`, `/api/visitors/timeline` | **panel** id, passed as `?documentId=` |
+| `/api/config/dashboard-kpis?panelSlug` | panel **slug** |
+| `/api/config/dashboard-blocks?panelSlug` | panel **slug** |
+| `/api/kpis/[kpiId]` | **dashboard KPI** id |
+| `/api/blocks/[blockId]`, `/api/blocks/[blockId]/issues/[issueId]`, `…/comments` | **dashboard block** id |
+| `/api/kpis/issues`, `/api/error-rate`, `/api/visitors/timeline` | **dashboard KPI** id, passed as `?documentId=` |
 
-Every data route's `documentId` query param carries the selected **dashboard panel**'s Strapi `documentId`, because the panel is what maps a tool and holds its connection details. The param name is a leftover from when wiring lived on the project — don't read it as a project id, and don't rename it in isolation (client fetchers, hooks and the monitor layer all use the same name). See the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
+Every data route's id carries a **dashboard element**'s Strapi `documentId` — a `DashboardKpi` or a `DashboardBlock` — because the element is what declares a strategy and holds its tool connection. Where it is still a `?documentId=` query param the name is a leftover from when the wiring lived on the project, then on the panel; don't read it as a project or panel id, and don't rename it in isolation (client fetchers, hooks and the data-access layer all use the same name). See the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
+
+**`/api/blocks/[blockId]?tag=` names one of the element's own tags, never a query.** A log-monitor block declaring several tags is read one tag at a time — the provider ANDs the terms of a single query, so asking for all of them at once returns their intersection. The route forwards the raw param and `BlocksDataAccess` matches it against `strategy.tags`, throwing when it matches none: nothing the browser sends ever reaches the provider query verbatim. Omitting the param keeps the historical behaviour (every declared tag in one ANDed query), which is what a single-tag element wants.
+
+**The element measures carry no type param.** `/api/kpis/[kpiId]` and `/api/blocks/[blockId]` read the absence of `windowMinutes` as "this element is not windowed": a KPI whose Strapi `type` is not `interval` reads a total, a block whose `type` draws no time series — anything but `rate`, `bar` and `stackedBar` — reads a list. The wiring does not carry the element's `type`, so never default that param — a default silently turns every total into a windowed count.
+
+**A data route says which collection its id belongs to.** It passes an element kind as the first argument of the data-access call:
+
+```ts
+import { DASHBOARD_BLOCK } from "@/lib/config/domain/loadToolWiring";
+
+const data = await blocksDataAccess.getMeasure(DASHBOARD_BLOCK, blockId, windowMinutes, environment, limit, tag);
+```
+
+The route is the only layer that knows this — it is what the URL means. The data-access layer turns the pair into a `ToolWiring`; the monitor layer never sees either. The `/api/kpis/*` routes pass `DASHBOARD_KPI`, the `/api/blocks/*` ones `DASHBOARD_BLOCK`, and nothing below them changes.
 
 ## Route conventions
 
@@ -54,7 +78,7 @@ Every route handler must:
 
 6. **Wrap upstream failures.** `try/catch` around the data-access call, return `502 { error: message }` on throw. Don't expose stack traces. A missing Strapi mapping, an incomplete tool configuration and a provider outage all surface this way — with the original message, so the cause stays diagnosable.
 
-7. **Response shape**: `{ data: T }` on success, `{ error: string }` on failure. Keep it consistent — the client fetchers (`fetchIssuesClient`, …) rely on it. `data` may legitimately be `null` (a project with no panels, a panel with no strategies); the fetchers pass that through and the UI renders an empty state.
+7. **Response shape**: `{ data: T }` on success, `{ error: string }` on failure. Keep it consistent — the client fetchers (`fetchBlockMeasureClient`, …) rely on it. `data` may legitimately be `null` (a project with no panels, a panel with no strategies); the fetchers pass that through and the UI renders an empty state.
 
 8. **`params` is a Promise.** Next 16 dynamic segments: `{ params }: { params: Promise<{ projectId: string }> }`, then `const { projectId } = await params;`.
 
@@ -62,22 +86,26 @@ Every route handler must:
 
 ```ts
 import { NextRequest, NextResponse } from "next/server";
-import { issuesDataAccess } from "@/app/features/issues/data-access/IssuesDataAccess";
+import { blocksDataAccess } from "@/app/features/blocks/data-access/BlocksDataAccess";
+import { DASHBOARD_BLOCK } from "@/lib/config/domain/loadToolWiring";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: NextRequest) {
-  // The selected dashboard panel's Strapi documentId — what the monitor layer resolves a factory from.
-  const documentId = request.nextUrl.searchParams.get("documentId");
-  if (!documentId) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ blockId: string }> },
+) {
+  // The dashboard element's Strapi documentId — what the monitor layer resolves a factory from.
+  const { blockId } = await params;
+  if (!blockId) {
     return NextResponse.json(
-      { error: "Query param 'documentId' is required." },
+      { error: "Path param 'blockId' is required." },
       { status: 400 },
     );
   }
 
   try {
-    const data = await issuesDataAccess.getRecent(documentId);
+    const data = await blocksDataAccess.getMeasure(DASHBOARD_BLOCK, blockId, null);
     return NextResponse.json({ data });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";

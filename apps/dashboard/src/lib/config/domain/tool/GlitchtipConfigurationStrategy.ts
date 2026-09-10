@@ -1,17 +1,16 @@
-
 import "server-only";
-import { cache } from "react";
-import { StrapiClientFactory } from "@/lib/config/domain/StrapiClientFactory";
 import { ToolConfigurationStrategyInterface } from "./ToolConfigurationStrategyInterface";
 import { ToolConnection } from "./ToolConnection";
+import { ToolWiring } from "../ToolWiring";
+
+const TOOL_KIND = "glitchtip";
 
 export type GlitchtipConfiguration = {
-    kind: "glitchtip";
+    kind: typeof TOOL_KIND;
     id: string;
     url: string;
     projectId: string;
-    organization: string;
-    toolSlug: string;
+    organization: string | null;
 };
 
 export interface GlitchtipConnection extends ToolConnection {
@@ -20,42 +19,35 @@ export interface GlitchtipConnection extends ToolConnection {
 
 export class GlitchtipConfigurationStrategy implements ToolConfigurationStrategyInterface {
 
-    isConfigure = cache(
-        async (
-            documentId: string,
-            strategyName: string, 
-            toolSlug: string
-        ): Promise<boolean> => {
-            return await new StrapiClientFactory().create().isPanelHasStrategy(documentId, strategyName, toolSlug);
-        }
-    )
+    /**
+     * A dashboard element carries both its strategy and its tool, so supporting
+     * it is one question about one document: does it ask for this strategy,
+     * through this vendor?
+     */
+    isConfigure(wiring: ToolWiring, strategyName: string): boolean {
+        return (
+            wiring.strategy?.kind === strategyName &&
+            wiring.configuration?.kind === TOOL_KIND
+        );
+    }
 
   /**
-   * Resolves the GlitchTip connection (instance URL, organization, project id)
-   * from the Strapi project's `tool_configuration`. The API token stays in env —
-   * only the non-secret connection details live in Strapi.
+   * Shapes the GlitchTip connection (instance URL, organization, project id)
+   * out of the element's tool configuration. The API token stays in env — only
+   * the non-secret connection details live in Strapi.
    */
-  resolveConnection = cache(
-    async (documentId: string): Promise<GlitchtipConnection> => {
-      const panel = await new StrapiClientFactory().create().getPanelById(documentId);
-      
-      if (!panel) {
-        throw new Error(`Strapi panel "${documentId}" not found.`);
-      }
+  resolveConnection(wiring: ToolWiring): GlitchtipConnection {
+      const glitchtip = wiring.configuration;
 
-      const glitchtip = panel.toolConfigurations?.find(
-        (configuration) => configuration.kind === "glitchtip",
-      );
-      
-      if (!glitchtip) {
+      if (glitchtip?.kind !== TOOL_KIND) {
         throw new Error(
-          `Strapi panel "${documentId}" has no GlitchTip configuration.`,
+          `Strapi element "${wiring.id}" has no GlitchTip configuration.`,
         );
       }
 
       if (!glitchtip.url || !glitchtip.organization || !glitchtip.projectId) {
         throw new Error(
-          `GlitchTip configuration of Strapi panel "${documentId}" is incomplete ` +
+          `GlitchTip configuration of Strapi element "${wiring.id}" is incomplete ` +
             "(url, organization and projectId are all required).",
         );
       }
@@ -65,6 +57,5 @@ export class GlitchtipConfigurationStrategy implements ToolConfigurationStrategy
         organizationSlug: glitchtip.organization,
         projectId: glitchtip.projectId,
       };
-    },
-  );
+  }
 }

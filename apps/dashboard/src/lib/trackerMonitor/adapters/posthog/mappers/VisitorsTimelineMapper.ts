@@ -47,6 +47,10 @@ function toCount(raw: number | string | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+export function mapPostHogVisitorsTotal(dto: PostHogQueryResponseDto): number {
+  return toCount(dto.results?.[0]?.[0]);
+}
+
 export function mapPostHogVisitorsTimeline(
   dto: PostHogQueryResponseDto,
   windowMinutes: number,

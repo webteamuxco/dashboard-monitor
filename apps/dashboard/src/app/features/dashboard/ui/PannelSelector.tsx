@@ -5,21 +5,9 @@ import { useSelectedProject } from "../state/useSelectedProject";
 import { useSelectedPanel } from "../state/useSelectedPanel";
 import { usePanels } from "../../config/hooks/usePannels";
 import { icons, type LucideIcon } from "lucide-react";
+import { getLucideIcon } from "../../utils/lucidIcon";
 interface ProjectSelectorProps {
   fallbackDocumentId: string;
-}
-
-function getLucideIcon(name?: string | null): LucideIcon {
-  if (!name) {
-    return icons.Circle;
-  }
-
-  const iconName = name
-    .split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
-
-  return icons[iconName as keyof typeof icons] ?? icons.Circle;
 }
 
 export function PannelSelector({ fallbackDocumentId }: ProjectSelectorProps) {
