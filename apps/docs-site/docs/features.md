@@ -103,6 +103,11 @@ The log-monitor bar block is what used to be a standalone reservations panel: th
 
 **One tag at a time when the strategy declares several.** The provider ANDs the terms of a single log query, so two tags in one query ask for the logs carrying both — an intersection that is almost always empty. A block declaring several tags therefore reads them one at a time: `BlockCard` holds the selection (local `useState`, since it is scoped to that one card), `BlockCardHeader` renders a `BlockTagSelector` next to the polling dot, and the id travels as `?tag=` down to `BlocksDataAccess`, which matches it against the tags the element declares — an unknown id throws rather than reaching the provider — and names the series after the tag. Each tag keeps its own cache entry through the last segment of the measure key, so switching back is instant. The card's caption carries both descriptions: the block's own on the left — the unit the card is read in, `req/min` — and the selected tag's on the right, which follows the selection. The selector is mounted only when the dashboard is interactive; a kiosk stays on the first tag Strapi lists.
 
+**The chart marks take the selected tag's colour.** A tag carries an optional `color` drawn from the very same Strapi enumeration as an element's `level`, so both resolve through `ACCENT_CHART`. `BlockCard` — the component that already derives the active tag — resolves `activeTag?.color ?? level` and hands it down as the body's `accent` prop, which `useSeriesChart` applies to the first series. Two boundaries are deliberate:
+
+- **the prop is named `accent`, not `level`**, all the way down `BlockCardContent` → `BlockBody` → `BlockBar` / `BlockRate`. It no longer carries the element's level once a tag overrides it, and only the series bodies ever read it — `BlockList` ignores it.
+- **the card chrome keeps the element's `level`.** The 2px accent strip and the header's row count stay on the block's own colour, so switching tag recolours the data and nothing else. A block with no tag, or a tag published without a colour, falls back to `level` and looks exactly as it did before.
+
 ### issues
 
 [src/app/features/issues/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/issues/)

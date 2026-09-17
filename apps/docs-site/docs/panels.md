@@ -96,6 +96,7 @@ What lives where:
 | Panel | `slug`, `display_name`, `icon`, `order`, `is_development` | the header selector's entry, nothing more |
 | Element | `strategy` (one of `error-monitor`, `log-monitor`, `tracker-monitor`), `tool` | the wiring — it is what differs between two cards |
 | Element | `type`, `level`, `title`, `description`, `icon`, `order` | how the card renders |
+| Strategy tag | `name`, `value`, `description`, `color` | the log query term, its selector label and the colour its chart marks take |
 | Tool | `configuration[]` — url, organization, provider project id | shared: ten elements can point at one `Tool` entry |
 
 Two consequences of `tool` being a **relation** rather than an inline component: the instance URL is edited once for every element using it, and changing it moves every one of them at the same time.
@@ -235,7 +236,7 @@ Adding a third element kind is one entry in the `loaders` record of [loadToolWir
 3. **On each element** (`DashboardKpi` / `DashboardBlock`) — attach it to the panel, then give it:
    - `title`, `icon`, `level`, `order`, `description`
    - `type` — `list` / `interval` for a KPI, `list` / `rate` / `bar` / `stackedBar` for a block
-   - `strategy` — exactly one of `error-monitor`, `log-monitor` (with its `tags`), `tracker-monitor`
+   - `strategy` — exactly one of `error-monitor`, `log-monitor` (with its `tags`), `tracker-monitor`. Each tag takes a `name`, a `value`, an optional `description` and an optional `color`, that last one drawn from the same enumeration as `level`: it colours the chart marks when that tag is the selected one.
    - `tool` — the `Tool` entry whose `configuration` carries the url, the organization and the provider project id
 4. **On each tool** — `slug` plus one configuration component: GlitchTip (instance URL, organization slug, provider project id) or PostHog (instance URL, project id).
 
