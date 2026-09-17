@@ -156,14 +156,15 @@ Transport lives once in `repositories/AbstractStrapiRepository.ts`; each content
 ## Invariants — do not break
 
 1. **`import "server-only";` is the first line** of every file in this folder. Compile fails if a client component pulls one in.
-2. **The Strategy interface is the contract.** UI/data-access code talks only to `<Family>MonitorStrategyInterface`. No leaking DTOs, no leaking provider-specific fields.
-3. **Domain types in `domain/` are pure.** No imports from `adapters/`, no provider field names. Renaming `glitchtip` → `sentry` must not touch `domain/`.
-4. **DTOs stay inside the adapter.** Every adapter has its own `dto/` and `mappers/`. Never import `adapters/X/dto/...` from another adapter or from `domain/`.
-5. **Factories own env validation.** The only provider env vars are the API secrets (`GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`), read in the abstract vendor factory's client builder. If one is missing → throw immediately with a message naming it. Never read provider env vars from a strategy or HTTP client. Everything else (url, organization, projectId) comes from Strapi via `createConnection()`.
-6. **HTTP clients are transport only.** `GlitchTipClient` / `PostHogClient` know about auth headers, JSON parsing, URL composition — nothing about monitor families or domain types.
-7. **The resolver picks via `support(strategy)`,** on a factory already holding the wiring. Adding a provider = new adapter folder + register its Factory in `Get<Family>Monitor.ts`'s `factories` array (constructed with the `wiring`) + add the tool slug to the enum file + wire the tool to the target **KPI or block** in Strapi admin. The resolver code does not change.
-8. **The monitor layer never reads Strapi.** No `StrapiClientFactory`, no `cache()`, nothing to await in `support()` / `createConnection()`. Whoever knows which collection an id belongs to loads the wiring and passes it in — that is the data-access layer, via `loadToolWiring`.
-9. **`connection.projectId` is the provider's project id**, never a Strapi id. Only `loadToolWiring` and the repositories speak `documentId`.
+2. **The Strategy interface is the contract.** UI/data-access code talks only to `<Family>MonitorStrategyInterface`. No leaking DTOs, no leaking provider-specific fields. Every family also implements the shared `StrategyInterface` — `getKpiMeasures` / `getBlockMeasures` — and **that is where a measure is computed**, not in the data-access layer.
+3. **A family's two measures validate through one guard.** `getKpiMeasures` and `getBlockMeasures` read the same wiring, so they must refuse the same wirings: put the checks in a private helper (`GlitchTipLogMonitorStrategy.requireLogStrategy()`) rather than in each method. Duplicating them is how a log block came to count a whole project on a tagless element while the KPI refused — `buildLogQuery([])` returns `""`, which the provider reads as *everything*.
+4. **Domain types in `domain/` are pure.** No imports from `adapters/`, no provider field names. Renaming `glitchtip` → `sentry` must not touch `domain/`.
+5. **DTOs stay inside the adapter.** Every adapter has its own `dto/` and `mappers/`. Never import `adapters/X/dto/...` from another adapter or from `domain/`.
+6. **Factories own env validation.** The only provider env vars are the API secrets (`GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`), read in the abstract vendor factory's client builder. If one is missing → throw immediately with a message naming it. Never read provider env vars from a strategy or HTTP client. Everything else (url, organization, projectId) comes from Strapi via `createConnection()`.
+7. **HTTP clients are transport only.** `GlitchTipClient` / `PostHogClient` know about auth headers, JSON parsing, URL composition — nothing about monitor families or domain types.
+8. **The resolver picks via `support(strategy)`,** on a factory already holding the wiring. Adding a provider = new adapter folder + register its Factory in `Get<Family>Monitor.ts`'s `factories` array (constructed with the `wiring`) + add the tool slug to the enum file + wire the tool to the target **KPI or block** in Strapi admin. The resolver code does not change.
+9. **The monitor layer never reads Strapi.** No `StrapiClientFactory`, no `cache()`, nothing to await in `support()` / `createConnection()`. Whoever knows which collection an id belongs to loads the wiring and passes it in — that is the data-access layer, via `loadToolWiring`.
+10. **`connection.projectId` is the provider's project id**, never a Strapi id. Only `loadToolWiring` and the repositories speak `documentId`.
 
 ## Adding a new adapter (e.g. Sentry for errorMonitor)
 

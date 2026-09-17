@@ -11,7 +11,7 @@ import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 import { LOG_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 import { aggregateByBucket, buildBlockPeriod, buildEmptyBuckets, buildKpiPeriod, DEFAULT_LIST_LIMIT, formatRelative, resolveBuckets } from "@/lib/shared/helper/periodHelper";
 import { BlockListEntry, BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
-import { MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
+import { LogMonitorStrategy, MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
 import { KpiMeasure } from "@/lib/shared/domain/KpiMeasure";
 
 
@@ -38,7 +38,7 @@ function toLogEntry(log: Log): BlockListEntry {
 function selectLogTags(
   tags: MonitorStrategyTag[],
   tagId: string | null,
-  documentId: string,
+  elementId: string,
 ): MonitorStrategyTag[] {
   if (tagId === null) {
     return tags;
@@ -48,7 +48,7 @@ function selectLogTags(
 
   if (!tag) {
     throw new Error(
-      `Log monitor of Strapi dashboard-block "${documentId}" declares no tag "${tagId}".`,
+      `Log monitor of Strapi element "${elementId}" declares no tag "${tagId}".`,
     );
   }
 
@@ -77,8 +77,12 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
     return dto.map(mapGlitchTipLog);
   }
 
-  async getKpiMeasures(windowMinutes: number | null, environment: string | null): Promise<KpiMeasure> {
-
+  /**
+   * Everything a log measure needs from the element, validated in one place so
+   * a KPI and a block refuse the same wirings. Keeping the checks per method is
+   * how a block came to count the whole project while a KPI refused to.
+   */
+  private requireLogStrategy(): LogMonitorStrategy {
     const strategy = this.wiring.strategy;
 
     if (!strategy) {
@@ -94,13 +98,20 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
     }
 
     // An empty tag list builds an empty query, which the provider reads as
-    // "everything": the KPI would report the project's whole log volume as if
+    // "everything": the card would report the project's whole log volume as if
     // it were the measure asked for.
     if (!strategy.tags.length) {
       throw new Error(
         `Log monitor of Strapi element "${this.wiring.id}" declares no tag: there is nothing to count.`,
       );
     }
+
+    return strategy;
+  }
+
+  async getKpiMeasures(windowMinutes: number | null, environment: string | null): Promise<KpiMeasure> {
+
+    const strategy = this.requireLogStrategy();
 
     const period = windowMinutes === null ? null : buildKpiPeriod(windowMinutes);
 
@@ -115,23 +126,11 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
 
   async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null, tagId: string | null): Promise<BlockMeasure> {
 
-    const strategy = this.wiring.strategy
+    const strategy = this.requireLogStrategy();
     const now = new Date();
     const rows = limit ?? DEFAULT_LIST_LIMIT;
 
-    if (!strategy) {
-      throw new Error(
-        `Strapi LogMonitor "${this.wiring.configuration?.projectId}" declares no strategy. Map one in admin.`,
-      );
-    }
-
-    if (strategy.kind !== LOG_MONITOR_STRATEGY_ENUM) {
-      throw new Error(
-        `Expected a LogMonitor strategy, got "${strategy.kind}".`,
-      );
-    }
-
-    const tags = selectLogTags(strategy.tags, tagId, this.connection.projectId);
+    const tags = selectLogTags(strategy.tags, tagId, this.wiring.id);
 
     const filters = { query: buildLogQuery(tags, environment) };
 
