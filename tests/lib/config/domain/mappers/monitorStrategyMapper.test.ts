@@ -19,7 +19,7 @@ describe("mapMonitorStrategy", () => {
           __typename: "ComponentStrategyLogMonitor",
           id: "s2",
           tags: [
-            { id: "t1", name: "reservation", value: "reservation.sent", description: null },
+            { id: "t1", name: "reservation", value: "reservation.sent", description: null, color: "warning" },
           ],
         },
       ]),
@@ -27,7 +27,27 @@ describe("mapMonitorStrategy", () => {
       kind: "log-monitor",
       id: "s2",
       tags: [
-        { id: "t1", name: "reservation", value: "reservation.sent", description: null },
+        { id: "t1", name: "reservation", value: "reservation.sent", description: null, color: "warning" },
+      ],
+    });
+  });
+
+  it("carries a tag published without a colour as null rather than dropping the field", () => {
+    const strategy = mapMonitorStrategy([
+      {
+        __typename: "ComponentStrategyLogMonitor",
+        id: "s2",
+        tags: [
+          { id: "t1", name: "reservation", value: "reservation.sent", description: null, color: null },
+        ],
+      },
+    ]);
+
+    expect(strategy).toEqual({
+      kind: "log-monitor",
+      id: "s2",
+      tags: [
+        { id: "t1", name: "reservation", value: "reservation.sent", description: null, color: null },
       ],
     });
   });

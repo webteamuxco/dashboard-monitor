@@ -66,7 +66,7 @@ function renderContent(
     createElement(BlockCardContent, {
       dashboardBlock,
       data,
-      level: "info",
+      accent: "info",
       isPending: false,
       isError: false,
       error: null,
@@ -122,7 +122,7 @@ describe("BlockCardContent", () => {
       createElement(BlockCardContent, {
         dashboardBlock: block(),
         data: undefined,
-        level: "info" as const,
+        accent: "info" as const,
         isPending: true,
         isError: false,
         error: null,
@@ -138,7 +138,7 @@ describe("BlockCardContent", () => {
       createElement(BlockCardContent, {
         dashboardBlock: block(),
         data: undefined,
-        level: "info" as const,
+        accent: "info" as const,
         isPending: false,
         isError: true,
         error: new Error("glitchtip is down"),

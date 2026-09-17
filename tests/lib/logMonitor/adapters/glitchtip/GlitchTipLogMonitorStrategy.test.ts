@@ -8,7 +8,7 @@ import { glitchtipWiring } from "../../../../helpers/toolWiring";
 const CONNECTION = { baseUrl: "https://gt", organizationSlug: "org", projectId: "p" };
 
 function tag(id: string, name: string, value: string): MonitorStrategyTag {
-  return { id, name, value, description: null };
+  return { id, name, value, description: null, color: null };
 }
 
 const ONE_TAG = [tag("t1", "reservation", "reservation.sent")];

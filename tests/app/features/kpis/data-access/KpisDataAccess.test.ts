@@ -56,7 +56,7 @@ const LOG_WIRING = glitchtipWiring({
     kind: "log-monitor",
     id: "s2",
     tags: [
-      { id: "t1", name: "reservation", value: "reservation.sent", description: null },
+      { id: "t1", name: "reservation", value: "reservation.sent", description: null, color: null },
     ],
   },
 });

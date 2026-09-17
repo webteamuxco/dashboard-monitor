@@ -115,7 +115,9 @@ Test file naming: `<SourceFile>.test.ts`. Two files cover a whole contract acros
 | `DashboardHeader` | the `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY` gate on every control |
 | `*Selector` components | options rendered, current value, what they write to the store |
 
-Coverage excludes (see [vitest.config.ts](../vitest.config.ts)): `domain/**`, `dto/**`, `*Interface.ts`, `*TypeEnums.ts`, `src/app/api/**`, `src/components/**`, the app shell (`layout`/`page`/`providers`), and the presentational widgets (`*Panel.tsx`, `*Kpi.tsx`, `*KpiCard.tsx`, `*Sheet.tsx`, `KpiCard.tsx`) — a hook call plus Recharts markup, whose only real logic (which of them mounts) is covered through `DashboardContent` and `KpiRow`. Don't add tests just to cover these.
+Coverage excludes (see [vitest.config.ts](../vitest.config.ts)): `domain/**`, `dto/**`, `*Interface.ts`, `*TypeEnums.ts`, `src/app/api/**`, `src/components/**`, the app shell (`layout`/`page`/`providers`), and the presentational widgets (`features/*/ui/*Panel.tsx`, `features/*/ui/*Sheet.tsx`, `kpis/ui/KpiCard.tsx`) — a hook call plus Recharts markup, whose only real logic (which of them mounts) is covered through [DashboardContent](app/features/dashboard/ui/DashboardContent.test.ts), [PanelKpi / PanelBlock](app/features/components/panelLists.test.ts) and [BlockCardContent](app/features/blocks/ui/BlockCardContent.test.ts). Don't add tests just to cover these.
+
+Mind the gap this leaves under `blocks/ui/`. `BlockCard`, `BlockCardHeader`, `BlockTagSelector`, `useSeriesChart` and the four bodies under `blockType/` are **not** excluded, and they all sit at 0%: [BlockCardContent.test.ts](app/features/blocks/ui/BlockCardContent.test.ts) mocks each body down to a marker, which is the right seam for testing *which* body mounts but means nothing ever executes them. So the figure is honest — it is untested code, not an accounting artefact. `BlockTagSelector` (the tag selection) and `useSeriesChart` (the chart config) carry real logic and deserve tests; the bodies themselves are Recharts markup and are the weakest candidates.
 
 ## Mocking conventions
 

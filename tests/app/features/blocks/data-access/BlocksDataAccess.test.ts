@@ -61,6 +61,7 @@ const LOG_WIRING = glitchtipWiring({
         name: "reservation",
         value: "reservation.sent",
         description: null,
+        color: null,
       },
     ],
   },
