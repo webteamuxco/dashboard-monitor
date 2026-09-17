@@ -29,6 +29,7 @@ export function getDashboardKpisQuery(
                                 value
                                 name
                                 description
+                                color
                             }
                         }
                         ... on ComponentStrategyErrorMonitor {

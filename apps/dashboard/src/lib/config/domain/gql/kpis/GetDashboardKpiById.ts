@@ -18,6 +18,7 @@ export function getDashboardKpiByIdQuery(documentId: string): GraphQlQuery {
                                 value
                                 name
                                 description
+                                color
                             }
                         }
                         ... on ComponentStrategyTrackerMonitor {

@@ -29,6 +29,7 @@ export function getDashboardBlocksQuery(
                                 value
                                 name
                                 description
+                                color
                             }
                         }
                         ... on ComponentStrategyErrorMonitor {

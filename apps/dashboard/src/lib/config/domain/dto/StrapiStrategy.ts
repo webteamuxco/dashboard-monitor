@@ -1,3 +1,4 @@
+import { Level } from "../Level";
 import { DynamicZoneErrorDto } from "./StrapiDynamicZone";
 
 export interface StrategyErrorMonitorDto {
@@ -21,6 +22,7 @@ export type LogMonitorTags = {
     value: string
     name: string
     description: string | null
+    color: Level | null
 }
 
 export type StrategyDto =

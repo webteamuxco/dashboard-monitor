@@ -24,7 +24,7 @@ export interface SeriesChart {
 
 export function useSeriesChart(
   measure: SeriesBlockMeasure,
-  level: Level,
+  accent: Level,
 ): SeriesChart {
   const rows = useMemo<SeriesChartRow[]>(() => {
     const byEpoch = new Map<number, SeriesChartRow>();
@@ -52,14 +52,14 @@ export function useSeriesChart(
             label: series.label,
             color:
               index === 0
-                ? ACCENT_CHART[level]
+                ? ACCENT_CHART[accent]
                 : SECONDARY_SERIES_COLORS[
                     (index - 1) % SECONDARY_SERIES_COLORS.length
                   ],
           },
         ]),
       ),
-    [measure, level],
+    [measure, accent],
   );
 
   const labelByEpoch = useMemo(

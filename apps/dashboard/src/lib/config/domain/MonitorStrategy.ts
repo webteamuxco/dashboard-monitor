@@ -3,12 +3,14 @@ import {
     LOG_MONITOR_STRATEGY_ENUM,
     TRACKER_MONITOR_STRATEGY_ENUM,
 } from "@/lib/shared/strategiesEnum";
+import { Level } from "./Level";
 
 export interface MonitorStrategyTag {
     id: string
     name: string
     value: string
     description: string | null
+    color: Level | null
 }
 
 export interface ErrorMonitorStrategy {

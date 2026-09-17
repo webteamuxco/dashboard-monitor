@@ -14,12 +14,12 @@ import { useSeriesChart } from "../useSeriesChart";
 
 export function BlockRate({
   measure,
-  level,
+  accent,
 }: {
   measure: SeriesBlockMeasure;
-  level: Level;
+  accent: Level;
 }) {
-  const { rows, config, ticks, labelOf } = useSeriesChart(measure, level);
+  const { rows, config, ticks, labelOf } = useSeriesChart(measure, accent);
 
   if (rows.length === 0) {
     return <EmptyState>Aucune donnée</EmptyState>;

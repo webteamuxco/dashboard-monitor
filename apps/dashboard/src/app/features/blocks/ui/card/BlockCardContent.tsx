@@ -14,7 +14,7 @@ import { BlockBar, StackedBlockBar } from "../blockType/bar/blockBar";
 export interface BlockBodyProps<TMeasure extends BlockMeasure = BlockMeasure> {
     blockId: string;
     measure: TMeasure;
-    level: Level;
+    accent: Level;
 }
 
 type ShapeOf<TType extends DashboardBlockType> = TType extends "list"
@@ -38,7 +38,7 @@ const BLOCK_BODIES: {
 type BlockCardContentProps = {
     dashboardBlock: DashboardBlock,
     data: BlockMeasure | undefined,
-    level: Level,
+    accent: Level,
     isPending: boolean,
     isError: boolean,
     error: Error | null
@@ -48,7 +48,7 @@ export function BlockCardContent(
     {
         dashboardBlock,
         data,
-        level,
+        accent,
         isPending,
         isError,
         error
@@ -68,7 +68,7 @@ export function BlockCardContent(
           <BlockBody
             dashboardBlock={dashboardBlock}
             measure={data}
-            level={level}
+            accent={accent}
           />
         )}
       </CardContent>
@@ -78,11 +78,11 @@ export function BlockCardContent(
 function BlockBody({
     dashboardBlock,
     measure,
-    level,
+    accent,
 }: {
     dashboardBlock: DashboardBlock;
     measure: BlockMeasure;
-    level: Level;
+    accent: Level;
 }) {
     if (dashboardBlock.type === null) {
         return (
@@ -105,5 +105,5 @@ function BlockBody({
 
     const renderer = body as ComponentType<BlockBodyProps>;
 
-    return createElement(renderer, { blockId: dashboardBlock.id, measure, level });
+    return createElement(renderer, { blockId: dashboardBlock.id, measure, accent });
 }

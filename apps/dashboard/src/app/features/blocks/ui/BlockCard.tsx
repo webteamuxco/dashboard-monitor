@@ -65,6 +65,7 @@ export function BlockCard({ dashboardBlock, limit, intervalMs }: BlockProps) {
   // `level` is optional in Strapi admin: a block published without one still
   // has to pick a colour, and every accent map is keyed on a real level.
   const level = dashboardBlock.level ?? LEVELS.INFO;
+  const chartAccent = activeTag?.color ?? level;
 
   return (
     <Card className="relative flex h-full min-h-0 w-full flex-col">
@@ -86,7 +87,7 @@ export function BlockCard({ dashboardBlock, limit, intervalMs }: BlockProps) {
       <BlockCardContent
         dashboardBlock={dashboardBlock}
         data={data}
-        level={level}
+        accent={chartAccent}
         isError={isError}
         isPending={isPending}
         error={error}

@@ -16,12 +16,12 @@ const STACK_ID = "series";
 
 interface BlockBarProps {
   measure: SeriesBlockMeasure;
-  level: Level;
+  accent: Level;
   stacked?: boolean;
 }
 
-export function BlockBar({ measure, level, stacked = false }: BlockBarProps) {
-  const { rows, config, labelOf } = useSeriesChart(measure, level);
+export function BlockBar({ measure, accent, stacked = false }: BlockBarProps) {
+  const { rows, config, labelOf } = useSeriesChart(measure, accent);
 
   if (rows.length === 0) {
     return <EmptyState>Aucune donnée</EmptyState>;

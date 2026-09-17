@@ -46,5 +46,6 @@ function mapMonitorStrategyTag(dto: LogMonitorTags): MonitorStrategyTag {
         name: dto.name,
         value: dto.value,
         description: dto.description,
+        color: dto.color
     };
 }

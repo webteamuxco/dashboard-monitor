@@ -18,6 +18,7 @@ export function getDashboardBlockByIdQuery(documentId: string): GraphQlQuery {
                                 value
                                 name
                                 description
+                                color
                             }
                         }
                         ... on ComponentStrategyTrackerMonitor {
