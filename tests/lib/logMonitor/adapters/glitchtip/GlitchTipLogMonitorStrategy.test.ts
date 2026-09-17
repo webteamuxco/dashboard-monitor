@@ -165,56 +165,76 @@ describe("GlitchTipLogMonitorStrategy.getKpiMeasures", () => {
     expect(params.end).toBeUndefined();
   });
 
-  // An empty tag list builds an empty query, which the provider reads as
-  // "everything" — the KPI would report the project's whole log volume.
-  it("throws rather than counting everything when no tag is declared", async () => {
-    const { strategy, getPaginated } = buildStrategy(logWiring([]));
+});
 
-    await expect(strategy.getKpiMeasures(15, null)).rejects.toThrow(
-      /declares no tag: there is nothing to count/,
-    );
-    expect(getPaginated).not.toHaveBeenCalled();
-  });
+// A KPI and a block read the same wiring through the same guard, so neither may
+// be laxer than the other: a block once counted the whole project on a tagless
+// element while the KPI refused. Each refusal is asserted against both, windowed
+// and unwindowed.
+describe("GlitchTipLogMonitorStrategy — what both measures refuse", () => {
+  const MEASURES: ReadonlyArray<{
+    name: string;
+    run: (
+      strategy: GlitchTipLogMonitorStrategy,
+      windowMinutes: number | null,
+    ) => Promise<unknown>;
+  }> = [
+    { name: "getKpiMeasures", run: (s, w) => s.getKpiMeasures(w, null) },
+    {
+      name: "getBlockMeasures",
+      run: (s, w) => s.getBlockMeasures(w, null, null, null),
+    },
+  ];
 
-  it("still refuses a log monitor with no tag when no window is asked for", async () => {
-    const { strategy, getPaginated } = buildStrategy(logWiring([]));
+  for (const measure of MEASURES) {
+    describe(measure.name, () => {
+      for (const windowMinutes of [15, null]) {
+        const window = windowMinutes === null ? "no window" : "a window";
 
-    await expect(strategy.getKpiMeasures(null, null)).rejects.toThrow(
-      /declares no tag/,
-    );
-    expect(getPaginated).not.toHaveBeenCalled();
-  });
+        // An empty tag list builds an empty query, which the provider reads as
+        // "everything".
+        it(`refuses a tagless element with ${window}, rather than counting everything`, async () => {
+          const { strategy, getPaginated } = buildStrategy(logWiring([]));
 
-  it("names the element so the card can be found in admin", async () => {
-    const { strategy } = buildStrategy(
-      glitchtipWiring({
-        id: "kpi-9",
-        strategy: { kind: "log-monitor", id: "s2", tags: [] },
-      }),
-    );
+          await expect(measure.run(strategy, windowMinutes)).rejects.toThrow(
+            /declares no tag: there is nothing to count/,
+          );
+          expect(getPaginated).not.toHaveBeenCalled();
+        });
+      }
 
-    await expect(strategy.getKpiMeasures(15, null)).rejects.toThrow(/"kpi-9"/);
-  });
+      it("names the element so the card can be found in admin", async () => {
+        const { strategy } = buildStrategy(
+          glitchtipWiring({
+            id: "element-9",
+            strategy: { kind: "log-monitor", id: "s2", tags: [] },
+          }),
+        );
 
-  it("refuses an element whose strategy is not a log monitor", async () => {
-    const { strategy, getPaginated } = buildStrategy(glitchtipWiring());
+        await expect(measure.run(strategy, 15)).rejects.toThrow(/"element-9"/);
+      });
 
-    await expect(strategy.getKpiMeasures(15, null)).rejects.toThrow(
-      /Expected a LogMonitor strategy/,
-    );
-    expect(getPaginated).not.toHaveBeenCalled();
-  });
+      it("refuses an element whose strategy is not a log monitor", async () => {
+        const { strategy, getPaginated } = buildStrategy(glitchtipWiring());
 
-  it("refuses an element declaring no strategy at all", async () => {
-    const { strategy, getPaginated } = buildStrategy(
-      glitchtipWiring({ strategy: undefined }),
-    );
+        await expect(measure.run(strategy, 15)).rejects.toThrow(
+          /Expected a LogMonitor strategy/,
+        );
+        expect(getPaginated).not.toHaveBeenCalled();
+      });
 
-    await expect(strategy.getKpiMeasures(15, null)).rejects.toThrow(
-      /declares no strategy/,
-    );
-    expect(getPaginated).not.toHaveBeenCalled();
-  });
+      it("refuses an element declaring no strategy at all", async () => {
+        const { strategy, getPaginated } = buildStrategy(
+          glitchtipWiring({ strategy: undefined }),
+        );
+
+        await expect(measure.run(strategy, 15)).rejects.toThrow(
+          /declares no strategy/,
+        );
+        expect(getPaginated).not.toHaveBeenCalled();
+      });
+    });
+  }
 });
 
 describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
