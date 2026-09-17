@@ -217,6 +217,21 @@ only the log family can narrow a block down to one of several declared tags. The
 matched against those tags rather than trusted, so nothing the browser sends reaches the
 provider query verbatim.
 
+:::warning Both measures of a family must refuse the same wirings
+
+A log measure validates its element through **one** private guard,
+`requireLogStrategy()`, shared by `getKpiMeasures` and `getBlockMeasures`. It refuses
+three things: an element with no strategy, one whose strategy is not a log monitor, and
+one **declaring no tag at all**.
+
+That last one matters more than it looks. `buildLogQuery([])` returns the empty string,
+which GlitchTip reads as *everything* — so a tagless element does not measure nothing,
+it silently reports the project's whole log volume as if it were the value asked for.
+The guard used to live inside each measure separately, and the two drifted: the KPI
+refused while the block happily counted the whole project. Add a check to one path only
+and that asymmetry comes straight back.
+:::
+
 ## The three monitor families
 
 ### errorMonitor
@@ -265,6 +280,8 @@ export interface LogMonitorStrategyInterface extends StrategyInterface {
 - **Domain types:** `Log`, `LogLevel`, `LogFilters`
 
 > A bar block consumes this monitor with the tag filter its Strapi strategy declares (`reservation.sent`, suffixed with the selected environment) to aggregate business events on top of the log layer.
+
+The tags are the whole filter, which is why an element declaring none is refused rather than measured — see the warning above. Several tags are ANDed (the provider reads space-separated terms as a conjunction), so a block wanting them one at a time passes a `tagId`.
 
 ### trackerMonitor
 
