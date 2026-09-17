@@ -28,7 +28,7 @@ Each `<family>Monitor/` folder follows the **same** structure:
 │   └── <Family>MonitorStrategyInterface.ts
 ├── factory/
 │   ├── <Family>MonitorFactoryInterface.ts   # alias of FactoryInterface<TStrategy>
-│   └── <Family>MonitorResolver.ts           # picks factory by support(wiring, strategy)
+│   └── <Family>MonitorResolver.ts           # picks factory by support(strategy)
 └── adapters/
     └── <provider>/
         ├── <Provider>Factory.ts             # extends the shared abstract vendor factory
@@ -46,19 +46,27 @@ The wiring is carried by a **dashboard element**: a `DashboardKpi` or a `Dashboa
 ```
 data-access                              # the only layer that knows which collection an id belongs to
   loadToolWiring(DASHBOARD_KPI, kpiId)   # one Strapi read, memoized per request
-    → getErrorMonitorFactory(wiring)     # pure
-      → ErrorMonitorResolver.resolve(wiring)
-        → factory.support(wiring, "error-monitor")
-          → GlitchtipConfigurationStrategy.isConfigure(wiring, "error-monitor")
-    → factory.createConnection(wiring)   # pure — validates and shapes the connection
+    → resolveMonitorFactory(wiring)      # dispatches on strategy.kind
+      → getErrorMonitorFactory(wiring)   # pure — builds the factories around the wiring
+        → ErrorMonitorResolver.resolve(wiring)
+          → factory.support("error-monitor")
+            → GlitchtipConfigurationStrategy.isConfigure(wiring, "error-monitor")
+    → factory.createConnection()         # pure — validates and shapes the connection
     → factory.createStrategy(connection) # reads the API secret from env
+    → strategy.getKpiMeasures(window, environment)
 ```
+
+**The wiring is handed to the factory once, at construction.** `get<Family>Monitor(wiring)`
+builds its `factories` array per call, passing the wiring to each constructor, so
+`support()` and `createConnection()` take no wiring argument — they read the one
+their factory already holds. The resolver still receives the wiring, but only to
+name the element in its error.
 
 Adding a third element kind is one entry in `loaders` inside [config/domain/loadToolWiring.ts](config/domain/loadToolWiring.ts), one query and one repository method. **Nothing in the monitor layer changes.**
 
 ## Resolution flow — the element drives the adapter
 
-`FactoryInterface<TStrategy>` ([shared/factory/FactoryInterface.ts](shared/factory/FactoryInterface.ts)) is the contract: `support(wiring, strategyResolver)`, `createConnection(wiring)`, `createStrategy(connection)`. The first two are synchronous: no network, no env, nothing to await.
+`FactoryInterface<TStrategy>` ([shared/factory/FactoryInterface.ts](shared/factory/FactoryInterface.ts)) is the contract: `support(strategyResolver)`, `createConnection()`, `createStrategy(connection)`. The first two are synchronous: no network, no env, nothing to await. Neither takes the wiring — the factory was constructed with it.
 
 `support()` is answered by the wiring itself, matching a **strategy name** (`error-monitor`, `log-monitor`, `tracker-monitor` — the `STRATEGY_RESOLVER` constant of each resolver, sourced from [shared/strategiesEnum.ts](shared/strategiesEnum.ts)) against the **vendor of the element's tool configuration**:
 
@@ -153,7 +161,7 @@ Transport lives once in `repositories/AbstractStrapiRepository.ts`; each content
 4. **DTOs stay inside the adapter.** Every adapter has its own `dto/` and `mappers/`. Never import `adapters/X/dto/...` from another adapter or from `domain/`.
 5. **Factories own env validation.** The only provider env vars are the API secrets (`GLITCHTIP_TOKEN`, `POSTHOG_PERSONAL_API_KEY`), read in the abstract vendor factory's client builder. If one is missing → throw immediately with a message naming it. Never read provider env vars from a strategy or HTTP client. Everything else (url, organization, projectId) comes from Strapi via `createConnection()`.
 6. **HTTP clients are transport only.** `GlitchTipClient` / `PostHogClient` know about auth headers, JSON parsing, URL composition — nothing about monitor families or domain types.
-7. **The resolver picks via `support(wiring, strategy)`.** Adding a provider = new adapter folder + register its Factory in `Get<Family>Monitor.ts`'s `factories` array + add the tool slug to the enum file + wire the tool to the target **KPI or block** in Strapi admin. The resolver code does not change.
+7. **The resolver picks via `support(strategy)`,** on a factory already holding the wiring. Adding a provider = new adapter folder + register its Factory in `Get<Family>Monitor.ts`'s `factories` array (constructed with the `wiring`) + add the tool slug to the enum file + wire the tool to the target **KPI or block** in Strapi admin. The resolver code does not change.
 8. **The monitor layer never reads Strapi.** No `StrapiClientFactory`, no `cache()`, nothing to await in `support()` / `createConnection()`. Whoever knows which collection an id belongs to loads the wiring and passes it in — that is the data-access layer, via `loadToolWiring`.
 9. **`connection.projectId` is the provider's project id**, never a Strapi id. Only `loadToolWiring` and the repositories speak `documentId`.
 
@@ -166,13 +174,17 @@ Transport lives once in `repositories/AbstractStrapiRepository.ts`; each content
    - `SentryStrategy.ts` implementing `ErrorMonitorStrategyInterface`.
    - `dto/` for Sentry response shapes.
    - `mappers/` translating DTO → existing `domain/` types (`Issue`, `IssueEvent`, …). **Do not modify the domain types** to fit Sentry — add the mapping logic instead.
-4. Register the factory in `errorMonitor/GetErrorMonitor.ts`:
+4. Register the factory inside `getErrorMonitorFactory()` in `errorMonitor/GetErrorMonitor.ts` — the array is built per call so every factory gets the wiring:
 
    ```ts
-   const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] = [
-     new GlitchTipFactory(),
-     new SentryErrorMonitorFactory(),
-   ];
+   export function getErrorMonitorFactory(wiring: ToolWiring) {
+     const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] = [
+       new GlitchTipFactory(wiring),
+       new SentryErrorMonitorFactory(wiring),
+     ];
+
+     return new ErrorMonitorResolver(factories).resolve(wiring);
+   }
    ```
 
 5. Add the Sentry component to the Strapi `ToolConfigurationDynamicZone`, its DTO in `dto/StrapiTool.ts` (with `__typename`), its `mapToolConfiguration` case, and the `... on ComponentConfigSentryConfiguration` fragment in **both** wiring queries (`gql/kpis/GetDashboardKpiById.ts` and `gql/blocks/GetDashboardBlockById.ts`) — they share a DTO, so they must share a selection set.

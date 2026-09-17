@@ -68,7 +68,7 @@ sequenceDiagram
     participant DA as Data Access
     participant Load as loadToolWiring
     participant Strapi
-    participant Get as get<Family>Monitor
+    participant Get as resolveMonitorFactory
     participant Factory
     participant Cfg as Tool configuration strategy
 
@@ -77,21 +77,28 @@ sequenceDiagram
     Strapi-->>Load: dashboardKpi / dashboardBlock
     Load-->>DA: ToolWiring { id, strategy?, configuration? }
 
-    DA->>Get: get<Family>Monitor(wiring)
-    Get->>Factory: support(wiring, "<strategy>")
-    Factory->>Cfg: isConfigure(wiring, "<strategy>")
+    DA->>Get: resolveMonitorFactory(wiring)
+    Note over Get: dispatches on strategy.kind<br/>onto get<Family>Monitor(wiring)
+    Get->>Factory: new <Vendor>Factory(wiring)
+    Get->>Factory: support("<strategy>")
+    Factory->>Cfg: isConfigure(this.wiring, "<strategy>")
     Note over Cfg: pure — no network, no env
     Cfg-->>Factory: true
     Get-->>DA: factory
 
-    DA->>Factory: createConnection(wiring)
+    DA->>Factory: createConnection()
     Factory-->>DA: { baseUrl, organizationSlug?, projectId }
 
     DA->>Factory: createStrategy(connection)
     Factory-->>DA: strategy (client built with the env secret)
+
+    DA->>Factory: strategy.get{Kpi,Block}Measures(window, environment, …)
+    Factory-->>DA: KpiMeasure / BlockMeasure
 ```
 
-Only the first step touches Strapi, and it is wrapped in React `cache()`, so several cards resolving the same element during one request read it once. Everything below `get<Family>Monitor` is pure and synchronous — that is the invariant that lets the monitor layer stay unaware of Strapi entirely.
+Only the first step touches Strapi, and it is wrapped in React `cache()`, so several cards resolving the same element during one request read it once. Everything below `resolveMonitorFactory` is pure and synchronous — that is the invariant that lets the monitor layer stay unaware of Strapi entirely.
+
+The factory receives the wiring **at construction**, which is why `support()` and `createConnection()` take no wiring argument. And the last step is where the measure is actually computed: the data-access layer composes, the adapter strategy sums and buckets.
 
 ## Path 1: server prefetch on first load
 

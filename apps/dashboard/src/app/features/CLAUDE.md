@@ -31,12 +31,16 @@ Its public methods take the **element kind first**, then the id — the route su
 
 ```ts
 const wiring = await loadToolWiring(kind, documentId);   // one memoized Strapi read
-const factory = getErrorMonitorFactory(wiring);          // pure, synchronous
-const connection = factory.createConnection(wiring);
+const factory = resolveMonitorFactory(wiring);           // pure — dispatches on strategy.kind
+const connection = factory.createConnection();           // the factory holds the wiring
 const strategy = factory.createStrategy(connection);
+
+return strategy.getKpiMeasures(windowMinutes, environment);
 ```
 
 Keep `kind` and `documentId` as separate primitives all the way into the `cache()`d inner function: React's `cache()` keys on argument identity, so passing the resolved wiring object around instead would defeat the per-request dedup.
+
+**The orchestrator composes, it does not compute.** Summing a series, bucketing timestamps, building a log query from the element's tags, refusing a list from a family that has no rows — all of that lives in the adapter strategy's `getKpiMeasures` / `getBlockMeasures`, because it is provider-specific. A data-access method that starts reducing over points is a sign the logic belongs one layer down. `resolveMonitorFactory` ([lib/shared/factory/MonitorFactoryResolver.ts](../../lib/shared/factory/MonitorFactoryResolver.ts)) is what saves each orchestrator from switching on `strategy.kind` itself.
 
 ## Layer rules
 
@@ -75,7 +79,7 @@ Two kinds of files in this folder — keep them separate:
 
 1. **Server orchestrators** (e.g. `IssuesDataAccess.ts`):
    - First line `import "server-only";`.
-   - Compose monitor calls via `get<Family>Monitor()` — passing the **panel** id they received.
+   - Resolve the adapter via `resolveMonitorFactory(wiring)`, from the **element** id they received.
    - Map the monitor-domain type → feature view model (the `<Feature>Row` / `<Feature>View` shape consumed by the UI).
    - Wrap data fetches in React `cache()` for per-request deduplication.
    - Exported as a class instance singleton (`export const issuesDataAccess = new IssuesDataAccess()`).

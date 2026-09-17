@@ -39,18 +39,21 @@ Whoever knows which collection an id belongs to loads that wiring and passes it 
 classDiagram
     class FactoryInterface~TStrategy~ {
         <<interface>>
-        +support(wiring, strategyResolver) boolean
-        +createConnection(wiring) ToolConnection
+        +support(strategyResolver) boolean
+        +createConnection() ToolConnection
         +createStrategy(connection) TStrategy
     }
     class StrategyInterface {
         <<interface>>
+        +getKpiMeasures(window, environment) Promise~KpiMeasure~
+        +getBlockMeasures(window, environment, limit) Promise~BlockMeasure~
         +getX(params) Promise~Result~
     }
     class AbstractVendorFactory {
         <<abstract>>
-        +support(wiring, strategyResolver) boolean
-        +createConnection(wiring) ToolConnection
+        #wiring: ToolWiring
+        +support(strategyResolver) boolean
+        +createConnection() ToolConnection
         +createVendorClient(connection) HttpClient
     }
     class ConcreteFactory {
@@ -144,36 +147,75 @@ sequenceDiagram
     Load-->>Caller: wiring
 
     Caller->>Get: getErrorMonitorFactory(wiring)
+    Get->>Factory: new GlitchTipFactory(wiring)
     Get->>Resolver: resolve(wiring)
     loop for each registered factory
-        Resolver->>Factory: support(wiring, "error-monitor")
-        Factory->>Config: isConfigure(wiring, "error-monitor")
+        Resolver->>Factory: support("error-monitor")
+        Factory->>Config: isConfigure(this.wiring, "error-monitor")
         Config-->>Factory: strategy.kind matches && configuration.kind === "glitchtip"
     end
     Resolver-->>Caller: factory
 
-    Caller->>Factory: createConnection(wiring)
-    Factory->>Config: resolveConnection(wiring)
+    Caller->>Factory: createConnection()
+    Factory->>Config: resolveConnection(this.wiring)
     Config-->>Caller: { baseUrl, organizationSlug, projectId }
 
     Caller->>Factory: createStrategy(connection)
     Factory->>Factory: read GLITCHTIP_TOKEN, build GlitchTipClient
-    Factory->>Strategy: new GlitchTipErrorMonitorStrategy(client, orgSlug)
+    Factory->>Strategy: new GlitchTipErrorMonitorStrategy(client, connection)
     Factory-->>Caller: strategy
 
-    Caller->>Strategy: getIssues(connection.projectId)
+    Caller->>Strategy: getKpiMeasures(windowMinutes, environment)
 ```
+
+Each factory is **constructed with the wiring**, inside `get<Family>Monitor`. That is why
+`support()` and `createConnection()` take no wiring argument: they read the one their
+factory already holds, and only the configuration strategy below still sees it explicitly.
 
 The call site is always the same four lines — one `await`, then pure composition:
 
 ```typescript
 const wiring = await loadToolWiring(DASHBOARD_BLOCK, blockId);
-const factory = getErrorMonitorFactory(wiring);
-const connection = factory.createConnection(wiring);
+const factory = resolveMonitorFactory(wiring);   // or get<Family>Monitor(wiring) directly
+const connection = factory.createConnection();
 const strategy = factory.createStrategy(connection);
+
+return strategy.getBlockMeasures(windowMinutes, environment, limit);
 ```
 
+`resolveMonitorFactory` ([src/lib/shared/factory/MonitorFactoryResolver.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/MonitorFactoryResolver.ts)) is the one entry point a data-access orchestrator uses: it maps `strategy.kind` onto the three `get<Family>Monitor` functions, so no feature has to switch on the family itself. It throws when the element declares no strategy at all.
+
 `connection.projectId` is the **provider's** project id (GlitchTip numeric id, PostHog project id) — never a Strapi `documentId`. Confusing the two is the most common wiring bug in this codebase, now that four values are in circulation: project id, panel slug, element id, provider project id.
+
+## Every family measures — `StrategyInterface`
+
+The three family interfaces all extend one shared contract ([src/lib/shared/factory/StrategyInterace.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/StrategyInterace.ts)):
+
+```typescript
+export interface StrategyInterface {
+  getKpiMeasures(windowMinutes: number | null, environment: string | null): Promise<KpiMeasure>;
+  getBlockMeasures(
+    windowMinutes: number | null,
+    environment: string | null,
+    limit: number | null,
+  ): Promise<BlockMeasure>;
+}
+```
+
+**This is where a measure is built, not in the data-access layer.** Summing a series,
+filling quiet buckets, turning the element's tags into a provider query, refusing a list
+from a family that exposes no rows — all provider-specific, all here. The orchestrator
+above only loads the wiring, picks the family and hands these two methods their
+arguments.
+
+`null` is meaningful in both: a `windowMinutes` of `null` means *no window* — a KPI
+whose Strapi `type` is not `interval` reads a total, and no family may fall back to a
+window. `limit` of `null` means the adapter's own default row cap.
+
+`LogMonitorStrategyInterface` widens `getBlockMeasures` with a fourth `tagId` argument:
+only the log family can narrow a block down to one of several declared tags. The id is
+matched against those tags rather than trusted, so nothing the browser sends reaches the
+provider query verbatim.
 
 ## The three monitor families
 
@@ -182,7 +224,7 @@ const strategy = factory.createStrategy(connection);
 [src/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface.ts)
 
 ```typescript
-export interface ErrorMonitorStrategyInterface {
+export interface ErrorMonitorStrategyInterface extends StrategyInterface {
   getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]>;
   getErrorStats(projectId: string, period: Period, environment?: string): Promise<ErrorStatsSeries>;
   getIssue(issueId: string): Promise<Issue>;
@@ -204,8 +246,16 @@ export interface ErrorMonitorStrategyInterface {
 [src/lib/logMonitor/strategy/LogMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/logMonitor/strategy/LogMonitorStrategyInterface.ts)
 
 ```typescript
-export interface LogMonitorStrategyInterface {
+export interface LogMonitorStrategyInterface extends StrategyInterface {
   getLogs(projectId: string, filters?: LogFilters, period?: Period): Promise<Log[]>;
+
+  // Widened: only this family can narrow a block to one declared tag.
+  getBlockMeasures(
+    windowMinutes: number | null,
+    environment: string | null,
+    limit: number | null,
+    tagId?: string | null,
+  ): Promise<BlockMeasure>;
 }
 ```
 
@@ -221,7 +271,7 @@ export interface LogMonitorStrategyInterface {
 [src/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/trackerMonitor/strategy/TrackerMonitorStrategyInterface.ts)
 
 ```typescript
-export interface TrackerMonitorStrategyInterface {
+export interface TrackerMonitorStrategyInterface extends StrategyInterface {
   getActiveUsersTimeline(
     projectId: string,
     windowMinutes: number,
@@ -244,12 +294,14 @@ Vendor plumbing lives once, in the abstract factory:
 ```typescript
 // src/lib/shared/factory/AbstractPosthogFactory.ts
 export abstract class AbstractPostHogFactory {
-  support(wiring: ToolWiring, strategyResolver: string): boolean {
-    return new PosthogConfigurationStrategy().isConfigure(wiring, strategyResolver);
+  constructor(protected readonly wiring: ToolWiring) {}
+
+  support(strategyResolver: string): boolean {
+    return new PosthogConfigurationStrategy().isConfigure(this.wiring, strategyResolver);
   }
 
-  createConnection(wiring: ToolWiring): ToolConnection {
-    return new PosthogConfigurationStrategy().resolveConnection(wiring);
+  createConnection(): ToolConnection {
+    return new PosthogConfigurationStrategy().resolveConnection(this.wiring);
   }
 
   createPostHogClient(connection: ToolConnection): PostHogClient {
@@ -348,12 +400,14 @@ Forgetting `__typename` or the fragment is silent: the mapper's `switch` matches
 ```typescript
 // src/lib/shared/factory/AbstractSentryFactory.ts
 export abstract class AbstractSentryFactory {
-  support(wiring: ToolWiring, strategyResolver: string): boolean {
-    return new SentryConfigurationStrategy().isConfigure(wiring, strategyResolver);
+  constructor(protected readonly wiring: ToolWiring) {}
+
+  support(strategyResolver: string): boolean {
+    return new SentryConfigurationStrategy().isConfigure(this.wiring, strategyResolver);
   }
 
-  createConnection(wiring: ToolWiring): ToolConnection {
-    return new SentryConfigurationStrategy().resolveConnection(wiring);
+  createConnection(): ToolConnection {
+    return new SentryConfigurationStrategy().resolveConnection(this.wiring);
   }
 
   createSentryClient(connection: ToolConnection): SentryClient {
@@ -387,11 +441,18 @@ Match every method of `ErrorMonitorStrategyInterface`. Inside each method: HTTP 
 [src/lib/errorMonitor/GetErrorMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/GetErrorMonitor.ts):
 
 ```typescript
-const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] = [
-  new GlitchTipFactory(),
-  new SentryErrorMonitorFactory(), // <-- add
-];
+export function getErrorMonitorFactory(wiring: ToolWiring) {
+  const factories: ErrorMonitorFactoryInterface<ErrorMonitorStrategyInterface>[] = [
+    new GlitchTipFactory(wiring),
+    new SentryErrorMonitorFactory(wiring), // <-- add
+  ];
+
+  return new ErrorMonitorResolver(factories).resolve(wiring);
+}
 ```
+
+The array is built **inside** the function, not at module level: every factory is
+constructed with the wiring of the element being rendered.
 
 ### 7. Document the secret and map the tool
 

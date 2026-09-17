@@ -95,13 +95,14 @@ Test file naming: `<SourceFile>.test.ts`. A few files cover a whole contract acr
 | Layer | Test focus |
 |---|---|
 | `src/lib/<family>/Get<Family>Monitor.ts` | resolver wiring: which Factory comes back for a `ToolWiring`, and the failure when none matches |
-| `src/lib/<family>/factory/...Resolver.ts` | `support(wiring, strategy)` dispatch, error when no factory matches |
+| `src/lib/<family>/factory/...Resolver.ts` | `support(strategy)` dispatch, error when no factory matches |
 | `src/lib/<family>/adapters/<provider>/<Provider>Factory.ts` | `support` / `createConnection` delegation to the config strategy, secret validation in `createStrategy` |
 | `src/lib/<family>/adapters/<provider>/` | strategy methods + DTO→domain mappers. **Mock the HTTP client**, not `fetch`. |
 | `src/lib/tool/{glitchtip,posthog}/*Client.ts` | URL building, auth header, status-code handling. Mock `fetch`. |
 | `src/lib/config/domain/mappers/projectMapper.ts` | DTO→domain renaming, including `mapDashboardPanel` (`documentId` → `id`, `is_development` → `isDevelopment`) |
 | `src/lib/config/domain/mappers/{monitorStrategyMapper,toolWiringMapper}.ts` | the dynamic-zone mapping: first entry wins, `null` holes dropped, `Error` throws, vendor read from `__typename` |
-| `src/app/features/*/data-access/...DataAccess.ts` | composition + view-model mapping. Mock the monitor family's `get<Family>Monitor`. |
+| `src/app/features/*/data-access/...DataAccess.ts` | composition + view-model mapping: the wiring loaded, the family picked from `strategy.kind`, the arguments handed down, the measure returned untouched. Mock the three `get<Family>Monitor` and leave `resolveMonitorFactory` real, so the dispatch stays under test. **Not** the measure arithmetic — that is the adapter's. |
+| `src/lib/<family>/adapters/<provider>/` `get{Kpi,Block}Measures` | the measure itself: sums, bucket filling, the query built from the element's tags, the granularity served, and every refusal (no tag, no rows). **Mock the HTTP client.** |
 | `src/app/features/*/data-access/fetch*Client.ts` | `fetch` wrapper behavior: URL, params, `no-store`, `{ data }` unwrapping, `{ error }` and unparseable-body paths. Mock `fetch`. |
 | `src/lib/config/domain/repositories/*.ts` | endpoint + Bearer and the GraphQL error paths (once, through any concrete repository), plus **the variables each query sends**. Also guards the query ↔ DTO coupling (`timeInterval`, `is_development`, `__typename`). Mock `fetch`. |
 | `src/lib/config/domain/tool/*ConfigurationStrategy.ts` | which wirings `isConfigure` accepts, and every explicit `resolveConnection` failure. No mock — both are pure. |
@@ -134,13 +135,18 @@ Coverage excludes (see [vitest.config.ts](../vitest.config.ts)): `domain/**`, `d
 
 ## What is under test is a `ToolWiring`, not an id
 
-A factory, a resolver and a `Get<Family>Monitor` no longer take a `documentId`: they take a `ToolWiring` and are **synchronous**. Build one with [helpers/toolWiring.ts](helpers/toolWiring.ts) (`glitchtipWiring()` / `posthogWiring()`, both accepting overrides) rather than hand-rolling the shape, and assert `support()` was handed that exact object:
+A factory, a resolver and a `Get<Family>Monitor` no longer take a `documentId`: they take a `ToolWiring` and are **synchronous**. Build one with [helpers/toolWiring.ts](helpers/toolWiring.ts) (`glitchtipWiring()` / `posthogWiring()`, both accepting overrides) rather than hand-rolling the shape.
+
+Mind which call actually carries the wiring. A factory is **constructed** with it, so `support()` receives only the strategy name and `createConnection()` no argument at all; the wiring surfaces one level down, in the configuration strategy the factory delegates to. Assert it there:
 
 ```ts
 const wiring = glitchtipWiring();
 
 expect(getErrorMonitorFactory(wiring)).toBeInstanceOf(GlitchTipFactory);
 expect(isConfigureMock).toHaveBeenCalledWith(wiring, "error-monitor");
+
+// …whereas the resolver only ever names the strategy:
+expect(factory.support).toHaveBeenCalledWith("error-monitor");
 ```
 
 The `*ConfigurationStrategy` tests need **no mock at all** now — both methods are pure. If a test of yours still mocks `StrapiClientFactory` to reach them, the seam is wrong.

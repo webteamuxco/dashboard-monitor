@@ -195,7 +195,7 @@ sequenceDiagram
     participant DA as BlocksDataAccess
     participant Load as loadToolWiring
     participant Strapi
-    participant Get as getErrorMonitorFactory
+    participant Get as resolveMonitorFactory
     participant Res as ErrorMonitorResolver
     participant Fac as GlitchTipFactory
     participant Cfg as GlitchtipConfigurationStrategy
@@ -206,18 +206,22 @@ sequenceDiagram
     Strapi-->>Load: block
     Load-->>DA: ToolWiring { id, strategy?, configuration? }
 
-    DA->>Get: getErrorMonitorFactory(wiring)
+    DA->>Get: resolveMonitorFactory(wiring)
+    Note over Get: dispatches on strategy.kind
+    Get->>Fac: new GlitchTipFactory(wiring)
     Get->>Res: resolve(wiring)
-    Res->>Fac: support(wiring, "error-monitor")
-    Fac->>Cfg: isConfigure(wiring, "error-monitor")
+    Res->>Fac: support("error-monitor")
+    Fac->>Cfg: isConfigure(this.wiring, "error-monitor")
     Note over Cfg: pure: strategy.kind === "error-monitor"<br/>&& configuration.kind === "glitchtip"
     Cfg-->>Fac: true
     Res-->>DA: factory
 
-    DA->>Fac: createConnection(wiring)
+    DA->>Fac: createConnection()
     Fac-->>DA: { baseUrl, organizationSlug, projectId }
     DA->>Fac: createStrategy(connection)
     Note over Fac: reads GLITCHTIP_TOKEN, builds the client
+    DA->>Fac: strategy.getBlockMeasures(window, environment, limit)
+    Note over Fac: the measure is built here, not in the data access
 ```
 
 The single Strapi read is `loadToolWiring(kind, documentId)`, memoized per request with React `cache()`. Everything after it is **pure and synchronous**: the resolver, `support()` and `createConnection()` never touch the network. The vendor is read from the configuration component's `__typename` (mapped into `configuration.kind`), never from `tool.slug` — that slug is an editable label in admin and can drift.
