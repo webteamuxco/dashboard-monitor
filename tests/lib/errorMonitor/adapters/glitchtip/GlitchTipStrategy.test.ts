@@ -18,6 +18,8 @@ function buildIssueDto(overrides: Partial<GlitchTipIssueDto> = {}): GlitchTipIss
   };
 }
 
+const CONNECTION = { baseUrl: "https://gt", organizationSlug: "org", projectId: "p" };
+
 describe("GlitchTipErrorMonitorStrategy", () => {
   let get: ReturnType<typeof vi.fn>;
   let getPaginated: ReturnType<typeof vi.fn>;
@@ -30,7 +32,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
     getPaginated = vi.fn();
     post = vi.fn();
     client = { get, getPaginated, post } as unknown as GlitchTipClient;
-    strategy = new GlitchTipErrorMonitorStrategy(client, "my-org");
+    strategy = new GlitchTipErrorMonitorStrategy(client, CONNECTION);
   });
 
   describe("getIssues", () => {
@@ -40,7 +42,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       const out = await strategy.getIssues("proj-1");
 
       expect(getPaginated).toHaveBeenCalledWith(
-        "/api/0/organizations/my-org/issues/",
+        "/api/0/organizations/org/issues/",
         expect.objectContaining({ project: "proj-1" }),
         expect.any(Object),
       );
@@ -115,7 +117,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       });
 
       expect(get).toHaveBeenCalledWith(
-        "/api/0/organizations/my-org/stats_v2/",
+        "/api/0/organizations/org/stats_v2/",
         expect.objectContaining({
           category: "error",
           interval: "1h",
@@ -165,7 +167,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
         query: "",
       });
       expect(get).toHaveBeenCalledWith(
-        "/api/0/organizations/my-org/issues-stats/",
+        "/api/0/organizations/org/issues-stats/",
         { groups: ["1", "2"], statsPeriod: "24h" },
       );
       const at = (iso: string) =>
@@ -340,6 +342,164 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       post.mockRejectedValue(new Error("GlitchTip API error 403 on /api/0/issues/i1/comments/"));
 
       await expect(strategy.createIssueComment("i1", { text: "x" })).rejects.toThrow(/403/);
+    });
+  });
+
+  describe("getKpiMeasures", () => {
+    it("sums the error stats over the window", async () => {
+      get.mockResolvedValue({
+        intervals: ["2026-09-09T08:00:00Z", "2026-09-09T08:01:00Z"],
+        groups: [{ series: { "sum(quantity)": [4, 7] } }],
+      });
+
+      expect(await strategy.getKpiMeasures(30, null)).toEqual({
+        value: 11,
+        windowMinutes: 30,
+      });
+    });
+
+    it("queries the provider project id, never the Strapi one", async () => {
+      get.mockResolvedValue({ intervals: [], groups: [] });
+
+      await strategy.getKpiMeasures(30, null);
+
+      const params = get.mock.calls[0][1];
+      expect(params.project).toBe("p");
+      expect(
+        new Date(params.end).getTime() - new Date(params.start).getTime(),
+      ).toBe(30 * 60_000);
+    });
+
+    it("treats a null bucket as zero without coercing the sum to NaN", async () => {
+      get.mockResolvedValue({
+        intervals: ["2026-09-09T08:00:00Z", "2026-09-09T08:01:00Z"],
+        groups: [{ series: { "sum(quantity)": [null, 2] } }],
+      });
+
+      expect((await strategy.getKpiMeasures(30, null)).value).toBe(2);
+    });
+
+    // The bucket size does not change the sum, only how many buckets the
+    // provider has to return.
+    it("keeps the buckets coarse on a wide window", async () => {
+      get.mockResolvedValue({ intervals: [], groups: [] });
+
+      await strategy.getKpiMeasures(24 * 60, null);
+
+      expect(get.mock.calls[0][1].interval).toBe("1h");
+    });
+
+    it("scopes the series per issue when an environment is named", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "1" })]);
+      get.mockResolvedValue([
+        { id: "1", count: "3", stats: { "24h": [[1783069200, 3]], "14d": null } },
+      ]);
+
+      await strategy.getKpiMeasures(30, "production");
+
+      expect(getPaginated.mock.calls[0][0]).toBe(
+        "/api/0/organizations/org/issues/",
+      );
+      expect(getPaginated.mock.calls[0][1]).toMatchObject({
+        environment: "production",
+      });
+    });
+
+    describe("without a window", () => {
+      it("counts the open issues instead of summing a series", async () => {
+        getPaginated.mockResolvedValue([
+          buildIssueDto({ id: "i1" }),
+          buildIssueDto({ id: "i2" }),
+        ]);
+
+        expect(await strategy.getKpiMeasures(null, "production")).toEqual({
+          value: 2,
+          windowMinutes: null,
+        });
+        expect(get).not.toHaveBeenCalled();
+        expect(getPaginated.mock.calls[0][1]).toMatchObject({
+          project: "p",
+          query: "is:unresolved",
+          environment: "production",
+        });
+      });
+
+      // A capped list would make the total plateau at the cap instead of
+      // reporting how many issues are actually open.
+      it("caps nothing when counting the open issues", async () => {
+        getPaginated.mockResolvedValue([]);
+
+        await strategy.getKpiMeasures(null, null);
+
+        expect(getPaginated.mock.calls[0][1].limit).toBeUndefined();
+        expect(getPaginated.mock.calls[0][2]).toEqual({ maxItems: undefined });
+      });
+    });
+  });
+
+  describe("getBlockMeasures", () => {
+    it("returns the list shape when no window is asked for", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "i1" })]);
+
+      const measure = await strategy.getBlockMeasures(null, null, 5);
+
+      if (measure.type !== "list") throw new Error("expected a list");
+      expect(measure.entries).toHaveLength(1);
+      expect(measure.windowMinutes).toBeNull();
+      expect(getPaginated.mock.calls[0][1].limit).toBe(5);
+    });
+
+    // An issue has a detail sheet to open; a log line has none.
+    it("marks the list as having a detail sheet", async () => {
+      getPaginated.mockResolvedValue([]);
+
+      const measure = await strategy.getBlockMeasures(null, null, null);
+
+      if (measure.type !== "list") throw new Error("expected a list");
+      expect(measure.hasDetail).toBe(true);
+    });
+
+    it("defaults the row cap when none is given", async () => {
+      getPaginated.mockResolvedValue([]);
+
+      await strategy.getBlockMeasures(null, null, null);
+
+      expect(getPaginated.mock.calls[0][1].limit).toBe(20);
+    });
+
+    it("returns one series shape whichever chart will draw it", async () => {
+      get.mockResolvedValue({ intervals: [], groups: [] });
+
+      const measure = await strategy.getBlockMeasures(30, null, null);
+
+      if (measure.type !== "series") throw new Error("expected a series");
+      expect(measure.windowMinutes).toBe(30);
+      expect(measure.series).toHaveLength(1);
+      expect(measure.series[0].key).toBe("count");
+    });
+
+    it("keeps the buckets coarse on a wide window", async () => {
+      get.mockResolvedValue({ intervals: [], groups: [] });
+
+      await strategy.getBlockMeasures(24 * 60, null, null);
+
+      expect(get.mock.calls[0][1].interval).toBe("1h");
+    });
+
+    // 30 minutes asks for minutes; the environment-scoped path can only answer
+    // hourly, and the measure has to carry that back to the card.
+    it("reports the granularity the provider served, not the one asked for", async () => {
+      getPaginated.mockResolvedValue([buildIssueDto({ id: "1" })]);
+      get.mockResolvedValue([
+        { id: "1", count: "3", stats: { "24h": [[1783069200, 3]], "14d": null } },
+      ]);
+
+      const measure = await strategy.getBlockMeasures(30, "production", null);
+
+      if (measure.type !== "series") throw new Error("expected a series");
+      expect(measure.interval).toBe("1h");
+      expect(measure.windowMinutes).toBe(30);
+      expect(measure.series[0].points[0].label).toMatch(/^\d{2}h$/);
     });
   });
 });

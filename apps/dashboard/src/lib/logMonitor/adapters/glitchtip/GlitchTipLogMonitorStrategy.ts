@@ -93,6 +93,15 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
       );
     }
 
+    // An empty tag list builds an empty query, which the provider reads as
+    // "everything": the KPI would report the project's whole log volume as if
+    // it were the measure asked for.
+    if (!strategy.tags.length) {
+      throw new Error(
+        `Log monitor of Strapi element "${this.wiring.id}" declares no tag: there is nothing to count.`,
+      );
+    }
+
     const period = windowMinutes === null ? null : buildKpiPeriod(windowMinutes);
 
     const logs = await this.getLogs(

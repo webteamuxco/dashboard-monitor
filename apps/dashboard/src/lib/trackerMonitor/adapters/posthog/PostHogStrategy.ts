@@ -10,9 +10,6 @@ import {
 import { KpiMeasure } from "@/lib/shared/domain/KpiMeasure";
 import { PosthogConnection } from "@/lib/config/domain/tool/PosthogConfigurationStrategy";
 import { BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
-import { getTrackerMonitor } from "../../GetTrackerMonitor";
-import { MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
-import { DashboardElementKind } from "@/lib/config/domain/loadToolWiring";
 
 const SESSION_DURATION_MINUTES = 30;
 
@@ -60,7 +57,9 @@ export class PostHogStrategy implements TrackerMonitorStrategyInterface {
     return mapPostHogVisitorsTotal(dto);
   }
 
-  async getKpiMeasures(windowMinutes: number | null, environment: string | null): Promise<KpiMeasure> {
+  // PostHog scopes nothing by environment here: a project is one instance, so
+  // the contract's `environment` has no query to land in.
+  async getKpiMeasures(windowMinutes: number | null, _environment: string | null): Promise<KpiMeasure> {
 
     if (windowMinutes === null) {
       return {
@@ -83,44 +82,44 @@ export class PostHogStrategy implements TrackerMonitorStrategyInterface {
     };
   }
 
-  async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null,): Promise<BlockMeasure> {
-        
-    
+  // `limit` caps a list, and this family serves none — see the throw below.
+  async getBlockMeasures(windowMinutes: number | null, _environment: string | null, _limit: number | null): Promise<BlockMeasure> {
+
     if (windowMinutes === null) {
-          throw new Error(
-            `Strapi trackerMonitor "${this.connection.projectId}" asks a list from a tracker monitor, which exposes no rows. Use a "rate", "bar" or "stackedBar" block.`,
-          );
-        }
+      throw new Error(
+        `Strapi trackerMonitor "${this.connection.projectId}" asks a list from a tracker monitor, which exposes no rows. Use a "rate", "bar" or "stackedBar" block.`,
+      );
+    }
 
-        const points = await this.getActiveUsersTimeline(
-          this.connection.projectId,
-          windowMinutes,
-        );
+    const points = await this.getActiveUsersTimeline(
+      this.connection.projectId,
+      windowMinutes,
+    );
 
-        return {
-          type: "series",
-          windowMinutes,
-          interval: "1m",
-          series: [
-            {
-              key: "newCount",
-              label: "Nouveaux",
-              points: points.map((p) => ({
-                bucketEpoch: new Date(p.minuteIso).getTime(),
-                label: p.label,
-                count: p.newCount,
-              })),
-            },
-            {
-              key: "returningCount",
-              label: "Récurrents",
-              points: points.map((p) => ({
-                bucketEpoch: new Date(p.minuteIso).getTime(),
-                label: p.label,
-                count: p.returningCount,
-              })),
-            },
-          ],
-        };
+    return {
+      type: "series",
+      windowMinutes,
+      interval: "1m",
+      series: [
+        {
+          key: "newCount",
+          label: "Nouveaux",
+          points: points.map((p) => ({
+            bucketEpoch: new Date(p.minuteIso).getTime(),
+            label: p.label,
+            count: p.newCount,
+          })),
+        },
+        {
+          key: "returningCount",
+          label: "Récurrents",
+          points: points.map((p) => ({
+            bucketEpoch: new Date(p.minuteIso).getTime(),
+            label: p.label,
+            count: p.returningCount,
+          })),
+        },
+      ],
+    };
   }
 }

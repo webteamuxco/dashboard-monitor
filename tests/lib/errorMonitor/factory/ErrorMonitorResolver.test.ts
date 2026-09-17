@@ -16,6 +16,8 @@ function fakeStrategy(): ErrorMonitorStrategyInterface {
     getIssueEvents: vi.fn(),
     getIssueComments: vi.fn(),
     createIssueComment: vi.fn(),
+    getKpiMeasures: vi.fn(),
+    getBlockMeasures: vi.fn()
   };
 }
 
@@ -38,13 +40,12 @@ describe("ErrorMonitorResolver", () => {
     expect(resolver.resolve(glitchtipWiring())).toBe(supporting);
   });
 
-  it("asks each factory for the 'error-monitor' strategy, handing it the wiring", () => {
+  it("asks each factory for the 'error-monitor' strategy", () => {
     const factory = fakeFactory(true);
-    const wiring = glitchtipWiring();
 
-    new ErrorMonitorResolver([factory]).resolve(wiring);
+    new ErrorMonitorResolver([factory]).resolve(glitchtipWiring());
 
-    expect(factory.support).toHaveBeenCalledWith(wiring, "error-monitor");
+    expect(factory.support).toHaveBeenCalledWith("error-monitor");
   });
 
   it("throws when no factory supports the element", () => {

@@ -20,7 +20,8 @@ describe("PostHogFactory", () => {
   let factory: PostHogFactory;
 
   beforeEach(() => {
-    factory = new PostHogFactory();
+    const wiring = posthogWiring();
+    factory = new PostHogFactory(wiring);
     isConfigureMock.mockReset();
     resolveConnectionMock.mockReset();
     delete process.env.POSTHOG_PERSONAL_API_KEY;
@@ -31,14 +32,14 @@ describe("PostHogFactory", () => {
       isConfigureMock.mockReturnValue(true);
       const wiring = posthogWiring();
 
-      expect(factory.support(wiring, "tracker-monitor")).toBe(true);
+      expect(factory.support("tracker-monitor")).toBe(true);
       expect(isConfigureMock).toHaveBeenCalledWith(wiring, "tracker-monitor");
     });
 
     it("returns false when the element does not wire posthog", () => {
       isConfigureMock.mockReturnValue(false);
 
-      expect(factory.support(posthogWiring(), "tracker-monitor")).toBe(false);
+      expect(factory.support("tracker-monitor")).toBe(false);
     });
   });
 
@@ -47,7 +48,7 @@ describe("PostHogFactory", () => {
       resolveConnectionMock.mockReturnValue(CONNECTION);
       const wiring = posthogWiring();
 
-      expect(factory.createConnection(wiring)).toEqual(CONNECTION);
+      expect(factory.createConnection()).toEqual(CONNECTION);
       expect(resolveConnectionMock).toHaveBeenCalledWith(wiring);
     });
   });

@@ -13,6 +13,18 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // A strategy implements the whole family contract even where a provider has
+    // nothing to do with an argument (PostHog scopes nothing by environment).
+    // Dropping it from the signature would hide the contract; `_` marks it as
+    // deliberately unread.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

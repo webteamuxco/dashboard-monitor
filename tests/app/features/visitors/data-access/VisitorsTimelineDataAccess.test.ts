@@ -46,7 +46,7 @@ describe("VisitorsTimelineDataAccess.getSeries", () => {
     await new VisitorsTimelineDataAccess().getSeries(DASHBOARD_KPI, "doc1", 60);
 
     expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "doc1");
-    expect(createConnectionMock).toHaveBeenCalledWith(WIRING);
+    expect(createConnectionMock).toHaveBeenCalledWith();
   });
 
   it("forwards the resolved projectId and windowMinutes to the tracker monitor", async () => {

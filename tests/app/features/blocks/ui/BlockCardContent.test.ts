@@ -3,7 +3,6 @@ import { describe, it, expect, vi } from "vitest";
 import { createElement } from "react";
 import { render, screen } from "@testing-library/react";
 import type { DashboardBlock } from "@/lib/config/domain/DashboardBlock";
-import type { BlockMeasure } from "@/app/features/blocks/domain/BlockMeasure";
 
 function marker(testId: string) {
   return ({ blockId }: { blockId?: string }) =>
@@ -22,6 +21,7 @@ vi.mock("@/app/features/blocks/ui/blockType/bar/blockBar", () => ({
 }));
 
 import { BlockCardContent } from "@/app/features/blocks/ui/card/BlockCardContent";
+import { BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
 
 const SERIES_MEASURE: BlockMeasure = {
   type: "series",

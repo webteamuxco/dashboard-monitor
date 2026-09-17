@@ -3,16 +3,14 @@ import { glitchtipWiring, posthogWiring } from "../../../../helpers/toolWiring";
 
 const {
   loadToolWiringMock,
-  getErrorStatsMock,
-  getIssuesMock,
-  getLogsMock,
-  getActiveUsersTimelineMock,
+  errorMeasuresMock,
+  logMeasuresMock,
+  trackerMeasuresMock,
 } = vi.hoisted(() => ({
   loadToolWiringMock: vi.fn(),
-  getErrorStatsMock: vi.fn(),
-  getIssuesMock: vi.fn(),
-  getLogsMock: vi.fn(),
-  getActiveUsersTimelineMock: vi.fn(),
+  errorMeasuresMock: vi.fn(),
+  logMeasuresMock: vi.fn(),
+  trackerMeasuresMock: vi.fn(),
 }));
 
 vi.mock("@/lib/config/domain/loadToolWiring", () => ({
@@ -27,29 +25,26 @@ const CONNECTION = {
   projectId: "provider-project",
 };
 
+const createErrorConnectionMock = vi.fn(() => CONNECTION);
+
 vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
   getErrorMonitorFactory: () => ({
-    createConnection: () => CONNECTION,
-    createStrategy: () => ({
-      getErrorStats: getErrorStatsMock,
-      getIssues: getIssuesMock,
-    }),
+    createConnection: createErrorConnectionMock,
+    createStrategy: () => ({ getBlockMeasures: errorMeasuresMock }),
   }),
 }));
 
 vi.mock("@/lib/logMonitor/GetLogMonitor", () => ({
   getLogMonitor: () => ({
     createConnection: () => CONNECTION,
-    createStrategy: () => ({ getLogs: getLogsMock }),
+    createStrategy: () => ({ getBlockMeasures: logMeasuresMock }),
   }),
 }));
 
 vi.mock("@/lib/trackerMonitor/GetTrackerMonitor", () => ({
   getTrackerMonitor: () => ({
     createConnection: () => ({ baseUrl: "https://ph", projectId: "ph-project" }),
-    createStrategy: () => ({
-      getActiveUsersTimeline: getActiveUsersTimelineMock,
-    }),
+    createStrategy: () => ({ getBlockMeasures: trackerMeasuresMock }),
   }),
 }));
 
@@ -71,39 +66,27 @@ const LOG_WIRING = glitchtipWiring({
   },
 });
 
-const MULTI_TAG_WIRING = glitchtipWiring({
-  strategy: {
-    kind: "log-monitor",
-    id: "s3",
-    tags: [
-      {
-        id: "t1",
-        name: "Envoyées",
-        value: "reservation.sent",
-        description: null,
-      },
-      {
-        id: "t2",
-        name: "Annulées",
-        value: "reservation.cancelled",
-        description: null,
-      },
-    ],
-  },
-});
+const EMPTY_SERIES = {
+  type: "series" as const,
+  windowMinutes: 30,
+  interval: "1m" as const,
+  series: [],
+};
 
 describe("BlocksDataAccess.getMeasure", () => {
   beforeEach(() => {
     loadToolWiringMock.mockReset();
-    getErrorStatsMock.mockReset();
-    getIssuesMock.mockReset();
-    getLogsMock.mockReset();
-    getActiveUsersTimelineMock.mockReset();
+    createErrorConnectionMock.mockClear();
+    errorMeasuresMock.mockReset();
+    logMeasuresMock.mockReset();
+    trackerMeasuresMock.mockReset();
+    errorMeasuresMock.mockResolvedValue(EMPTY_SERIES);
+    logMeasuresMock.mockResolvedValue(EMPTY_SERIES);
+    trackerMeasuresMock.mockResolvedValue(EMPTY_SERIES);
   });
 
   it("loads the wiring of the element it was given", async () => {
     loadToolWiringMock.mockResolvedValue(LOG_WIRING);
-    getLogsMock.mockResolvedValue([]);
 
     await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-42", 30);
 
@@ -113,7 +96,15 @@ describe("BlocksDataAccess.getMeasure", () => {
     );
   });
 
-  it("throws when the element declares no strategy", async () => {
+  it("connects from the wiring the factory already holds", async () => {
+    loadToolWiringMock.mockResolvedValue(glitchtipWiring());
+
+    await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", 30);
+
+    expect(createErrorConnectionMock).toHaveBeenCalledWith();
+  });
+
+  it("throws rather than measuring when the element declares no strategy", async () => {
     loadToolWiringMock.mockResolvedValue(
       glitchtipWiring({ strategy: undefined }),
     );
@@ -121,130 +112,51 @@ describe("BlocksDataAccess.getMeasure", () => {
     await expect(
       new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", 30),
     ).rejects.toThrow(/declares no strategy/);
+    expect(errorMeasuresMock).not.toHaveBeenCalled();
   });
 
-  describe("a windowed block", () => {
-    it("returns one series shape whichever chart will draw it", async () => {
-      loadToolWiringMock.mockResolvedValue(LOG_WIRING);
-      getLogsMock.mockResolvedValue([]);
+  it("hands the window, the environment and the row cap to the strategy", async () => {
+    loadToolWiringMock.mockResolvedValue(glitchtipWiring());
 
-      const measure = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        30,
-      );
+    await new BlocksDataAccess().getMeasure(
+      DASHBOARD_BLOCK,
+      "block-1",
+      30,
+      "production",
+      5,
+    );
 
-      expect(measure.type).toBe("series");
-      expect(measure.windowMinutes).toBe(30);
-    });
-
-    it("buckets the log timestamps the log monitor returns", async () => {
-      loadToolWiringMock.mockResolvedValue(LOG_WIRING);
-      const now = Date.now();
-      getLogsMock.mockResolvedValue([
-        { id: "l1", message: "m", level: "info", timestamp: new Date(now).toISOString() },
-        { id: "l2", message: "m", level: "info", timestamp: new Date(now).toISOString() },
-      ]);
-
-      const measure = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        30,
-      );
-
-      if (measure.type !== "series") throw new Error("expected a series");
-      expect(measure.series).toHaveLength(1);
-      expect(measure.series[0].key).toBe("count");
-      const total = measure.series[0].points.reduce(
-        (sum, point) => sum + (point.count ?? 0),
-        0,
-      );
-      expect(total).toBe(2);
-    });
-
-    it("fills the quiet buckets so a bar is a real zero, not a gap", async () => {
-      loadToolWiringMock.mockResolvedValue(LOG_WIRING);
-      getLogsMock.mockResolvedValue([]);
-
-      const measure = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        30,
-      );
-
-      if (measure.type !== "series") throw new Error("expected a series");
-      expect(measure.series[0].points).toHaveLength(30);
-      expect(
-        measure.series[0].points.every((point) => point.count === 0),
-      ).toBe(true);
-    });
-
-    it("gives the tracker timeline one series per visitor kind — what a stack needs", async () => {
-      loadToolWiringMock.mockResolvedValue(posthogWiring());
-      getActiveUsersTimelineMock.mockResolvedValue([
-        {
-          minuteIso: "2026-09-09T08:00:00.000Z",
-          label: "08:00",
-          newCount: 4,
-          returningCount: 7,
-        },
-      ]);
-
-      const measure = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        60,
-      );
-
-      if (measure.type !== "series") throw new Error("expected a series");
-      expect(measure.series.map((series) => series.key)).toEqual([
-        "newCount",
-        "returningCount",
-      ]);
-      expect(measure.series[0].points[0].count).toBe(4);
-      expect(measure.series[1].points[0].count).toBe(7);
-    });
-
-    it("keeps the buckets coarse on a wide window", async () => {
-      loadToolWiringMock.mockResolvedValue(glitchtipWiring());
-      getErrorStatsMock.mockResolvedValue({ interval: "1h", points: [] });
-
-      await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        24 * 60,
-      );
-
-      expect(getErrorStatsMock.mock.calls[0][1].interval).toBe("1h");
-    });
-
-    it("reports the granularity the provider served, not the one asked for", async () => {
-      loadToolWiringMock.mockResolvedValue(glitchtipWiring());
-      // 30 minutes asks for minutes; the environment-scoped GlitchTip path can
-      // only answer hourly, and the measure has to carry that back to the card.
-      getErrorStatsMock.mockResolvedValue({
-        interval: "1h",
-        points: [{ timestamp: "2026-09-09T09:00:00.000Z", count: 3 }],
-      });
-
-      const measure = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        30,
-        "production",
-      );
-
-      if (measure.type !== "series") throw new Error("expected a series");
-      expect(measure.interval).toBe("1h");
-      expect(measure.windowMinutes).toBe(30);
-      expect(measure.series[0].points[0].label).toBe("11h");
-    });
+    expect(errorMeasuresMock).toHaveBeenCalledWith(30, "production", 5);
   });
 
-  describe("a block declaring several log tags", () => {
-    it("queries only the selected tag, since the provider ANDs the terms of one query", async () => {
-      loadToolWiringMock.mockResolvedValue(MULTI_TAG_WIRING);
-      getLogsMock.mockResolvedValue([]);
+  it("defaults the environment, the cap and the tag to null", async () => {
+    loadToolWiringMock.mockResolvedValue(glitchtipWiring());
+
+    await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", 30);
+
+    expect(errorMeasuresMock).toHaveBeenCalledWith(30, null, null);
+  });
+
+  it("returns the measure the strategy built, untouched", async () => {
+    loadToolWiringMock.mockResolvedValue(glitchtipWiring());
+    const measure = {
+      type: "list" as const,
+      entries: [],
+      hasDetail: true,
+      windowMinutes: null,
+    };
+    errorMeasuresMock.mockResolvedValue(measure);
+
+    expect(
+      await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", null),
+    ).toEqual(measure);
+  });
+
+  // Only the log monitor can narrow a block down to one of several tags, so it
+  // is the only family the tag id is threaded into.
+  describe("the selected log tag", () => {
+    it("reaches the log monitor as a fourth argument", async () => {
+      loadToolWiringMock.mockResolvedValue(LOG_WIRING);
 
       await new BlocksDataAccess().getMeasure(
         DASHBOARD_BLOCK,
@@ -255,16 +167,13 @@ describe("BlocksDataAccess.getMeasure", () => {
         "t2",
       );
 
-      expect(getLogsMock.mock.calls[0][1].query).toBe(
-        "reservation.cancelled.production",
-      );
+      expect(logMeasuresMock).toHaveBeenCalledWith(30, "production", null, "t2");
     });
 
-    it("names the series after the selected tag", async () => {
-      loadToolWiringMock.mockResolvedValue(MULTI_TAG_WIRING);
-      getLogsMock.mockResolvedValue([]);
+    it("is not handed to a family that cannot narrow on it", async () => {
+      loadToolWiringMock.mockResolvedValue(glitchtipWiring());
 
-      const measure = await new BlocksDataAccess().getMeasure(
+      await new BlocksDataAccess().getMeasure(
         DASHBOARD_BLOCK,
         "block-1",
         30,
@@ -273,85 +182,48 @@ describe("BlocksDataAccess.getMeasure", () => {
         "t2",
       );
 
-      if (measure.type !== "series") throw new Error("expected a series");
-      expect(measure.series[0].label).toBe("Annulées");
+      expect(errorMeasuresMock).toHaveBeenCalledWith(30, null, null);
     });
+  });
 
-    it("refuses a tag the element does not declare rather than passing it to the provider", async () => {
-      loadToolWiringMock.mockResolvedValue(MULTI_TAG_WIRING);
-
-      await expect(
-        new BlocksDataAccess().getMeasure(
-          DASHBOARD_BLOCK,
-          "block-1",
-          30,
-          null,
-          null,
-          "reservation.sent OR anything",
-        ),
-      ).rejects.toThrow(/declares no tag/);
-      expect(getLogsMock).not.toHaveBeenCalled();
-    });
-
-    it("keeps the legacy behaviour when no tag is selected", async () => {
-      loadToolWiringMock.mockResolvedValue(MULTI_TAG_WIRING);
-      getLogsMock.mockResolvedValue([]);
+  describe("picks the family the strategy names", () => {
+    it("routes an error-monitor element to the error monitor", async () => {
+      loadToolWiringMock.mockResolvedValue(glitchtipWiring());
 
       await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", 30);
 
-      expect(getLogsMock.mock.calls[0][1].query).toBe(
-        "reservation.sent reservation.cancelled",
-      );
+      expect(errorMeasuresMock).toHaveBeenCalledTimes(1);
+      expect(logMeasuresMock).not.toHaveBeenCalled();
+      expect(trackerMeasuresMock).not.toHaveBeenCalled();
+    });
+
+    it("routes a log-monitor element to the log monitor", async () => {
+      loadToolWiringMock.mockResolvedValue(LOG_WIRING);
+
+      await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-2", 30);
+
+      expect(logMeasuresMock).toHaveBeenCalledTimes(1);
+      expect(errorMeasuresMock).not.toHaveBeenCalled();
+    });
+
+    it("routes a tracker-monitor element to the tracker monitor", async () => {
+      loadToolWiringMock.mockResolvedValue(posthogWiring());
+
+      await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-3", 60);
+
+      expect(trackerMeasuresMock).toHaveBeenCalledWith(60, null, null);
+      expect(errorMeasuresMock).not.toHaveBeenCalled();
     });
   });
 
-  describe("an unwindowed block", () => {
-    it("returns the list shape", async () => {
-      loadToolWiringMock.mockResolvedValue(glitchtipWiring());
-      getIssuesMock.mockResolvedValue([]);
+  it("lets a provider failure bubble up — the route turns it into a 502", async () => {
+    loadToolWiringMock.mockResolvedValue(posthogWiring());
+    trackerMeasuresMock.mockRejectedValue(
+      new Error("asks a list from a tracker monitor, which exposes no rows"),
+    );
 
-      const measure = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        null,
-        null,
-        5,
-      );
-
-      expect(measure.type).toBe("list");
-      expect(getIssuesMock.mock.calls[0][1].limit).toBe(5);
-    });
-
-    it("opens a detail sheet for issues, never for logs", async () => {
-      loadToolWiringMock.mockResolvedValue(glitchtipWiring());
-      getIssuesMock.mockResolvedValue([]);
-      const issues = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-1",
-        null,
-      );
-
-      loadToolWiringMock.mockResolvedValue(LOG_WIRING);
-      getLogsMock.mockResolvedValue([]);
-      const logs = await new BlocksDataAccess().getMeasure(
-        DASHBOARD_BLOCK,
-        "block-2",
-        null,
-      );
-
-      if (issues.type !== "list" || logs.type !== "list") {
-        throw new Error("expected two lists");
-      }
-      expect(issues.hasDetail).toBe(true);
-      expect(logs.hasDetail).toBe(false);
-    });
-
-    it("refuses a list from a tracker monitor, which exposes no rows", async () => {
-      loadToolWiringMock.mockResolvedValue(posthogWiring());
-
-      await expect(
-        new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", null),
-      ).rejects.toThrow(/exposes no rows/);
-    });
+    await expect(
+      new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", null),
+    ).rejects.toThrow(/exposes no rows/);
   });
 });

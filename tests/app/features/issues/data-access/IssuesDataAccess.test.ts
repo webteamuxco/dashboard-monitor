@@ -119,7 +119,7 @@ describe("IssuesDataAccess", () => {
       await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "panel-42", 20);
 
       expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "panel-42");
-      expect(createConnectionMock).toHaveBeenCalledWith(WIRING);
+      expect(createConnectionMock).toHaveBeenCalledWith();
     });
 
     it("maps each Issue into an IssueRow", async () => {
@@ -230,7 +230,7 @@ describe("IssuesDataAccess", () => {
       });
 
       expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "panel-42");
-      expect(createConnectionMock).toHaveBeenCalledWith(WIRING);
+      expect(createConnectionMock).toHaveBeenCalledWith();
     });
 
     it("renames the DTO's content into the domain's text", async () => {

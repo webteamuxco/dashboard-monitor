@@ -8,7 +8,11 @@ import { glitchtipWiring } from "../../../helpers/toolWiring";
 const CONNECTION: ToolConnection = { baseUrl: "https://gt", projectId: "p" };
 
 function fakeStrategy(): LogMonitorStrategyInterface {
-  return { getLogs: vi.fn() };
+  return { 
+    getLogs: vi.fn(),
+    getBlockMeasures: vi.fn(),
+    getKpiMeasures: vi.fn()
+  };
 }
 
 function fakeFactory(
@@ -30,13 +34,12 @@ describe("LogMonitorResolver", () => {
     expect(resolver.resolve(glitchtipWiring())).toBe(supporting);
   });
 
-  it("asks each factory for the 'log-monitor' strategy, handing it the wiring", () => {
+  it("asks each factory for the 'log-monitor' strategy", () => {
     const factory = fakeFactory(true);
-    const wiring = glitchtipWiring();
 
-    new LogMonitorResolver([factory]).resolve(wiring);
+    new LogMonitorResolver([factory]).resolve(glitchtipWiring());
 
-    expect(factory.support).toHaveBeenCalledWith(wiring, "log-monitor");
+    expect(factory.support).toHaveBeenCalledWith("log-monitor");
   });
 
   it("throws when no factory supports the element", () => {

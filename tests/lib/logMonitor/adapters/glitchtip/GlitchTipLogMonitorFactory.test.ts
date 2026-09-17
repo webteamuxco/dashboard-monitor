@@ -20,7 +20,8 @@ describe("GlitchTipLogMonitorFactory", () => {
   let factory: GlitchTipLogMonitorFactory;
 
   beforeEach(() => {
-    factory = new GlitchTipLogMonitorFactory();
+    const wiring = glitchtipWiring();
+    factory = new GlitchTipLogMonitorFactory(wiring);
     isConfigureMock.mockReset();
     resolveConnectionMock.mockReset();
     delete process.env.GLITCHTIP_TOKEN;
@@ -31,14 +32,14 @@ describe("GlitchTipLogMonitorFactory", () => {
       isConfigureMock.mockReturnValue(true);
       const wiring = glitchtipWiring();
 
-      expect(factory.support(wiring, "log-monitor")).toBe(true);
+      expect(factory.support("log-monitor")).toBe(true);
       expect(isConfigureMock).toHaveBeenCalledWith(wiring, "log-monitor");
     });
 
     it("returns false when the element does not wire glitchtip", () => {
       isConfigureMock.mockReturnValue(false);
 
-      expect(factory.support(glitchtipWiring(), "log-monitor")).toBe(false);
+      expect(factory.support("log-monitor")).toBe(false);
     });
   });
 
@@ -47,7 +48,7 @@ describe("GlitchTipLogMonitorFactory", () => {
       resolveConnectionMock.mockReturnValue(CONNECTION);
       const wiring = glitchtipWiring();
 
-      expect(factory.createConnection(wiring)).toEqual(CONNECTION);
+      expect(factory.createConnection()).toEqual(CONNECTION);
       expect(resolveConnectionMock).toHaveBeenCalledWith(wiring);
     });
   });

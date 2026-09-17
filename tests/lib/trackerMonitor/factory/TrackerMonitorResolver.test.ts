@@ -8,7 +8,12 @@ import { posthogWiring } from "../../../helpers/toolWiring";
 const CONNECTION: ToolConnection = { baseUrl: "https://ph", projectId: "1" };
 
 function fakeStrategy(): TrackerMonitorStrategyInterface {
-  return { getActiveUsersTimeline: vi.fn(), getTotalVisitors: vi.fn() };
+  return { 
+    getActiveUsersTimeline: vi.fn(),
+    getTotalVisitors: vi.fn(),
+    getKpiMeasures: vi.fn(),
+    getBlockMeasures: vi.fn()
+  };
 }
 
 function fakeFactory(
@@ -30,13 +35,12 @@ describe("TrackerMonitorResolver", () => {
     expect(resolver.resolve(posthogWiring())).toBe(supporting);
   });
 
-  it("asks each factory for the 'tracker-monitor' strategy, handing it the wiring", () => {
+  it("asks each factory for the 'tracker-monitor' strategy", () => {
     const factory = fakeFactory(true);
-    const wiring = posthogWiring();
 
-    new TrackerMonitorResolver([factory]).resolve(wiring);
+    new TrackerMonitorResolver([factory]).resolve(posthogWiring());
 
-    expect(factory.support).toHaveBeenCalledWith(wiring, "tracker-monitor");
+    expect(factory.support).toHaveBeenCalledWith("tracker-monitor");
   });
 
   it("throws when no factory supports the element", () => {

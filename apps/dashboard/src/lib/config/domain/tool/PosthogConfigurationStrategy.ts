@@ -12,8 +12,10 @@ export type PosthogConfiguration = {
     projectId: string;
 };
 
-export interface PosthogConnection extends ToolConnection {
-}
+// PostHog needs nothing beyond the base connection — no organization slug, as
+// the project id alone addresses an instance. The alias exists to keep the name
+// symmetric with GlitchtipConnection at every call site.
+export type PosthogConnection = ToolConnection;
 
 export class PosthogConfigurationStrategy implements ToolConfigurationStrategyInterface {
 
