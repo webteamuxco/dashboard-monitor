@@ -1,6 +1,6 @@
 # src/app/features — Feature modules
 
-Each subfolder is a self-contained feature (blocks, kpis, issues, errorRate, visitors, dashboard, config). Features compose UI, client hooks, server-side data access, and view-model types.
+Each subfolder is a self-contained feature (blocks, kpis, issues, dashboard, config, components, utils). Features compose UI, client hooks, server-side data access, and view-model types.
 
 ## Layout
 
@@ -21,7 +21,7 @@ Three Strapi ids circulate in this folder and most signatures call all of them `
 
 - **project `documentId`** — the `config` feature and `dashboard`'s own hooks (`useActiveProject`, `usePanels`). It resolves the catalog, the refresh cadence, the window presets, the panel list.
 - **panel `slug`** — what lists a panel's dashboard KPIs (`useDashboardKpis(panelSlug)`); the GraphQL filter matches on the slug, not the id.
-- **dashboard element `documentId`** — *every data feature* (`blocks`, `kpis`, `issues`, `errorRate`, `visitors`). Today that is a `DashboardKpi` id, tomorrow a `DashboardBlock` id: it is the element that declares a strategy and a tool, so it is the only id a data route can resolve a provider from.
+- **dashboard element `documentId`** — *every data feature* (`blocks`, `kpis`, `issues`). A `DashboardKpi` id or a `DashboardBlock` id: it is the element that declares a strategy and a tool, so it is the only id a data route can resolve a provider from.
 
 Check where a value came from before threading it somewhere new — see the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
 
@@ -47,7 +47,7 @@ Keep `kind` and `documentId` as separate primitives all the way into the `cache(
 ### `ui/` — components
 
 - React only. No `fetch`. No env reads (the header is the one exception: it reads `NEXT_PUBLIC_*` display knobs). No direct imports from `data-access/` server modules — go through hooks.
-- A panel reads server data via its hook (`useIssues`, …) and UI state via Zustand (`useDashboardWindow`, `useSelectedPanel`, …).
+- A card reads server data via its hook (`useKpi`, `useBlock`, `useIssueDetail`, …) and UI state via Zustand (`useDashboardWindow`, `useSelectedPanel`, …).
 - Mark `"use client"` only when needed (state, effects, event handlers). Prefer leaving as Server Component when the panel just renders props.
 
 ### `hooks/` — TanStack Query
@@ -58,16 +58,22 @@ Keep `kind` and `documentId` as separate primitives all the way into the `cache(
 - Polling interval flows in as a prop / from Zustand config, never hard-coded.
 
 Template:
+
 ```ts
 "use client";
 import { useQuery } from "@tanstack/react-query";
-import { fetchIssuesClient } from "../data-access/fetchIssuesClient";
-import { issuesKeys } from "../queryKeys";
+import { fetchKpiMeasureClient } from "../data-access/fetchKpiMeasureClient";
+import { dashboardKpiKeys } from "../queryKeys";
 
-export function useIssues(documentId: string, limit: number, intervalMs: number) {
+export function useKpi(
+  kpiId: string,
+  windowMinutes: number | null,
+  environment: string | null,
+  intervalMs: number,
+) {
   return useQuery({
-    queryKey: issuesKeys.recent(documentId, limit),
-    queryFn: () => fetchIssuesClient(documentId, limit),
+    queryKey: dashboardKpiKeys.measure(kpiId, windowMinutes, environment),
+    queryFn: () => fetchKpiMeasureClient(kpiId, windowMinutes, environment),
     refetchInterval: intervalMs > 0 ? intervalMs : false,
   });
 }
@@ -84,7 +90,7 @@ Two kinds of files in this folder — keep them separate:
    - Wrap data fetches in React `cache()` for per-request deduplication.
    - Exported as a class instance singleton (`export const issuesDataAccess = new IssuesDataAccess()`).
 
-2. **Client fetchers** (e.g. `fetchIssuesClient.ts`):
+2. **Client fetchers** (e.g. `fetchIssueDetailClient.ts`):
    - Plain `fetch()` to `/api/<feature>/...`.
    - Unwrap `{ data }` / throw on `{ error }`.
    - Never import from server orchestrators.
@@ -98,10 +104,14 @@ Feature-specific shapes the UI renders directly (e.g. `IssueRow` with `lastSeenL
 Export a single object whose methods return tuples typed `as const`:
 
 ```ts
-export const issuesKeys = {
-  recent: (documentId: string, limit: number) =>
-    ["issues", "recent", documentId, limit] as const,
-  detail: (issueId: string) => ["issues", "detail", issueId] as const,
+export const dashboardKpiKeys = {
+  config: (panelSlug: string | null) =>
+    ["dashboardKpis", "config", panelSlug] as const,
+  measure: (
+    kpiId: string,
+    windowMinutes: number | null,
+    environment: string | null = null,
+  ) => ["dashboardKpis", "measure", kpiId, windowMinutes, environment] as const,
 };
 ```
 
@@ -109,7 +119,7 @@ Use these keys both in `useQuery` and in `invalidateQueries`. Never inline a que
 
 **Put the id first among the variable segments.** A project or panel switch then invalidates nothing by hand — the new key is simply a cache miss. Every key follows this, `configKeys.pannels(documentId)` included.
 
-**Build the whole key inside the factory.** `issuesKeys.isConfig(documentId, environment, panelSlug)` takes the panel slug rather than letting `useProjectStrategy` append it, so `page.tsx` can seed the same key. A hook that spreads a factory result and adds a segment makes the key unreproducible server-side.
+**Build the whole key inside the factory.** A factory takes every segment it needs — `dashboardKpiKeys.measure(kpiId, windowMinutes, environment)` rather than letting the hook append the window — so [page.tsx](../page.tsx) can seed the very same key server-side. A hook that spreads a factory result and adds a segment makes the key unreproducible from the server.
 
 ## The dashboard feature — composition root
 
@@ -159,4 +169,4 @@ If you find yourself stashing server data in a Zustand store, stop — that's a 
 
 Adding a widget means touching both sides: the strategy mapping in `DashboardContent` *and* the matching prefetch block. A widget mounted but not prefetched just fetches on mount; a widget prefetched under the wrong key wastes a server-side provider call on every page load.
 
-Also mind that the prefetch must call the **same data-access method as the route** — `getRecent` for `/api/issues`, not `getRecentUnresolved`. Two different datasets under one query key means the first paint disagrees with the first refetch.
+Also mind that the prefetch must call the **same data-access method as the route**, with the same arguments. Two different datasets under one query key means the first paint disagrees with the first refetch.

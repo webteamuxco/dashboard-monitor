@@ -2,17 +2,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 
-const {
-  fetchBlockMeasureClientMock,
-  fetchKpiMeasureClientMock,
-  fetchErrorRateClientMock,
-  fetchVisitorsTimelineClientMock,
-} = vi.hoisted(() => ({
-  fetchBlockMeasureClientMock: vi.fn(),
-  fetchKpiMeasureClientMock: vi.fn(),
-  fetchErrorRateClientMock: vi.fn(),
-  fetchVisitorsTimelineClientMock: vi.fn(),
-}));
+const { fetchBlockMeasureClientMock, fetchKpiMeasureClientMock } = vi.hoisted(
+  () => ({
+    fetchBlockMeasureClientMock: vi.fn(),
+    fetchKpiMeasureClientMock: vi.fn(),
+  }),
+);
 
 vi.mock("@/app/features/blocks/data-access/fetchBlockMeasureClient", () => ({
   fetchBlockMeasureClient: fetchBlockMeasureClientMock,
@@ -20,22 +15,11 @@ vi.mock("@/app/features/blocks/data-access/fetchBlockMeasureClient", () => ({
 vi.mock("@/app/features/kpis/data-access/fetchKpiMeasureClient", () => ({
   fetchKpiMeasureClient: fetchKpiMeasureClientMock,
 }));
-vi.mock("@/app/features/errorRate/data-access/fetchErrorRateClient", () => ({
-  fetchErrorRateClient: fetchErrorRateClientMock,
-}));
-vi.mock(
-  "@/app/features/visitors/data-access/fetchVisitorsTimelineClient",
-  () => ({ fetchVisitorsTimelineClient: fetchVisitorsTimelineClientMock }),
-);
 
 import { useBlock } from "@/app/features/blocks/hooks/useBlock";
 import { useKpi } from "@/app/features/kpis/hooks/useKpi";
-import { useErrorRate } from "@/app/features/errorRate/hooks/useErrorRate";
-import { useVisitorsTimeline } from "@/app/features/visitors/hooks/useVisitorsTimeline";
 import { dashboardBlockKeys } from "@/app/features/blocks/queryKeys";
 import { dashboardKpiKeys } from "@/app/features/kpis/queryKeys";
-import { errorRateKeys } from "@/app/features/errorRate/queryKeys";
-import { visitorsKeys } from "@/app/features/visitors/queryKeys";
 import {
   refetchIntervalOf,
   renderQueryHookWithClient,
@@ -66,26 +50,6 @@ const CASES = [
       ),
     key: dashboardKpiKeys.measure("kpi-1", 30, null),
     mock: fetchKpiMeasureClientMock,
-  },
-  {
-    name: "useErrorRate",
-    render: (intervalMs: number) =>
-      renderQueryHookWithClient(
-        () => useErrorRate("panel-1", null, intervalMs),
-        undefined,
-      ),
-    key: errorRateKeys.series("panel-1", null),
-    mock: fetchErrorRateClientMock,
-  },
-  {
-    name: "useVisitorsTimeline",
-    render: (intervalMs: number) =>
-      renderQueryHookWithClient(
-        () => useVisitorsTimeline("panel-1", 60, intervalMs),
-        undefined,
-      ),
-    key: visitorsKeys.timeline("panel-1", 60),
-    mock: fetchVisitorsTimelineClientMock,
   },
 ];
 

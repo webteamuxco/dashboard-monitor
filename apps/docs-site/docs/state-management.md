@@ -170,8 +170,6 @@ Two rules:
 1. **Keep keys structural** (constants → variables, broad to narrow). `invalidateQueries({ queryKey: ["dashboardBlocks"] })` invalidates every block query; `["dashboardBlocks", "measure"]` only the measures; adding the id narrows it to one card.
 2. **The id is the first variable segment** of every data key. That is what makes a project, panel *or element* switch a plain cache miss instead of a manual invalidation. `configKeys.pannels(documentId, showDevelopmentPanel)` carries the project id for exactly that reason — without it, switching project served the previous project's panel list until the 5-minute `staleTime` expired — and the dev flag because they are two different lists.
 
-`errorRateKeys` and `visitorsKeys` still exist for the two [dormant features](features.md#dormant-features), as do `issuesKeys.recentKpi` and `issuesKeys.isConfig`, which nothing builds any more.
-
 ### Hydration from server
 
 [src/app/page.tsx](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/page.tsx) seeds the three **config** queries with `setQueryData` on a server-side `QueryClient`, then dehydrates it and wraps children in `<HydrationBoundary state={...}>`. See [data-flow.md](data-flow.md).
@@ -252,7 +250,7 @@ The defaults are only a fallback: `DashboardContent` calls `hydrateFromStrapi()`
 
 Also exports `isDashboardInteractive()` — reads `NEXT_PUBLIC_DASHBOARD_INTERACTIVITY`. Used to hide the selectors on read-only kiosks.
 
-The block, KPI and visitors hooks subscribe to `windowMinutes` to refetch when the user picks a new preset — but a card whose element is not windowed selects `null` from the store instead of the value, so changing preset neither re-renders it nor invalidates its key.
+The block and KPI hooks subscribe to `windowMinutes` to refetch when the user picks a new preset — but a card whose element is not windowed selects `null` from the store instead of the value, so changing preset neither re-renders it nor invalidates its key.
 
 ### useEnvironment
 

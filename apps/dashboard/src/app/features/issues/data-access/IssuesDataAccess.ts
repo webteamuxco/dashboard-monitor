@@ -14,7 +14,6 @@ import {
   loadToolWiring,
 } from "@/lib/config/domain/loadToolWiring";
 import type { ErrorMonitorStrategyInterface } from "@/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface";
-import type { ToolConnection } from "@/lib/config/domain/tool/ToolConnection";
 
 const EVENTS_PAGE_SIZE = 25;
 
@@ -46,52 +45,12 @@ function toRow(issue: Issue): IssueRow {
 async function resolveMonitor(
   kind: DashboardElementKind,
   documentId: string,
-): Promise<{
-  strategy: ErrorMonitorStrategyInterface;
-  connection: ToolConnection;
-}> {
+): Promise<ErrorMonitorStrategyInterface> {
   const wiring = await loadToolWiring(kind, documentId);
   const factory = getErrorMonitorFactory(wiring);
-  const connection = factory.createConnection();
 
-  return { strategy: factory.createStrategy(connection), connection };
+  return factory.createStrategy(factory.createConnection());
 }
-
-const fetchRecent = cache(
-  async (
-    kind: DashboardElementKind,
-    documentId: string,
-    limit: number,
-    environment: string | null,
-  ): Promise<IssueRow[]> => {
-      const { strategy, connection } = await resolveMonitor(kind, documentId);
-
-      const issues = await strategy.getIssues(connection.projectId, {
-        limit,
-        environment: environment ?? undefined,
-      });
-
-      return issues.map(toRow);
-  },
-);
-
-const fetchRecentUnresolved = cache(
-  async (
-    kind: DashboardElementKind,
-    documentId: string,
-    limit: number,
-    environment: string | null,
-  ): Promise<IssueRow[]> => {
-    const { strategy, connection } = await resolveMonitor(kind, documentId);
-
-    const issues = await strategy.getIssues(connection.projectId, {
-      resolved: false,
-      limit,
-      environment: environment ?? undefined,
-    });
-    return issues.map(toRow);
-  },
-);
 
 const postIssueComment =
   async (
@@ -100,7 +59,7 @@ const postIssueComment =
     issueId: string,
     dto: NewIssueComment,
   ): Promise<IssueComment> => {
-    const { strategy } = await resolveMonitor(kind, documentId);
+    const strategy = await resolveMonitor(kind, documentId);
 
     return await strategy.createIssueComment(issueId, dto);
   }
@@ -111,7 +70,7 @@ const fetchDetail = cache(
     documentId: string,
     issueId: string,
   ): Promise<IssueDetailView> => {
-    const { strategy: monitor } = await resolveMonitor(kind, documentId);
+    const monitor = await resolveMonitor(kind, documentId);
 
     const [issue, latestEvent, events, comments] = await Promise.all([
       monitor.getIssue(issueId),
@@ -134,24 +93,6 @@ const fetchDetail = cache(
 );
 
 export class IssuesDataAccess {
-
-  getRecent(
-    kind: DashboardElementKind,
-    documentId: string,
-    limit = 20,
-    environment: string | null = null,
-  ): Promise<IssueRow[]> {
-    return fetchRecent(kind, documentId, limit, environment);
-  }
-
-  getRecentUnresolved(
-    kind: DashboardElementKind,
-    documentId: string,
-    limit = 20,
-    environment: string | null = null,
-  ): Promise<IssueRow[]> {
-    return fetchRecentUnresolved(kind, documentId, limit, environment);
-  }
 
   getDetail(
     kind: DashboardElementKind,

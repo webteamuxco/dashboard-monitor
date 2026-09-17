@@ -99,7 +99,7 @@ A measure names its **data shape**, never its chart. `BlocksDataAccess` builds a
 
 The log-monitor bar block is what used to be a standalone reservations panel: the tag filter now comes from the element's strategy in Strapi (`reservation.sent`, suffixed with the selected environment) instead of being hard-coded in the feature. The series is zero-filled bucket by bucket before aggregation, so a quiet window draws real zeros rather than a gap.
 
-**The card states the granularity it is actually drawing.** `SeriesBlockMeasure` carries an `interval` alongside its `windowMinutes`, and `BlockCardHeader` prints the pair (`1h · 24h`) where the old standalone error-rate panel printed `erreurs / h · 24h`. It matters because a provider may coarsen what the window asked for: below 120 minutes `resolveBuckets` requests minute buckets, but GlitchTip cannot scope a minute series by environment (see [monitors.md](monitors.md#errormonitor)), so an environment-scoped error block gets hourly points — one single bucket on a 30-minute window. The labels follow the served interval too, so the axis never reads as minutes while the data is hourly.
+**The card states the granularity it is actually drawing.** `SeriesBlockMeasure` carries an `interval` alongside its `windowMinutes`, and `BlockCardHeader` prints the pair (`1h · 24h`). It matters because a provider may coarsen what the window asked for: below 120 minutes `resolveBuckets` requests minute buckets, but GlitchTip cannot scope a minute series by environment (see [monitors.md](monitors.md#errormonitor)), so an environment-scoped error block gets hourly points — one single bucket on a 30-minute window. The labels follow the served interval too, so the axis never reads as minutes while the data is hourly.
 
 **One tag at a time when the strategy declares several.** The provider ANDs the terms of a single log query, so two tags in one query ask for the logs carrying both — an intersection that is almost always empty. A block declaring several tags therefore reads them one at a time: `BlockCard` holds the selection (local `useState`, since it is scoped to that one card), `BlockCardHeader` renders a `BlockTagSelector` next to the polling dot, and the id travels as `?tag=` down to `BlocksDataAccess`, which matches it against the tags the element declares — an unknown id throws rather than reaching the provider — and names the series after the tag. Each tag keeps its own cache entry through the last segment of the measure key, so switching back is instant. The card's caption carries both descriptions: the block's own on the left — the unit the card is read in, `req/min` — and the selected tag's on the right, which follows the selection. The selector is mounted only when the dashboard is interactive; a kiosk stays on the first tag Strapi lists.
 
@@ -109,8 +109,8 @@ The log-monitor bar block is what used to be a standalone reservations panel: th
 
 No longer a panel of its own: a `list` block whose strategy is `error-monitor` renders the rows, and this feature owns what happens when one is clicked — the detail sheet (events, stacktrace, tags, breadcrumbs, comments) and posting a comment back.
 
-- **Monitor consumed:** `errorMonitor` (`getIssues`, `getIssue`, `getIssueLatestEvent`, `getIssueEvents`, `getIssueComments`, `createIssueComment`)
-- **API routes:** `GET /api/blocks/[blockId]/issues/[issueId]`, `GET|POST /api/blocks/[blockId]/issues/[issueId]/comments`, `GET /api/kpis/issues?documentId&limit&environment`
+- **Monitor consumed:** `errorMonitor` (`getIssue`, `getIssueLatestEvent`, `getIssueEvents`, `getIssueComments`, `createIssueComment`)
+- **API routes:** `GET /api/blocks/[blockId]/issues/[issueId]`, `GET|POST /api/blocks/[blockId]/issues/[issueId]/comments`
 - **Domain types:** `IssueRow`, `IssueDetailView`
 - **Hooks:** `useIssueDetail(blockId, issueId)`, `useCreateIssueComment(blockId, issueId)`
 - **UI:** `IssueDetailSheet`
@@ -118,7 +118,7 @@ No longer a panel of its own: a `list` block whose strategy is `error-monitor` r
 
 `useIssueDetail` is `enabled: !!issueId`, so nothing is fetched before a row is clicked. The detail endpoints are organization-scoped at GlitchTip, so they take the issue id alone — but the route still needs the **block** id to resolve *which* GlitchTip instance to ask. Posting a comment invalidates the detail key, which is why the mutation hook takes both ids.
 
-`IssuesDataAccess` also exposes `getRecent` / `getRecentUnresolved`; a block list uses the former through `BlocksDataAccess`. Two datasets under one key would make the first paint disagree with the first refetch, so check which one a call site wants before switching it.
+`IssuesDataAccess` exposes nothing else: the rows a `list` block shows come from `BlocksDataAccess`, which asks the error-monitor strategy for a `list` measure. This feature owns the detail only.
 
 ### config
 
@@ -167,17 +167,6 @@ Both return `null` when there is no panel slug, which is what makes an unconfigu
 [src/app/features/utils/](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/utils/)
 
 Cross-feature helpers: `accent.ts` (the `level` → Tailwind class maps, and the chart colour a series inherits), `lucidIcon.ts` (`getLucideIcon`, kebab-case Strapi string → lucide component, `Circle` as fallback) and `queryFilters.ts` (the `showDevelopmentPanel` query param, read identically on both sides of the hydration boundary).
-
-## Dormant features
-
-Two feature folders are complete and tested but **mounted by nothing** since the panel/element refactor. They are the pre-element versions of what blocks now do, kept because their data-access layers still work:
-
-| Folder | Route | Replaced by |
-|---|---|---|
-| `errorRate/` (`ErrorRatePanel`, `useErrorRate`) | `GET /api/error-rate?documentId&environment` | a block of `type: rate` whose strategy is `error-monitor` |
-| `visitors/` (`VisitorsPanel`, `useVisitorsTimeline`) | `GET /api/visitors/timeline?documentId&windowMinutes` | a block of `type: stackedBar` whose strategy is `tracker-monitor` |
-
-Their routes still take a **dashboard KPI** `documentId` as `?documentId=`, resolved through `loadToolWiring(DASHBOARD_KPI, …)` like everything else. `issuesKeys.recentKpi` and `issuesKeys.isConfig` are dead entries of the same era. Delete them together, or wire them back to an element — but don't take them as examples of the current shape.
 
 ## How a feature is added
 

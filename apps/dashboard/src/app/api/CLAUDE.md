@@ -15,19 +15,16 @@ src/app/api/
 │   ├── dashboard-kpis/route.ts         # ?panelSlug=<slug> → the panel's KPIs
 │   └── dashboard-blocks/route.ts       # ?panelSlug=<slug> → the panel's blocks
 ├── kpis/
-│   ├── [kpiId]/route.ts                # one KPI's measure
-│   └── issues/route.ts
-├── blocks/
-│   └── [blockId]/
-│       ├── route.ts                    # one block's measure (list or series)
-│       └── issues/[issueId]/
-│           ├── route.ts                # the detail of one row of a list block
-│           └── comments/route.ts       # POST a comment on that issue
-├── error-rate/route.ts
-└── visitors/timeline/route.ts
+│   └── [kpiId]/route.ts                # one KPI's measure
+└── blocks/
+    └── [blockId]/
+        ├── route.ts                    # one block's measure (list or series)
+        └── issues/[issueId]/
+            ├── route.ts                # the detail of one row of a list block
+            └── comments/route.ts       # POST a comment on that issue
 ```
 
-One folder per feature. Use `[param]` segments for resource ids, never query strings for ids — the `config`, `kpis` and `blocks` routes follow this; the remaining data routes are the documented exception.
+One folder per feature. Use `[param]` segments for resource ids, never query strings for ids — every route here follows this, `?panelSlug=` aside, which filters a list rather than naming a resource.
 
 ## Which id each route expects
 
@@ -40,9 +37,8 @@ One folder per feature. Use `[param]` segments for resource ids, never query str
 | `/api/config/dashboard-blocks?panelSlug` | panel **slug** |
 | `/api/kpis/[kpiId]` | **dashboard KPI** id |
 | `/api/blocks/[blockId]`, `/api/blocks/[blockId]/issues/[issueId]`, `…/comments` | **dashboard block** id |
-| `/api/kpis/issues`, `/api/error-rate`, `/api/visitors/timeline` | **dashboard KPI** id, passed as `?documentId=` |
 
-Every data route's id carries a **dashboard element**'s Strapi `documentId` — a `DashboardKpi` or a `DashboardBlock` — because the element is what declares a strategy and holds its tool connection. Where it is still a `?documentId=` query param the name is a leftover from when the wiring lived on the project, then on the panel; don't read it as a project or panel id, and don't rename it in isolation (client fetchers, hooks and the data-access layer all use the same name). See the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
+Every data route's id carries a **dashboard element**'s Strapi `documentId` — a `DashboardKpi` or a `DashboardBlock` — because the element is what declares a strategy and holds its tool connection. `documentId` remains the parameter name throughout the data-access layer, a leftover from when the wiring lived on the project, then on the panel; don't read it as a project or panel id, and don't rename it in isolation (client fetchers, hooks and the data-access layer all use the same name). See the root [CLAUDE.md](../../../../../CLAUDE.md#the-panel-system--read-this-before-touching-any-data-path).
 
 **`/api/blocks/[blockId]?tag=` names one of the element's own tags, never a query.** A log-monitor block declaring several tags is read one tag at a time — the provider ANDs the terms of a single query, so asking for all of them at once returns their intersection. The route forwards the raw param and the **log strategy** matches it against `strategy.tags`, throwing when it matches none: nothing the browser sends ever reaches the provider query verbatim. Omitting the param keeps the historical behaviour (every declared tag in one ANDed query), which is what a single-tag element wants.
 

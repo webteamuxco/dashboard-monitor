@@ -9,7 +9,6 @@ const { loadToolWiringMock } = vi.hoisted(() => ({
 
 const WIRING = glitchtipWiring();
 
-const getIssuesMock = vi.fn();
 const getIssueMock = vi.fn();
 const getIssueLatestEventMock = vi.fn();
 const getIssueEventsMock = vi.fn();
@@ -32,7 +31,6 @@ vi.mock("@/lib/errorMonitor/GetErrorMonitor", () => ({
   getErrorMonitorFactory: () => ({
     createConnection: createConnectionMock,
     createStrategy: () => ({
-      getIssues: getIssuesMock,
       getIssue: getIssueMock,
       getIssueLatestEvent: getIssueLatestEventMock,
       getIssueEvents: getIssueEventsMock,
@@ -66,7 +64,6 @@ const NOW = new Date("2026-05-28T08:30:00Z");
 
 describe("IssuesDataAccess", () => {
   beforeEach(() => {
-    getIssuesMock.mockReset();
     getIssueMock.mockReset();
     getIssueLatestEventMock.mockReset();
     getIssueEventsMock.mockReset();
@@ -83,94 +80,30 @@ describe("IssuesDataAccess", () => {
     vi.useRealTimers();
   });
 
-  describe("getRecent", () => {
-    it("queries without a status filter — resolved issues show up too", async () => {
-      getIssuesMock.mockResolvedValue([]);
+  describe("getDetail", () => {
+    it("resolves the factory from the element documentId it was given", async () => {
+      getIssueMock.mockResolvedValue(buildIssue());
+      getIssueLatestEventMock.mockResolvedValue(null);
+      getIssueEventsMock.mockResolvedValue([]);
+      getIssueCommentsMock.mockResolvedValue([]);
 
-      // This is what /api/issues and the server prefetch both call, so the
-      // first paint and the first poll must agree.
-      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-1", 50);
-
-      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { limit: 50 });
-    });
-
-    it("defaults limit to 20 when omitted", async () => {
-      getIssuesMock.mockResolvedValue([]);
-
-      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-2");
-
-      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { limit: 20 });
-    });
-
-    it("forwards the environment into the issue filters", async () => {
-      getIssuesMock.mockResolvedValue([]);
-
-      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-3", 20, "production");
-
-      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", {
-        limit: 20,
-        environment: "production",
-      });
-    });
-
-    it("resolves the factory from the panel documentId it was given", async () => {
-      getIssuesMock.mockResolvedValue([]);
-
-      await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "panel-42", 20);
+      await new IssuesDataAccess().getDetail(DASHBOARD_KPI, "panel-42", "i1");
 
       expect(loadToolWiringMock).toHaveBeenCalledWith(DASHBOARD_KPI, "panel-42");
       expect(createConnectionMock).toHaveBeenCalledWith();
     });
 
-    it("maps each Issue into an IssueRow", async () => {
-      getIssuesMock.mockResolvedValue([
-        buildIssue({ id: "i9", isResolved: true }),
-      ]);
-
-      const out = await new IssuesDataAccess().getRecent(DASHBOARD_KPI, "doc-recent-4", 10);
-
-      expect(out[0]).toMatchObject({ id: "i9", isResolved: true });
-      expect(out[0].lastSeenLabel).toBeTypeOf("string");
-    });
-  });
-
-  describe("getRecentUnresolved", () => {
-    it("queries unresolved issues with the provided limit", async () => {
-      getIssuesMock.mockResolvedValue([]);
-
-      await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1", 50);
-
-      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { resolved: false, limit: 50 });
-    });
-
-    it("defaults limit to 20 when omitted", async () => {
-      getIssuesMock.mockResolvedValue([]);
-
-      await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1");
-
-      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", { resolved: false, limit: 20 });
-    });
-
-    it("forwards the environment into the issue filters", async () => {
-      getIssuesMock.mockResolvedValue([]);
-
-      await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1", 20, "production");
-
-      expect(getIssuesMock).toHaveBeenCalledWith("gt-project", {
-        resolved: false,
-        limit: 20,
-        environment: "production",
-      });
-    });
-
-    it("maps each Issue into an IssueRow with a relative lastSeen label", async () => {
-      getIssuesMock.mockResolvedValue([
+    it("maps the Issue into an IssueRow with a relative lastSeen label", async () => {
+      getIssueMock.mockResolvedValue(
         buildIssue({ id: "i1", lastSeen: "2026-05-28T08:29:00Z" }),
-      ]);
+      );
+      getIssueLatestEventMock.mockResolvedValue(null);
+      getIssueEventsMock.mockResolvedValue([]);
+      getIssueCommentsMock.mockResolvedValue([]);
 
-      const out = await new IssuesDataAccess().getRecentUnresolved(DASHBOARD_KPI, "doc1", 10);
+      const out = await new IssuesDataAccess().getDetail(DASHBOARD_KPI, "doc1", "i1");
 
-      expect(out[0]).toMatchObject({
+      expect(out.issue).toMatchObject({
         id: "i1",
         title: "boom",
         type: "TypeError",
@@ -178,11 +111,9 @@ describe("IssuesDataAccess", () => {
         isResolved: false,
         lastSeenIso: "2026-05-28T08:29:00Z",
       });
-      expect(out[0].lastSeenLabel).toMatch(/min|seconde/i);
+      expect(out.issue.lastSeenLabel).toMatch(/min|seconde/i);
     });
-  });
 
-  describe("getDetail", () => {
     it("fetches issue, latest event, events, and comments in parallel", async () => {
       getIssueMock.mockResolvedValue(buildIssue({ id: "i42" }));
       getIssueLatestEventMock.mockResolvedValue(null);

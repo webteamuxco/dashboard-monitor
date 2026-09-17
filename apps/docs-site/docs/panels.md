@@ -117,7 +117,7 @@ flowchart LR
     Proj[project documentId] --> Cfg["/api/config/projects/:id"]
     Proj --> Panels["/api/config/projects/:id/panels"]
     Slug[panel slug] --> Elements["/api/config/dashboard-kpis?panelSlug<br/>/api/config/dashboard-blocks?panelSlug"]
-    ElemId[element documentId] --> Data["/api/kpis/:kpiId · /api/blocks/:blockId<br/>/api/kpis/issues · /api/blocks/:blockId/issues/:issueId"]
+    ElemId[element documentId] --> Data["/api/kpis/:kpiId · /api/blocks/:blockId<br/>/api/blocks/:blockId/issues/:issueId"]
     Data --> Wiring["loadToolWiring(kind, id) → ToolWiring"]
     Wiring --> Conn["ToolConnection<br/>baseUrl · organization · provider projectId"]
 ```

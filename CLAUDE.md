@@ -110,8 +110,8 @@ DashboardKpi / DashboardBlock                      # each carries its own wiring
 The monitor layer no longer takes an id at all. A data route names the collection its id belongs to, the data-access layer turns the pair into a `ToolWiring`, and everything below is pure:
 
 ```
-route:        issuesDataAccess.getRecent(DASHBOARD_KPI, kpiId, …)
-data-access:  loadToolWiring(DASHBOARD_KPI, kpiId)  →  getErrorMonitorFactory(wiring)
+route:        kpisDataAccess.getMeasure(DASHBOARD_KPI, kpiId, …)
+data-access:  loadToolWiring(DASHBOARD_KPI, kpiId)  →  resolveMonitorFactory(wiring)
 ```
 
 `documentId` is still the parameter name everywhere, so read the call site to know which id you hold. Passing the wrong one fails with `Strapi dashboard-kpi "<id>" not found.`

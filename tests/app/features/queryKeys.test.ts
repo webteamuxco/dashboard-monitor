@@ -1,10 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { configKeys } from "@/app/features/config/queryKeys";
 import { issuesKeys } from "@/app/features/issues/queryKeys";
-import { errorRateKeys } from "@/app/features/errorRate/queryKeys";
 import { dashboardBlockKeys } from "@/app/features/blocks/queryKeys";
 import { dashboardKpiKeys } from "@/app/features/kpis/queryKeys";
-import { visitorsKeys } from "@/app/features/visitors/queryKeys";
 
 /**
  * Query keys are the contract between the server prefetch and the client
@@ -58,35 +56,12 @@ describe("configKeys", () => {
 });
 
 describe("issuesKeys", () => {
-  it("keys the recent list broad to narrow", () => {
-    expect(issuesKeys.recentKpi("open-issues", 20)).toEqual([
-      "issues",
-      "recent",
-      "open-issues",
-      20,
-    ]);
-  });
-
   it("keys a detail by the provider issue id alone", () => {
     expect(issuesKeys.detail("i1")).toEqual(["issues", "detail", "i1"]);
   });
 
-  it("keys the strategy list by panel slug", () => {
-    expect(issuesKeys.isConfig("prod-panel")).toEqual([
-      "issues",
-      "isConfig",
-      "prod-panel",
-    ]);
-  });
-
-  it("defaults the strategy key's panel slug to null", () => {
-    expect(issuesKeys.isConfig()).toEqual(["issues", "isConfig", null]);
-  });
-
-  it("distinguishes two panels", () => {
-    expect(issuesKeys.isConfig("prod")).not.toEqual(
-      issuesKeys.isConfig("staging"),
-    );
+  it("distinguishes two issues", () => {
+    expect(issuesKeys.detail("i1")).not.toEqual(issuesKeys.detail("i2"));
   });
 });
 
@@ -160,44 +135,11 @@ describe("dashboardKpiKeys", () => {
   });
 });
 
-describe("errorRateKeys", () => {
-  it("keys the series by panel id and environment", () => {
-    expect(errorRateKeys.series("panel-1", "staging")).toEqual([
-      "errorRate",
-      "series",
-      "panel-1",
-      "staging",
-    ]);
-  });
-
-  it("defaults the environment to null", () => {
-    expect(errorRateKeys.series("panel-1")).toEqual([
-      "errorRate",
-      "series",
-      "panel-1",
-      null,
-    ]);
-  });
-});
-
-describe("visitorsKeys", () => {
-  it("keys the timeline by panel id and window", () => {
-    expect(visitorsKeys.timeline("panel-1", 60)).toEqual([
-      "visitors",
-      "timeline",
-      "panel-1",
-      60,
-    ]);
-  });
-});
-
 describe("key layout invariants", () => {
   it("puts the id first among the variable segments of every data key", () => {
-    expect(issuesKeys.recentKpi("open-issues", 20)[2]).toBe("open-issues");
-    expect(errorRateKeys.series("panel-1")[2]).toBe("panel-1");
+    expect(issuesKeys.detail("i1")[2]).toBe("i1");
     expect(dashboardBlockKeys.measure("block-1", 30)[2]).toBe("block-1");
     expect(dashboardKpiKeys.measure("kpi-1", 30)[2]).toBe("kpi-1");
-    expect(visitorsKeys.timeline("panel-1", 60)[2]).toBe("panel-1");
     expect(configKeys.project("project-1")[2]).toBe("project-1");
     expect(configKeys.pannels("project-1", false)[2]).toBe("project-1");
   });
@@ -207,15 +149,11 @@ describe("key layout invariants", () => {
       configKeys.projects(),
       configKeys.project("p"),
       configKeys.pannels("p", false),
-      issuesKeys.recentKpi("k", 1),
       issuesKeys.detail("i"),
-      issuesKeys.isConfig("p"),
-      errorRateKeys.series("p"),
       dashboardBlockKeys.measure("b", 1),
       dashboardBlockKeys.config("p"),
       dashboardKpiKeys.measure("k", 1),
       dashboardKpiKeys.config("p"),
-      visitorsKeys.timeline("p", 1),
     ];
 
     for (const key of keys) {

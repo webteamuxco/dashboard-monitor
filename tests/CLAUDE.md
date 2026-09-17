@@ -88,7 +88,7 @@ tests/
     └── next-navigation.ts       # useSearchParams a test can drive
 ```
 
-Test file naming: `<SourceFile>.test.ts`. A few files cover a whole contract across features instead of one source file, and are named for it: [queryKeys.test.ts](app/features/queryKeys.test.ts) (every key shape), [pollingContract.test.ts](app/features/pollingContract.test.ts) (`refetchInterval` for every data hook), [panelHooks.test.ts](app/features/panelHooks.test.ts).
+Test file naming: `<SourceFile>.test.ts`. Two files cover a whole contract across features instead of one source file, and are named for it: [queryKeys.test.ts](app/features/queryKeys.test.ts) (every key shape) and [pollingContract.test.ts](app/features/pollingContract.test.ts) (`refetchInterval` for every data hook).
 
 ## What to test where
 
@@ -216,32 +216,32 @@ describe("getErrorMonitorFactory", () => {
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { waitFor } from "@testing-library/react";
 
-const { fetchIssuesClientMock } = vi.hoisted(() => ({
-  fetchIssuesClientMock: vi.fn(),
+const { fetchKpiMeasureClientMock } = vi.hoisted(() => ({
+  fetchKpiMeasureClientMock: vi.fn(),
 }));
 
-vi.mock("@/app/features/issues/data-access/fetchIssuesClient", () => ({
-  fetchIssuesClient: fetchIssuesClientMock,
+vi.mock("@/app/features/kpis/data-access/fetchKpiMeasureClient", () => ({
+  fetchKpiMeasureClient: fetchKpiMeasureClientMock,
 }));
 
-import { useIssues } from "@/app/features/issues/hooks/useIssues";
+import { useKpi } from "@/app/features/kpis/hooks/useKpi";
 import { renderQueryHook } from "../../../../helpers/renderHook";
 
-describe("useIssues", () => {
+describe("useKpi", () => {
   beforeEach(() => {
-    fetchIssuesClientMock.mockReset();
+    fetchKpiMeasureClientMock.mockReset();
   });
 
-  it("fetches with the panel documentId, the limit and the environment", async () => {
-    fetchIssuesClientMock.mockResolvedValue([{ id: "i1" }]);
+  it("fetches with the element documentId, the window and the environment", async () => {
+    fetchKpiMeasureClientMock.mockResolvedValue({ value: 3 });
 
     const { result } = renderQueryHook(
-      () => useIssues("panel-1", 20, "production", 30_000),
+      () => useKpi("kpi-1", 30, "production", 30_000),
       undefined,
     );
 
-    await waitFor(() => expect(result.current.data).toEqual([{ id: "i1" }]));
-    expect(fetchIssuesClientMock).toHaveBeenCalledWith("panel-1", 20, "production");
+    await waitFor(() => expect(result.current.data).toEqual({ value: 3 }));
+    expect(fetchKpiMeasureClientMock).toHaveBeenCalledWith("kpi-1", 30, "production");
   });
 });
 ```
