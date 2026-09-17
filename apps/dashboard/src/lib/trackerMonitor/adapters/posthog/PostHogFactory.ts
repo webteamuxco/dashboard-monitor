@@ -13,6 +13,6 @@ export class PostHogFactory extends AbstractPostHogFactory implements TrackerMon
 
     const client = this.createPostHogClient(connection)
 
-    return new PostHogStrategy(client);
+    return new PostHogStrategy(client, connection);
   }
 }

@@ -1,6 +1,6 @@
 import { LEVEL_ROW_CLASS, LEVEL_VARIANT } from "@/app/features/utils/accent";
 import { cn } from "@/lib/utils";
-import { BlockListEntry } from "../../../domain/BlockMeasure";
+import { BlockListEntry } from "../../../../../../lib/shared/domain/BlockMeasure";
 import { Badge } from "@/components/ui/badge";
 
 

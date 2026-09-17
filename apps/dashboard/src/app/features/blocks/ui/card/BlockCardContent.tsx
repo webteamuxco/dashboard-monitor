@@ -5,7 +5,7 @@ import {
 } from "@/lib/config/domain/DashboardBlock";
 import { Level } from "@/lib/config/domain/Level";
 import { ComponentType, createElement } from "react";
-import { BlockMeasure } from "../../domain/BlockMeasure";
+import { BlockMeasure } from "../../../../../lib/shared/domain/BlockMeasure";
 import { EmptyState } from "@/app/features/dashboard/ui/EmptyState";
 import { BlockList } from "../blockType/list/blockList";
 import { BlockRate } from "../blockType/rate/blockRate";

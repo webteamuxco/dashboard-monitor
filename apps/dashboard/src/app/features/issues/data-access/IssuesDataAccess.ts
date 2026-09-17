@@ -52,7 +52,7 @@ async function resolveMonitor(
 }> {
   const wiring = await loadToolWiring(kind, documentId);
   const factory = getErrorMonitorFactory(wiring);
-  const connection = factory.createConnection(wiring);
+  const connection = factory.createConnection();
 
   return { strategy: factory.createStrategy(connection), connection };
 }

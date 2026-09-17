@@ -8,12 +8,16 @@ import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
 export abstract class AbstractPostHogFactory {
 
-  support(wiring: ToolWiring, strategyResolver: string): boolean {
-    return new PosthogConfigurationStrategy().isConfigure(wiring, strategyResolver);
+  constructor(
+    protected readonly wiring: ToolWiring,
+  ) {}
+
+  support(strategyResolver: string): boolean {
+    return new PosthogConfigurationStrategy().isConfigure(this.wiring, strategyResolver);
   }
 
-  createConnection(wiring: ToolWiring): ToolConnection {
-    return new PosthogConfigurationStrategy().resolveConnection(wiring)
+  createConnection(): ToolConnection {
+    return new PosthogConfigurationStrategy().resolveConnection(this.wiring)
   }
 
   createPostHogClient(connection: ToolConnection): PostHogClient {

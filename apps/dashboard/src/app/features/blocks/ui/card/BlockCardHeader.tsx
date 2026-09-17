@@ -5,7 +5,7 @@ import { DashboardBlock } from "@/lib/config/domain/DashboardBlock";
 import { Level } from "@/lib/config/domain/Level";
 import { cn } from "@/lib/utils";
 import { createElement } from "react";
-import { BlockMeasure } from "../../domain/BlockMeasure";
+import { BlockMeasure } from "../../../../../lib/shared/domain/BlockMeasure";
 import { MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
 import { BlockTagSelector } from "./BlockTagSelector";
 import { formatWindowLabel } from "@/app/features/dashboard/state/windowPresets";

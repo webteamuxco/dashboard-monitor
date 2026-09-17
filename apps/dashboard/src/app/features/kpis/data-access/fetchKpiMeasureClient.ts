@@ -1,4 +1,4 @@
-import { KpiMeasure } from "../domain/KpiMeasure";
+import { KpiMeasure } from "../../../../lib/shared/domain/KpiMeasure";
 
 export async function fetchKpiMeasureClient(
   kpiId: string,

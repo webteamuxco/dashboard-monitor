@@ -50,7 +50,7 @@ const fetchSeries = cache(
 
     const wiring = await loadToolWiring(kind, documentId);
     const errorMonitorFactory = getErrorMonitorFactory(wiring)
-    const connection = errorMonitorFactory.createConnection(wiring)
+    const connection = errorMonitorFactory.createConnection()
     const strategy =  errorMonitorFactory.createStrategy(connection)
 
     const stats = await strategy.getErrorStats(

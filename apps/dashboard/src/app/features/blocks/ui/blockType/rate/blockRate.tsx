@@ -9,7 +9,7 @@ import {
   chartAxisTick,
 } from "@/components/ui/chart";
 import { Level } from "@/lib/config/domain/Level";
-import { SeriesBlockMeasure } from "../../../domain/BlockMeasure";
+import { SeriesBlockMeasure } from "../../../../../../lib/shared/domain/BlockMeasure";
 import { useSeriesChart } from "../useSeriesChart";
 
 export function BlockRate({

@@ -18,10 +18,11 @@ export class LogMonitorResolver {
   ): LogMonitorFactoryInterface<LogMonitorStrategyInterface> {
 
     for (const factory of this.factories) {
-      if (factory.support(wiring, STRATEGY_RESOLVER)) {
+      if (factory.support(STRATEGY_RESOLVER)) {
         return factory;
       }
     }
+
 
     throw new Error(
       `No LogMonitorFactory supports type "${STRATEGY_RESOLVER}" for Strapi element "${wiring.id}". Please check its strategy and its tool in admin.`,

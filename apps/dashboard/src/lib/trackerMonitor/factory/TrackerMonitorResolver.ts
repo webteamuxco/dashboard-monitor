@@ -17,7 +17,7 @@ export class TrackerMonitorResolver {
   ): TrackerMonitorFactoryInterface<TrackerMonitorStrategyInterface> {
 
     for (const factory of this.factories) {
-      if (factory.support(wiring, STRATEGY_RESOLVER)) {
+      if (factory.support(STRATEGY_RESOLVER)) {
         return factory;
       }
     }

@@ -8,12 +8,16 @@ import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
 export abstract class AbstractGlitchTipFactory {
 
-  support(wiring: ToolWiring, strategyResolver: string): boolean {
-    return new GlitchtipConfigurationStrategy().isConfigure(wiring, strategyResolver);
+  constructor(
+    protected readonly wiring: ToolWiring,
+  ) {}
+
+  support(strategyResolver: string): boolean {
+    return new GlitchtipConfigurationStrategy().isConfigure(this.wiring, strategyResolver);
   }
 
-  createConnection(wiring: ToolWiring): ToolConnection {
-    return new GlitchtipConfigurationStrategy().resolveConnection(wiring)
+  createConnection(): ToolConnection {
+    return new GlitchtipConfigurationStrategy().resolveConnection(this.wiring)
   }
 
   isGlitchtipConnection(

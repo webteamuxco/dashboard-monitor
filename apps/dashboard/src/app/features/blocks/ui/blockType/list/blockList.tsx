@@ -5,7 +5,7 @@ import { EmptyState } from "@/app/features/dashboard/ui/EmptyState";
 import { isDashboardInteractive } from "@/app/features/dashboard/state/useDashboardWindow";
 import { IssueDetailSheet } from "@/app/features/issues/ui/IssueDetailSheet";
 import { BlockLine } from "./blockLine";
-import { ListBlockMeasure } from "../../../domain/BlockMeasure";
+import { ListBlockMeasure } from "../../../../../../lib/shared/domain/BlockMeasure";
 
 export function BlockList({
   blockId,

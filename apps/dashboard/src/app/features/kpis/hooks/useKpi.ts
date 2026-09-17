@@ -3,7 +3,7 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { dashboardKpiKeys } from "../queryKeys";
 import { fetchKpiMeasureClient } from "../data-access/fetchKpiMeasureClient";
-import { KpiMeasure } from "../domain/KpiMeasure";
+import { KpiMeasure } from "../../../../lib/shared/domain/KpiMeasure";
 
 export function useKpi(
   kpiId: string,

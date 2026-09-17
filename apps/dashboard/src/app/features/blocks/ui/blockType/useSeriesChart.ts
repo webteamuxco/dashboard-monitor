@@ -7,7 +7,7 @@ import {
 } from "@/app/features/utils/accent";
 import type { ChartConfig } from "@/components/ui/chart";
 import type { Level } from "@/lib/config/domain/Level";
-import type { SeriesBlockMeasure } from "../../domain/BlockMeasure";
+import type { SeriesBlockMeasure } from "../../../../../lib/shared/domain/BlockMeasure";
 
 export interface SeriesChartRow {
   [seriesKey: string]: number | string | null;

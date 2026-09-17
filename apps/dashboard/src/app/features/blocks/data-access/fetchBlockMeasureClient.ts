@@ -1,4 +1,4 @@
-import { BlockMeasure } from "../domain/BlockMeasure";
+import { BlockMeasure } from "../../../../lib/shared/domain/BlockMeasure";
 
 export async function fetchBlockMeasureClient(
   blockId: string,

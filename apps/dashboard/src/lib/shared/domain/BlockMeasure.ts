@@ -43,3 +43,8 @@ export interface BlockListEntry {
   timestampIso: string;
   timestampLabel: string;
 }
+
+export interface Buckets {
+  interval: PeriodInterval;
+  sizeMs: number;
+}

@@ -13,7 +13,7 @@ const fetchTimeline = async (
 ): Promise<VisitorPoint[]> => {
   const wiring = await loadToolWiring(kind, documentId);
   const trackerMonitorFactory = getTrackerMonitor(wiring)
-  const connection = trackerMonitorFactory.createConnection(wiring)
+  const connection = trackerMonitorFactory.createConnection()
   const strategy = trackerMonitorFactory.createStrategy(connection)
 
   const points = await strategy.getActiveUsersTimeline(

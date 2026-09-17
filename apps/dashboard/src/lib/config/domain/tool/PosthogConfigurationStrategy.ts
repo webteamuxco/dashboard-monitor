@@ -12,6 +12,9 @@ export type PosthogConfiguration = {
     projectId: string;
 };
 
+export interface PosthogConnection extends ToolConnection {
+}
+
 export class PosthogConfigurationStrategy implements ToolConfigurationStrategyInterface {
 
     isConfigure(wiring: ToolWiring, strategyName: string): boolean {
@@ -26,7 +29,7 @@ export class PosthogConfigurationStrategy implements ToolConfigurationStrategyIn
      * element's tool configuration. The API key stays in env — only the
      * non-secret connection details live in Strapi.
      */
-    resolveConnection(wiring: ToolWiring): ToolConnection {
+    resolveConnection(wiring: ToolWiring): PosthogConnection {
         const posthog = wiring.configuration;
 
         if (posthog?.kind !== TOOL_KIND) {

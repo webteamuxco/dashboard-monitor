@@ -3,7 +3,7 @@
 import { useQuery, UseQueryResult } from "@tanstack/react-query";
 import { dashboardBlockKeys } from "../queryKeys";
 import { fetchBlockMeasureClient } from "../data-access/fetchBlockMeasureClient";
-import { BlockMeasure } from "../domain/BlockMeasure";
+import { BlockMeasure } from "../../../../lib/shared/domain/BlockMeasure";
 
 export function useBlock(
   blockId: string,

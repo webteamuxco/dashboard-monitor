@@ -22,6 +22,10 @@ import { mapGlitchTipStatsV2 } from "./mappers/statsV2Mapper";
 import { mapGlitchTipEvent } from "./mappers/EventMapper";
 import { mapGlitchTipComment } from "./mappers/CommentMapper";
 import { mapGlitchTipIssueStats } from "./mappers/issueStatsMapper";
+import { GlitchtipConnection } from "@/lib/config/domain/tool/GlitchtipConfigurationStrategy";
+import { KpiMeasure } from "@/lib/shared/domain/KpiMeasure";
+import { BlockListEntry, BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
+import { buildBlockPeriod, buildKpiPeriod, formatRelative, INTERVAL_SIZE_MS, resolveBuckets, toPoint } from "@/lib/shared/helper/periodHelper";
 
 // GlitchTip's stats_v2 endpoint is a raw ingestion-volume counter: it ignores
 // `environment` (as a param and as a `query` token). The issues list, however,
@@ -36,11 +40,25 @@ const DAY_MS = 86_400_000;
 const ISSUES_SCAN_LIMIT = 200;
 // Keeps the repeated `groups` params off the URL-length limit.
 const STATS_GROUPS_PER_REQUEST = 50;
+const DEFAULT_LIST_LIMIT = 20;
 
 function chunk<T>(items: T[], size: number): T[][] {
   const chunks: T[][] = [];
   for (let i = 0; i < items.length; i += size) chunks.push(items.slice(i, i + size));
   return chunks;
+}
+
+
+function toIssueEntry(issue: Issue): BlockListEntry {
+  return {
+    id: issue.id,
+    title: issue.title,
+    subtitle: issue.type,
+    level: issue.level,
+    count: issue.eventCount,
+    timestampIso: issue.lastSeen,
+    timestampLabel: formatRelative(issue.lastSeen),
+  };
 }
 
 // issues-stats exposes hourly and daily buckets only, so the requested interval
@@ -72,14 +90,15 @@ function isNotFound(err: unknown): boolean {
 }
 
 export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterface {
+
   constructor(
     private readonly client: GlitchTipClient,
-    private readonly organizationSlug: string,
-  ) {}
+    private readonly connection: GlitchtipConnection,
+  ) { }
 
   async getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]> {
     const dto = await this.client.getPaginated<GlitchTipIssueDto>(
-      `/api/0/organizations/${this.organizationSlug}/issues/`,
+      `/api/0/organizations/${this.connection.organizationSlug}/issues/`,
       {
         project: projectId,
         query: buildIssueQuery(filters),
@@ -102,7 +121,7 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     }
 
     const dto = await this.client.get<GlitchTipStatsV2Dto>(
-      `/api/0/organizations/${this.organizationSlug}/stats_v2/`,
+      `/api/0/organizations/${this.connection.organizationSlug}/stats_v2/`,
       {
         category: "error",
         interval: period.interval,
@@ -121,7 +140,7 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     environment: string,
   ): Promise<ErrorStatsSeries> {
     const issues = await this.client.getPaginated<GlitchTipIssueDto>(
-      `/api/0/organizations/${this.organizationSlug}/issues/`,
+      `/api/0/organizations/${this.connection.organizationSlug}/issues/`,
       { project: projectId, environment, query: "" },
       { maxItems: ISSUES_SCAN_LIMIT },
     );
@@ -135,7 +154,7 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     // GlitchTip answers with 500s.
     for (const groups of chunk(issues.map((issue) => issue.id), STATS_GROUPS_PER_REQUEST)) {
       const page = await this.client.get<GlitchTipIssueStatsDto[]>(
-        `/api/0/organizations/${this.organizationSlug}/issues-stats/`,
+        `/api/0/organizations/${this.connection.organizationSlug}/issues-stats/`,
         { groups, statsPeriod },
       );
       stats.push(...page);
@@ -184,6 +203,85 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     );
     return dto.map(mapGlitchTipComment);
   }
+
+  // GET MEASURES
+
+  async getKpiMeasures(windowMinutes: number | null, environment: string | null): Promise<KpiMeasure> {
+
+    const period = windowMinutes === null ? null : buildKpiPeriod(windowMinutes);
+
+    if (!period) {
+      // No `limit`: a capped list would make the total plateau at the cap
+      // instead of reporting how many issues are actually open.
+      const issues = await this.getIssues(this.connection.projectId, {
+        resolved: false,
+        environment: environment ?? undefined,
+      });
+
+      return { value: issues.length, windowMinutes };
+    }
+
+    const stats = await this.getErrorStats(
+      this.connection.projectId,
+      period,
+      environment ?? undefined,
+    );
+
+    return {
+      value: stats.points.reduce(
+        (total, point) => total + (point.count ?? 0),
+        0,
+      ),
+      windowMinutes,
+    };
+  }
+
+  async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null,): Promise<BlockMeasure> {
+
+    const rows = limit ?? DEFAULT_LIST_LIMIT;
+    const now = new Date();
+
+    if (windowMinutes === null) {
+      const issues = await this.getIssues(this.connection.projectId, {
+        limit: rows,
+        environment: environment ?? undefined,
+      });
+
+      return {
+        type: "list",
+        entries: issues.map(toIssueEntry),
+        hasDetail: true,
+        windowMinutes,
+      };
+    }
+
+    const buckets = resolveBuckets(windowMinutes);
+    const stats = await this.getErrorStats(
+      this.connection.projectId,
+      buildBlockPeriod(now, windowMinutes, buckets.interval),
+      environment ?? undefined,
+    );
+    // The provider may serve coarser buckets than the window asked for, so
+    // the labels follow what came back rather than what was requested.
+    const servedSizeMs = INTERVAL_SIZE_MS[stats.interval];
+
+    return {
+      type: "series",
+      windowMinutes,
+      interval: stats.interval,
+      series: [
+        {
+          key: "count",
+          label: "Erreurs",
+          points: stats.points.map((p) =>
+            toPoint(new Date(p.timestamp), p.count, servedSizeMs),
+          ),
+        },
+      ],
+    };
+  }
+
+  // POST
 
   async createIssueComment(
     issueId: string,

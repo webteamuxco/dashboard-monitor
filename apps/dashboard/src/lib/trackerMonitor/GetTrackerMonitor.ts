@@ -5,14 +5,17 @@ import type { TrackerMonitorStrategyInterface } from "./strategy/TrackerMonitorS
 import { PostHogFactory } from "./adapters/posthog/PostHogFactory";
 import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
-const factories: TrackerMonitorFactoryInterface<TrackerMonitorStrategyInterface>[] = [
-  new PostHogFactory(),
-];
 
-const resolver = new TrackerMonitorResolver(factories);
 
 export function getTrackerMonitor(
   wiring: ToolWiring,
 ): TrackerMonitorFactoryInterface<TrackerMonitorStrategyInterface> {
+
+  const factories: TrackerMonitorFactoryInterface<TrackerMonitorStrategyInterface>[] = [
+    new PostHogFactory(wiring),
+  ];
+
+  const resolver = new TrackerMonitorResolver(factories);
+
   return resolver.resolve(wiring);
 }

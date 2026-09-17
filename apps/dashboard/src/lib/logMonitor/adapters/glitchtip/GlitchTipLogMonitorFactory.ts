@@ -17,6 +17,6 @@ export class GlitchTipLogMonitorFactory extends AbstractGlitchTipFactory impleme
 
     const client = this.createGlithtipClient(connection)
     
-    return new GlitchTipLogMonitorStrategy(client, connection.organizationSlug);
+    return new GlitchTipLogMonitorStrategy(client, connection, this.wiring);
   }
 }

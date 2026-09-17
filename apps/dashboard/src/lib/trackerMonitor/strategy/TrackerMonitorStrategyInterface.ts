@@ -1,6 +1,7 @@
+import { StrategyInterface } from "@/lib/shared/factory/StrategyInterace";
 import type { VisitorsTimeSeriesPoint } from "../domain/VisitorsTimeSeriesPoint";
 
-export interface TrackerMonitorStrategyInterface {
+export interface TrackerMonitorStrategyInterface extends StrategyInterface {
   getActiveUsersTimeline(
     projectId: string,
     windowMinutes: number,

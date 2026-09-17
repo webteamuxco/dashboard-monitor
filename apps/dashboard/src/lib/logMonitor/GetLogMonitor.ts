@@ -6,14 +6,15 @@ import { GlitchTipLogMonitorFactory } from "./adapters/glitchtip/GlitchTipLogMon
 import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 
 
-const factories: LogMonitorFactoryInterface<LogMonitorStrategyInterface>[] = [
-  new GlitchTipLogMonitorFactory(),
-];
-
-const resolver = new LogMonitorResolver(factories);
-
 export function getLogMonitor(
   wiring: ToolWiring,
 ): LogMonitorFactoryInterface<LogMonitorStrategyInterface> {
+
+  const factories: LogMonitorFactoryInterface<LogMonitorStrategyInterface>[] = [
+    new GlitchTipLogMonitorFactory(wiring),
+  ];
+
+  const resolver = new LogMonitorResolver(factories);
+
   return resolver.resolve(wiring);
 }

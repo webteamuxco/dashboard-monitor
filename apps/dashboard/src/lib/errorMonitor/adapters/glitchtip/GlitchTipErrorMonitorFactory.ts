@@ -17,6 +17,6 @@ export class GlitchTipFactory extends AbstractGlitchTipFactory implements ErrorM
 
     const client = this.createGlithtipClient(connection)
     
-    return new GlitchTipErrorMonitorStrategy(client, connection.organizationSlug);
+    return new GlitchTipErrorMonitorStrategy(client, connection);
   }
 }

@@ -3,8 +3,9 @@ import type { Period } from "@/lib/shared/domain/Period";
 import type { ErrorStatsSeries } from "../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../domain/IssueEvent";
 import type { IssueComment, NewIssueComment } from "../domain/IssueComment";
+import { StrategyInterface } from "@/lib/shared/factory/StrategyInterace";
 
-export interface ErrorMonitorStrategyInterface {
+export interface ErrorMonitorStrategyInterface extends StrategyInterface {
 
   // GET
   getIssues(projectId: string, filters?: IssueFilters): Promise<Issue[]>;
