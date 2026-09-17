@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: https://glitchtip.uxco-group.com/api/1/envelope/?sentry_version=7&sentry_key=2e9b137a1b394b3ebcfc35191d02fe30&sentry_client=sentry.javascript.react%2F9.47.1
+  url: "{{url}}/api/1/envelope/?sentry_version=7&sentry_key=2e9b137a1b394b3ebcfc35191d02fe30&sentry_client=sentry.javascript.react%2F9.47.1"
   params:
     - name: sentry_version
       value: "7"

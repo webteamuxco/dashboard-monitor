@@ -5,7 +5,11 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/config/projects/f20rkqy3w59m3k5kloosbwug"
+  url: "{{url}}/api/config/projects/:projectId"
+  params:
+    - name: projectId
+      value: f20rkqy3w59m3k5kloosbwug
+      type: path
   auth: inherit
 
 settings:

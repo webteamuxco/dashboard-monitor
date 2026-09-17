@@ -5,7 +5,11 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/kpis/gm5w75zm2hzsgnimh2jx1cqy"
+  url: "{{url}}/api/kpis/:kpiId"
+  params:
+    - name: kpiId
+      value: gm5w75zm2hzsgnimh2jx1cqy
+      type: path
   auth: inherit
 
 settings:

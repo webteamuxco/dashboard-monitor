@@ -5,11 +5,14 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/blocks/t1lv940wmszrm6ketphh6rkc?limit=20"
+  url: "{{url}}/api/blocks/:blockId?limit=20"
   params:
     - name: limit
       value: "20"
       type: query
+    - name: blockId
+      value: t1lv940wmszrm6ketphh6rkc
+      type: path
     - name: windowMinutes
       value: "1440"
       type: query
