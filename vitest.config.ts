@@ -50,13 +50,11 @@ export default defineConfig({
         "apps/dashboard/src/app/page.tsx",
         "apps/dashboard/src/app/providers.tsx",
         // Presentational widgets: a hook call (covered) plus Recharts markup.
-        // Their logic — which of them mounts — is covered by DashboardContent
-        // and KpiRow instead.
+        // Their logic — which of them mounts — is covered through
+        // DashboardContent, PanelKpi / PanelBlock and BlockCardContent instead.
         "apps/dashboard/src/app/features/*/ui/*Panel.tsx",
-        "apps/dashboard/src/app/features/*/ui/*Kpi.tsx",
-        "apps/dashboard/src/app/features/*/ui/*KpiCard.tsx",
         "apps/dashboard/src/app/features/*/ui/*Sheet.tsx",
-        "apps/dashboard/src/app/features/dashboard/ui/KpiCard.tsx",
+        "apps/dashboard/src/app/features/kpis/ui/KpiCard.tsx",
       ],
     },
   },
