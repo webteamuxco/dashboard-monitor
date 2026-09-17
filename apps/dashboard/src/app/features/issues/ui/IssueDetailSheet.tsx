@@ -22,6 +22,7 @@ import { useIssueDetail } from "../hooks/useIssueDetail";
 import { useCreateIssueComment } from "../hooks/useCreateIssueComment";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { IssueUpdateStatusButton } from "./IssueUpdateStatusButton";
 
 
 const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" | "debug"> = {
@@ -103,7 +104,7 @@ function DetailBody({
         <SheetTitle className="font-mono text-sm break-words">
           {issue.title}
         </SheetTitle>
-        <SheetDescription className="sr-only">
+        <SheetDescription>
           Détails de l&apos;issue {issue.id}
         </SheetDescription>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -130,6 +131,8 @@ function DetailBody({
           lastSeenLabel={issue.lastSeenLabel}
           eventCount={issue.eventCount}
           isResolved={issue.isResolved}
+          blockId={blockId}
+          issueId={issue.id}
         />
 
         <div className="flex gap-2.5 h-full">
@@ -191,6 +194,8 @@ function MetaSection({
   lastSeenLabel,
   eventCount,
   isResolved,
+  blockId,
+  issueId
 }: {
   firstSeenIso: string;
   firstSeenLabel: string;
@@ -198,6 +203,8 @@ function MetaSection({
   lastSeenLabel: string;
   eventCount: number;
   isResolved: boolean;
+  blockId: string;
+  issueId: string;
 }) {
   return (
     <section>
@@ -206,7 +213,14 @@ function MetaSection({
         <MetaRow label="Première occurrence" value={firstSeenLabel} title={firstSeenIso} />
         <MetaRow label="Dernière occurrence" value={lastSeenLabel} title={lastSeenIso} />
         <MetaRow label="Événements" value={String(eventCount)} />
-        <MetaRow label="Statut" value={isResolved ? "résolu" : "non résolu"} />
+      </dl>
+      <dl className="relative grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[0.6875rem]">
+          <MetaRow label="Statut" value={isResolved ? "résolu" : "non résolu"} />
+          <IssueUpdateStatusButton
+            className="absolute right-135 -top-2.5"
+            blockId={blockId} 
+            issueId={issueId} 
+            isResolved={isResolved}/>
       </dl>
     </section>
   );

@@ -5,7 +5,14 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/blocks/t1lv940wmszrm6ketphh6rkc/issues/1"
+  url: "{{url}}/api/blocks/:blockId/issues/:issueId"
+  params:
+    - name: issueId
+      value: "255"
+      type: path
+    - name: blockId
+      value: t1lv940wmszrm6ketphh6rkc
+      type: path
   auth: inherit
 
 settings:

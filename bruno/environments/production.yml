@@ -1,6 +1,6 @@
 name: production
 variables:
-  - name: url
+  - name: glitchtip-url
     value: https://glitchtip.uxco-group.com
   - name: projectId
     value: "1"
@@ -8,3 +8,5 @@ variables:
     value: uxco-group
   - secret: true
     name: token-api
+  - name: url
+    value: https://dashboard.uxco-group.com

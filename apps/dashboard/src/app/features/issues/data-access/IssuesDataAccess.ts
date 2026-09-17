@@ -14,6 +14,7 @@ import {
   loadToolWiring,
 } from "@/lib/config/domain/loadToolWiring";
 import type { ErrorMonitorStrategyInterface } from "@/lib/errorMonitor/strategy/ErrorMonitorStrategyInterface";
+import { StatusDTO } from "../domain/statusDto";
 
 const EVENTS_PAGE_SIZE = 25;
 
@@ -62,7 +63,20 @@ const postIssueComment =
     const strategy = await resolveMonitor(kind, documentId);
 
     return await strategy.createIssueComment(issueId, dto);
-  }
+}
+
+
+const putIssueStatus =
+  async (
+    kind: DashboardElementKind,
+    documentId: string,
+    issueId: string,
+    content: StatusDTO,
+  ): Promise<Issue> => {
+    const strategy = await resolveMonitor(kind, documentId);
+
+    return await strategy.updateIssueStatus(issueId, { status: content.status });
+}
 
 const fetchDetail = cache(
   async (
@@ -111,6 +125,15 @@ export class IssuesDataAccess {
     return postIssueComment(kind, documentId, issueId, {
       text: content.content,
     });
+  }
+
+  updateStatus(
+    kind: DashboardElementKind,
+    documentId: string,
+    issueId: string,
+    content: StatusDTO,
+  ): Promise<Issue> {
+    return putIssueStatus(kind, documentId, issueId, content);
   }
 }
 

@@ -1,0 +1,28 @@
+info:
+  name: POST Issues Comment
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/api/blocks/:blocksId/issues/:issuesId/comments/"
+  params:
+    - name: issuesId
+      value: "235"
+      type: path
+    - name: blocksId
+      value: lilgpl6icon91roznynb461u
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "content": "name update",
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

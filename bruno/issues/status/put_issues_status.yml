@@ -1,0 +1,28 @@
+info:
+  name: PUT Issues Status
+  type: http
+  seq: 1
+
+http:
+  method: PUT
+  url: "{{url}}/api/blocks/:blocksId/issues/:issuesId/status/"
+  params:
+    - name: issuesId
+      value: "235"
+      type: path
+    - name: blocksId
+      value: lilgpl6icon91roznynb461u
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "status": "resolved"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

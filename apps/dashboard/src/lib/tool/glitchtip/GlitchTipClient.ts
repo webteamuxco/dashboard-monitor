@@ -99,6 +99,15 @@ export class GlitchTipClient {
     return (await response.json()) as T;
   }
 
+  async put<T>(path: string, body: unknown, query?: QueryParams): Promise<T> {
+    const response = await this.request(path, query, {
+      method: "PUT",
+      body: JSON.stringify(body),
+      headers: { "Content-Type": "application/json" },
+    });
+    return (await response.json()) as T;
+  }
+
   // Follows the cursor pagination of a list endpoint and returns every item.
   // Use for feeds where the caller expects the full result set — a plain `get`
   // silently caps at GlitchTip's default page size (100).

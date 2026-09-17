@@ -1,8 +1,10 @@
 name: development
 variables:
-  - name: url
-    value: http://localhost:3001
+  - name: glitchtip-url
+    value: http://localhost:8000
   - name: projectId
     value: "1"
   - name: organizationSlug
     value: uxco-group
+  - name: url
+    value: http://localhost:3000

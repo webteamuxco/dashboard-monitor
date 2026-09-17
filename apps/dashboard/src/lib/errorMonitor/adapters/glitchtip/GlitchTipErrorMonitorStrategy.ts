@@ -26,6 +26,9 @@ import { GlitchtipConnection } from "@/lib/config/domain/tool/GlitchtipConfigura
 import { KpiMeasure } from "@/lib/shared/domain/KpiMeasure";
 import { BlockListEntry, BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
 import { buildBlockPeriod, buildKpiPeriod, formatRelative, INTERVAL_SIZE_MS, resolveBuckets, toPoint } from "@/lib/shared/helper/periodHelper";
+import {  GlitchTipIssueStatusPayloadDto } from "./dto/GlitchTipIssueStatus";
+import { GLITCHTIP_STATUSES, GlitchTipStatus, isGlitchTipStatus } from "@/lib/tool/glitchtip/dto/GlitchTipType";
+import { NewIssueStatus } from "../../domain/IssueStatus";
 
 // GlitchTip's stats_v2 endpoint is a raw ingestion-volume counter: it ignores
 // `environment` (as a param and as a `query` token). The issues list, however,
@@ -287,11 +290,34 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     issueId: string,
     comment: NewIssueComment,
   ): Promise<IssueComment> {
-    const payload: GlitchTipCommentPayloadDto = { data: { text: comment.text } };
+    const payload: GlitchTipCommentPayloadDto = { data: { 
+      text: comment.text
+    } };
     const dto = await this.client.post<GlitchTipCommentDto>(
       `/api/0/issues/${issueId}/comments/`,
       payload,
     );
     return mapGlitchTipComment(dto);
+  }
+
+   async updateIssueStatus(
+    issueId: string,
+    status: NewIssueStatus,
+  ): Promise<Issue> {
+    
+    if (!isGlitchTipStatus(status.status)) {
+      throw new Error(`Wrong status ${status.status}: authorized status are only ${GLITCHTIP_STATUSES.join(', ')}`)
+    }
+
+    const glitchtipStatus = status.status as GlitchTipStatus
+
+    const payload: GlitchTipIssueStatusPayloadDto = { status: glitchtipStatus };
+
+    const dto =  await this.client.put<GlitchTipIssueDto>(
+      `/api/0/issues/${issueId}/`,
+      payload
+    );
+
+    return mapGlitchTipIssue(dto);
   }
 }
