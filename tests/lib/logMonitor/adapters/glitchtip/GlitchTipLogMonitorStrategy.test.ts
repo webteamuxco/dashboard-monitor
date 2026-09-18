@@ -182,7 +182,7 @@ describe("GlitchTipLogMonitorStrategy — what both measures refuse", () => {
     { name: "getKpiMeasures", run: (s, w) => s.getKpiMeasures(w, null) },
     {
       name: "getBlockMeasures",
-      run: (s, w) => s.getBlockMeasures(w, null, null, null),
+      run: (s, w) => s.getBlockMeasures(w, null, null),
     },
   ];
 
@@ -241,7 +241,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
   it("returns one series shape whichever chart will draw it", async () => {
     const { strategy } = buildStrategy(logWiring(ONE_TAG));
 
-    const measure = await strategy.getBlockMeasures(30, null, null, null);
+    const measure = await strategy.getBlockMeasures(30, null, null);
 
     if (measure.type !== "series") throw new Error("expected a series");
     expect(measure.windowMinutes).toBe(30);
@@ -257,7 +257,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
       { id: "l2", body: "m", level: "info", timestamp: now },
     ]);
 
-    const measure = await strategy.getBlockMeasures(30, null, null, null);
+    const measure = await strategy.getBlockMeasures(30, null, null);
 
     if (measure.type !== "series") throw new Error("expected a series");
     const total = measure.series[0].points.reduce(
@@ -272,7 +272,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
   it("fills the quiet buckets so a bar is a real zero, not a gap", async () => {
     const { strategy } = buildStrategy(logWiring(ONE_TAG));
 
-    const measure = await strategy.getBlockMeasures(30, null, null, null);
+    const measure = await strategy.getBlockMeasures(30, null, null);
 
     if (measure.type !== "series") throw new Error("expected a series");
     expect(measure.series[0].points).toHaveLength(30);
@@ -284,7 +284,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
   it("keeps the buckets coarse on a wide window", async () => {
     const { strategy } = buildStrategy(logWiring(ONE_TAG));
 
-    const measure = await strategy.getBlockMeasures(24 * 60, null, null, null);
+    const measure = await strategy.getBlockMeasures(24 * 60, null, null);
 
     if (measure.type !== "series") throw new Error("expected a series");
     expect(measure.interval).toBe("1h");
@@ -293,7 +293,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
   it("names the series after the only tag the element declares", async () => {
     const { strategy } = buildStrategy(logWiring(ONE_TAG));
 
-    const measure = await strategy.getBlockMeasures(30, null, null, null);
+    const measure = await strategy.getBlockMeasures(30, null, null);
 
     if (measure.type !== "series") throw new Error("expected a series");
     expect(measure.series[0].label).toBe("reservation");
@@ -303,7 +303,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
     it("queries only the selected tag, since the provider ANDs the terms of one query", async () => {
       const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
 
-      await strategy.getBlockMeasures(30, "production", null, "t2");
+      await strategy.getBlockMeasures(30, "production", null, { tagId: "t2" });
 
       expect(getPaginated.mock.calls[0][1].query).toBe(
         "reservation.cancelled.production",
@@ -313,7 +313,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
     it("keeps the legacy behaviour when no tag is selected", async () => {
       const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
 
-      await strategy.getBlockMeasures(30, null, null, null);
+      await strategy.getBlockMeasures(30, null, null);
 
       expect(getPaginated.mock.calls[0][1].query).toBe(
         "reservation.sent reservation.cancelled",
@@ -327,7 +327,9 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
       const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
 
       await expect(
-        strategy.getBlockMeasures(30, null, null, "reservation.sent OR anything"),
+        strategy.getBlockMeasures(30, null, null, {
+          tagId: "reservation.sent OR anything",
+        }),
       ).rejects.toThrow(/declares no tag/);
       expect(getPaginated).not.toHaveBeenCalled();
     });
@@ -345,7 +347,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
         },
       ]);
 
-      const measure = await strategy.getBlockMeasures(null, null, 5, null);
+      const measure = await strategy.getBlockMeasures(null, null, 5);
 
       if (measure.type !== "list") throw new Error("expected a list");
       expect(measure.entries).toHaveLength(1);
@@ -356,7 +358,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
     it("marks the list as having no detail sheet", async () => {
       const { strategy } = buildStrategy(logWiring(ONE_TAG));
 
-      const measure = await strategy.getBlockMeasures(null, null, null, null);
+      const measure = await strategy.getBlockMeasures(null, null, null);
 
       if (measure.type !== "list") throw new Error("expected a list");
       expect(measure.hasDetail).toBe(false);
@@ -369,7 +371,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
         { id: "new", body: "m", level: "info", timestamp: "2026-05-28T09:00:00Z" },
       ]);
 
-      const measure = await strategy.getBlockMeasures(null, null, 1, null);
+      const measure = await strategy.getBlockMeasures(null, null, 1);
 
       if (measure.type !== "list") throw new Error("expected a list");
       expect(measure.entries.map((entry) => entry.id)).toEqual(["new"]);

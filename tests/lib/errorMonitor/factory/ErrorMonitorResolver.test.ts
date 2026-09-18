@@ -16,6 +16,7 @@ function fakeStrategy(): ErrorMonitorStrategyInterface {
     getIssueEvents: vi.fn(),
     getIssueComments: vi.fn(),
     createIssueComment: vi.fn(),
+    updateIssueStatus: vi.fn(),
     getKpiMeasures: vi.fn(),
     getBlockMeasures: vi.fn()
   };
