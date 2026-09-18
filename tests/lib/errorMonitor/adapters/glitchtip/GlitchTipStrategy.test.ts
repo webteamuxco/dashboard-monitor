@@ -467,6 +467,52 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       expect(getPaginated.mock.calls[0][1].limit).toBe(20);
     });
 
+    it("asks the provider for the open issues alone by default", async () => {
+      getPaginated.mockResolvedValue([]);
+
+      await strategy.getBlockMeasures(null, null, null);
+
+      expect(getPaginated.mock.calls[0][1].query).toBe("is:unresolved");
+    });
+
+    // Both statuses, not the resolved ones alone: an `is:resolved` query would
+    // hide the open issues the card exists for.
+    it("drops the status filter when the resolved rows are asked for", async () => {
+      getPaginated.mockResolvedValue([]);
+
+      await strategy.getBlockMeasures(null, null, null, { showResolved: true });
+
+      expect(getPaginated.mock.calls[0][1].query).toBe("");
+    });
+
+    it("carries the resolution status of each row", async () => {
+      getPaginated.mockResolvedValue([
+        buildIssueDto({ id: "i1", status: "resolved" }),
+        buildIssueDto({ id: "i2", status: "unresolved" }),
+      ]);
+
+      const measure = await strategy.getBlockMeasures(null, null, null, {
+        showResolved: true,
+      });
+
+      if (measure.type !== "list") throw new Error("expected a list");
+      expect(measure.entries.map((entry) => entry.isResolved)).toEqual([
+        true,
+        false,
+      ]);
+    });
+
+    it("ignores the resolved filter on the series branch", async () => {
+      get.mockResolvedValue({ intervals: [], groups: [] });
+
+      const measure = await strategy.getBlockMeasures(30, null, null, {
+        showResolved: true,
+      });
+
+      if (measure.type !== "series") throw new Error("expected a series");
+      expect(getPaginated).not.toHaveBeenCalled();
+    });
+
     it("returns one series shape whichever chart will draw it", async () => {
       get.mockResolvedValue({ intervals: [], groups: [] });
 

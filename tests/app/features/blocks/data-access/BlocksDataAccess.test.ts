@@ -127,15 +127,21 @@ describe("BlocksDataAccess.getMeasure", () => {
       5,
     );
 
-    expect(errorMeasuresMock).toHaveBeenCalledWith(30, "production", 5);
+    expect(errorMeasuresMock).toHaveBeenCalledWith(30, "production", 5, {
+      tagId: null,
+      showResolved: false,
+    });
   });
 
-  it("defaults the environment, the cap and the tag to null", async () => {
+  it("defaults the environment, the cap and the tag to null, and hides the resolved rows", async () => {
     loadToolWiringMock.mockResolvedValue(glitchtipWiring());
 
     await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-1", 30);
 
-    expect(errorMeasuresMock).toHaveBeenCalledWith(30, null, null);
+    expect(errorMeasuresMock).toHaveBeenCalledWith(30, null, null, {
+      tagId: null,
+      showResolved: false,
+    });
   });
 
   it("returns the measure the strategy built, untouched", async () => {
@@ -153,10 +159,11 @@ describe("BlocksDataAccess.getMeasure", () => {
     ).toEqual(measure);
   });
 
-  // Only the log monitor can narrow a block down to one of several tags, so it
-  // is the only family the tag id is threaded into.
-  describe("the selected log tag", () => {
-    it("reaches the log monitor as a fourth argument", async () => {
+  // The per-family knobs travel in one bag the orchestrator fills the same way
+  // for everyone: only the log monitor reads a tag id, only the error monitor a
+  // resolution status, and each one ignores the other's.
+  describe("the per-family options", () => {
+    it("carries the selected log tag to the log monitor", async () => {
       loadToolWiringMock.mockResolvedValue(LOG_WIRING);
 
       await new BlocksDataAccess().getMeasure(
@@ -168,22 +175,29 @@ describe("BlocksDataAccess.getMeasure", () => {
         "t2",
       );
 
-      expect(logMeasuresMock).toHaveBeenCalledWith(30, "production", null, "t2");
+      expect(logMeasuresMock).toHaveBeenCalledWith(30, "production", null, {
+        tagId: "t2",
+        showResolved: false,
+      });
     });
 
-    it("is not handed to a family that cannot narrow on it", async () => {
+    it("carries the resolved filter to the error monitor", async () => {
       loadToolWiringMock.mockResolvedValue(glitchtipWiring());
 
       await new BlocksDataAccess().getMeasure(
         DASHBOARD_BLOCK,
         "block-1",
-        30,
         null,
         null,
-        "t2",
+        null,
+        null,
+        true,
       );
 
-      expect(errorMeasuresMock).toHaveBeenCalledWith(30, null, null);
+      expect(errorMeasuresMock).toHaveBeenCalledWith(null, null, null, {
+        tagId: null,
+        showResolved: true,
+      });
     });
   });
 
@@ -212,7 +226,10 @@ describe("BlocksDataAccess.getMeasure", () => {
 
       await new BlocksDataAccess().getMeasure(DASHBOARD_BLOCK, "block-3", 60);
 
-      expect(trackerMeasuresMock).toHaveBeenCalledWith(60, null, null);
+      expect(trackerMeasuresMock).toHaveBeenCalledWith(60, null, null, {
+        tagId: null,
+        showResolved: false,
+      });
       expect(errorMeasuresMock).not.toHaveBeenCalled();
     });
   });

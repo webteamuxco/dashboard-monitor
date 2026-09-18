@@ -77,10 +77,11 @@ describe("dashboardBlockKeys", () => {
       "production",
       20,
       "tag-1",
+      false,
     ]);
   });
 
-  it("defaults the environment, the row limit and the tag to null", () => {
+  it("defaults the environment, the row limit and the tag to null, and the resolved rows to hidden", () => {
     expect(dashboardBlockKeys.measure("block-1", 30)).toEqual([
       "dashboardBlocks",
       "measure",
@@ -89,7 +90,15 @@ describe("dashboardBlockKeys", () => {
       null,
       null,
       null,
+      false,
     ]);
+  });
+
+  // The filter is applied by the provider, so the two lists are two datasets.
+  it("gives the resolved rows their own cache entry", () => {
+    expect(
+      dashboardBlockKeys.measure("block-1", null, null, null, null, true),
+    ).not.toEqual(dashboardBlockKeys.measure("block-1", null));
   });
 
   it("gives each tag of a multi-tag block its own cache entry", () => {
@@ -112,6 +121,31 @@ describe("dashboardBlockKeys", () => {
       "config",
       "prod-panel",
     ]);
+  });
+
+  // `measures` is what a mutation invalidates: it must stay a strict prefix of
+  // `measure`, or a status update refreshes nothing.
+  it("prefixes every measure variant of one block", () => {
+    expect(dashboardBlockKeys.measures("block-1")).toEqual([
+      "dashboardBlocks",
+      "measure",
+      "block-1",
+    ]);
+
+    const variants = [
+      dashboardBlockKeys.measure("block-1", 30),
+      dashboardBlockKeys.measure("block-1", null, "production", 20, "tag-1", true),
+    ];
+
+    for (const variant of variants) {
+      expect(variant.slice(0, 3)).toEqual(dashboardBlockKeys.measures("block-1"));
+    }
+  });
+
+  it("does not prefix another block", () => {
+    expect(dashboardBlockKeys.measure("block-2", 30).slice(0, 3)).not.toEqual(
+      dashboardBlockKeys.measures("block-1"),
+    );
   });
 });
 
