@@ -21,6 +21,10 @@ http:
       value: production
       type: query
       disabled: true
+    - name: showResolved
+      value: "true"
+      type: query
+      disabled: true
   auth: inherit
 
 settings:
