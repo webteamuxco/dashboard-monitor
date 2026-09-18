@@ -8,6 +8,7 @@ import { createElement } from "react";
 import { BlockMeasure } from "../../../../../lib/shared/domain/BlockMeasure";
 import { MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
 import { BlockTagSelector } from "./BlockTagSelector";
+import { ShowResolvedToggle } from "./ShowResolvedToggle";
 import { formatWindowLabel } from "@/app/features/dashboard/state/windowPresets";
 
 type BlockCardHeaderProps = {
@@ -17,7 +18,11 @@ type BlockCardHeaderProps = {
     showBackgroundDot: boolean,
     tags: MonitorStrategyTag[],
     selectedTagId: string | null,
-    onSelectTag: (tagId: string) => void
+    onSelectTag: (tagId: string) => void,
+    resolvedFilter: {
+        showResolved: boolean,
+        onToggleResolved: (showResolved: boolean) => void
+    } | null
 }
 
 export function BlockCardHeader(
@@ -28,7 +33,8 @@ export function BlockCardHeader(
         showBackgroundDot,
         tags,
         selectedTagId,
-        onSelectTag
+        onSelectTag,
+        resolvedFilter
     }: BlockCardHeaderProps
 ) {
     return (
@@ -60,6 +66,12 @@ export function BlockCardHeader(
                     tags={tags}
                     selectedTagId={selectedTagId}
                     onSelect={onSelectTag}
+                />
+                )}
+                {resolvedFilter && (
+                <ShowResolvedToggle
+                    showResolved={resolvedFilter.showResolved}
+                    onToggle={resolvedFilter.onToggleResolved}
                 />
                 )}
                 {showBackgroundDot && (

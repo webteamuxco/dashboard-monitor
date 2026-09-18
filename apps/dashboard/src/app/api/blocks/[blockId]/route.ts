@@ -40,6 +40,7 @@ export async function GET(
 
   const environment = request.nextUrl.searchParams.get("environment");
   const tag = request.nextUrl.searchParams.get("tag");
+  const showResolved = request.nextUrl.searchParams.get("showResolved") === "true";
 
   try {
 
@@ -50,6 +51,7 @@ export async function GET(
       environment,
       limit,
       tag,
+      showResolved,
     );
     return NextResponse.json({ data });
     

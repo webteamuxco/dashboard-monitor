@@ -27,6 +27,7 @@ export function BlockList({
         {measure.entries.map((entry) => (
           <BlockLine
             key={entry.id}
+            blockId={blockId}
             entry={entry}
             onSelect={
               canOpenDetail ? () => setSelectedEntryId(entry.id) : undefined

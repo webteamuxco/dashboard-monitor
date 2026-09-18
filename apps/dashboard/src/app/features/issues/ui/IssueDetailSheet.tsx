@@ -22,7 +22,7 @@ import { useIssueDetail } from "../hooks/useIssueDetail";
 import { useCreateIssueComment } from "../hooks/useCreateIssueComment";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { IssueUpdateStatusButton } from "./IssueUpdateStatusButton";
+import { UpdateStatusButton } from "../../blocks/ui/card/UpdateStatusButton";
 
 
 const LEVEL_VARIANT: Record<ErrorLevel, "fatal" | "error" | "warning" | "info" | "debug"> = {
@@ -216,7 +216,7 @@ function MetaSection({
       </dl>
       <dl className="relative grid grid-cols-2 gap-x-3 gap-y-1.5 font-mono text-[0.6875rem]">
           <MetaRow label="Statut" value={isResolved ? "résolu" : "non résolu"} />
-          <IssueUpdateStatusButton
+          <UpdateStatusButton
             className="absolute right-135 -top-2.5"
             blockId={blockId} 
             issueId={issueId} 

@@ -1,4 +1,3 @@
-import type { IssueComment } from "@/lib/errorMonitor/domain/IssueComment";
 import { StatusDTO } from "../domain/statusDto";
 import { Issue } from "@/lib/errorMonitor/domain/Issue";
 

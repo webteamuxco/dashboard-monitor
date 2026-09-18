@@ -12,6 +12,7 @@ export function useBlock(
   limit: number | null,
   tagId: string | null,
   intervalMs: number,
+  showResolved = false,
 ): UseQueryResult<BlockMeasure, Error> {
   return useQuery({
     queryKey: dashboardBlockKeys.measure(
@@ -20,9 +21,17 @@ export function useBlock(
       environment,
       limit,
       tagId,
+      showResolved,
     ),
     queryFn: () =>
-      fetchBlockMeasureClient(blockId, windowMinutes, environment, limit, tagId),
+      fetchBlockMeasureClient(
+        blockId,
+        windowMinutes,
+        environment,
+        limit,
+        tagId,
+        showResolved,
+      ),
     refetchInterval: intervalMs > 0 ? intervalMs : false,
   });
 }

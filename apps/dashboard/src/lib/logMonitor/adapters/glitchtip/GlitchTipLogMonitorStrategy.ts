@@ -10,7 +10,7 @@ import { buildLogQuery } from "@/lib/utils";
 import { ToolWiring } from "@/lib/config/domain/ToolWiring";
 import { LOG_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 import { aggregateByBucket, buildBlockPeriod, buildEmptyBuckets, buildKpiPeriod, DEFAULT_LIST_LIMIT, formatRelative, resolveBuckets } from "@/lib/shared/helper/periodHelper";
-import { BlockListEntry, BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
+import { BlockListEntry, BlockMeasure, BlockMeasureOptions } from "@/lib/shared/domain/BlockMeasure";
 import { LogMonitorStrategy, MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
 import { KpiMeasure } from "@/lib/shared/domain/KpiMeasure";
 
@@ -124,8 +124,9 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
     return { value: logs.length, windowMinutes };
   }
 
-  async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null, tagId: string | null): Promise<BlockMeasure> {
+  async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null, options?: BlockMeasureOptions): Promise<BlockMeasure> {
 
+    const tagId = options?.tagId ?? null;
     const strategy = this.requireLogStrategy();
     const now = new Date();
     const rows = limit ?? DEFAULT_LIST_LIMIT;

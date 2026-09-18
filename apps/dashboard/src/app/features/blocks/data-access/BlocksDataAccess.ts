@@ -4,7 +4,6 @@ import {
   DashboardElementKind,
   loadToolWiring,
 } from "@/lib/config/domain/loadToolWiring";
-import { LOG_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 import { BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
 import { resolveMonitorFactory } from "@/lib/shared/factory/MonitorFactoryResolver";
 
@@ -16,6 +15,7 @@ const fetchMeasure = cache(
     environment: string | null,
     limit: number | null,
     tagId: string | null = null,
+    showResolved = false,
   ): Promise<BlockMeasure> => {
     const wiring = await loadToolWiring(kind, documentId);
     const strategy = wiring.strategy;
@@ -29,12 +29,12 @@ const fetchMeasure = cache(
     const factory = resolveMonitorFactory(wiring);
     const connection = factory.createConnection();
     const monitor = factory.createStrategy(connection);
+    
 
-    if (strategy.kind === LOG_MONITOR_STRATEGY_ENUM) {
-      return monitor.getBlockMeasures(windowMinutes, environment, limit, tagId)
-    }
-
-    return monitor.getBlockMeasures(windowMinutes, environment, limit)
+    return monitor.getBlockMeasures(windowMinutes, environment, limit, {
+      tagId,
+      showResolved,
+    })
   },
 );
 
@@ -46,6 +46,7 @@ export class BlocksDataAccess {
     environment: string | null = null,
     limit: number | null = null,
     tagId: string | null = null,
+    showResolved = false,
   ): Promise<BlockMeasure> {
     return fetchMeasure(
       kind,
@@ -54,6 +55,7 @@ export class BlocksDataAccess {
       environment,
       limit,
       tagId,
+      showResolved,
     );
   }
 }

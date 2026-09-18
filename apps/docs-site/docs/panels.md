@@ -221,7 +221,7 @@ sequenceDiagram
     Fac-->>DA: { baseUrl, organizationSlug, projectId }
     DA->>Fac: createStrategy(connection)
     Note over Fac: reads GLITCHTIP_TOKEN, builds the client
-    DA->>Fac: strategy.getBlockMeasures(window, environment, limit)
+    DA->>Fac: strategy.getBlockMeasures(window, environment, limit, { tagId, showResolved })
     Note over Fac: the measure is built here, not in the data access
 ```
 
