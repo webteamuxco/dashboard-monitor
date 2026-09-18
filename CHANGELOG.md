@@ -5,6 +5,36 @@ Toutes les évolutions notables de la plateforme UXCO Booking sont documentées 
 Format basé sur [Keep a Changelog](https://keepachangelog.com/) et
 [Conventional Commits](https://www.conventionalcommits.org/).
 
+## [3.1.0] - 2026-09-18
+
+### 📚 Documentation
+
+- **(release)** Update CHANGELOG.md [skip ci]
+- **(dashboard)** Update all docs after refacto
+- **(dashboard)** Add missing tags check on block docs
+- **(dashboard)** Add color to bar block docs
+- **(bruno)** Update all dashboard bruno request and add status update
+- **(dashbaord)** Add mark as resolved feature to bruno
+- **(release)** Update CHANGELOG.md [skip ci]
+
+### 📦 Build & dépendances
+
+- **(dashboard)** Remove dead code for vitest config
+- **(dashboard)** Bump version 3.1.0
+
+### 🚀 Nouveautés
+
+- **(dashboard)** Add missing tags check on block
+- **(dashboard)** Add color to bar block
+- **(dashbaord)** Add mark as resolved feature
+
+### 🧪 Tests
+
+- **(dashbaord)** Update all test for refocato of data-access
+- **(dashboard)** Add missing tags check on block tests
+- **(dashboard)** Add color to bar block tests
+- **(dashbaord)** Add mark as resolved feature tests
+
 ## [3.0.0] - 2026-09-15
 
 ### 📚 Documentation
