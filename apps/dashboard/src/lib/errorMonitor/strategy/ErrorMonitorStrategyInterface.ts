@@ -4,7 +4,6 @@ import type { ErrorStatsSeries } from "../domain/TimeSeriesPoint";
 import type { IssueEvent } from "../domain/IssueEvent";
 import type { IssueComment, NewIssueComment } from "../domain/IssueComment";
 import { StrategyInterface } from "@/lib/shared/factory/StrategyInterace";
-import { GlitchTipStatus } from "@/lib/tool/glitchtip/dto/GlitchTipType";
 import { NewIssueStatus } from "../domain/IssueStatus";
 
 export interface ErrorMonitorStrategyInterface extends StrategyInterface {

@@ -6,6 +6,7 @@ export async function fetchBlockMeasureClient(
   environment: string | null,
   limit: number | null,
   tagId: string | null = null,
+  showResolved = false,
 ): Promise<BlockMeasure> {
   const params = new URLSearchParams();
   if (windowMinutes !== null) {
@@ -19,6 +20,9 @@ export async function fetchBlockMeasureClient(
   }
   if (tagId) {
     params.set("tag", tagId);
+  }
+  if (showResolved) {
+    params.set("showResolved", "true");
   }
 
   const query = params.toString();

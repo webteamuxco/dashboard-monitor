@@ -162,7 +162,8 @@ Inventory (the id column says *which* Strapi value the key embeds):
 | `dashboardKpiKeys.config(slug)` | `["dashboardKpis", "config", slug]` | panel slug |
 | `dashboardKpiKeys.measure(id, win, env)` | `["dashboardKpis", "measure", id, win, env]` | dashboard KPI |
 | `dashboardBlockKeys.config(slug)` | `["dashboardBlocks", "config", slug]` | panel slug |
-| `dashboardBlockKeys.measure(id, win, env, limit, tag)` | `["dashboardBlocks", "measure", id, win, env, limit, tag]` | dashboard block |
+| `dashboardBlockKeys.measures(id)` | `["dashboardBlocks", "measure", id]` | dashboard block |
+| `dashboardBlockKeys.measure(id, win, env, limit, tag, showResolved)` | `["dashboardBlocks", "measure", id, win, env, limit, tag, showResolved]` | dashboard block |
 | `issuesKeys.detail(issueId)` | `["issues", "detail", issueId]` | — (provider issue id) |
 
 Two rules:
@@ -292,8 +293,10 @@ flowchart TD
 
 ```typescript
 const queryClient = useQueryClient();
-queryClient.invalidateQueries({ queryKey: dashboardBlockKeys.measure(blockId, windowMinutes) });
+queryClient.invalidateQueries({ queryKey: dashboardBlockKeys.measures(blockId) });
 ```
+
+`measures(blockId)` stops at the id, so one call covers every window / environment / tag / `showResolved` variant that block holds at once — which is what `useUpdateIssueStatus` needs, since a resolved row changes the list under every one of them. Pass the full `measure(...)` key only to target a single card in a single state.
 
 The header's **Refresh** button takes the blunt version, `invalidateQueries()` with no key, which refetches every mounted query at once.
 

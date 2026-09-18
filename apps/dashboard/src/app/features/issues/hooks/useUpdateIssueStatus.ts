@@ -2,6 +2,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { issuesKeys } from "../queryKeys";
+import { dashboardBlockKeys } from "@/app/features/blocks/queryKeys";
 import { putIssueStatusClient } from "../data-access/putIssueStatusClient";
 
 export function useUpdateIssueStatus(blockId: string, issueId: string) {
@@ -12,6 +13,9 @@ export function useUpdateIssueStatus(blockId: string, issueId: string) {
       putIssueStatusClient(blockId, issueId, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: issuesKeys.detail(issueId) });
+      queryClient.invalidateQueries({
+        queryKey: dashboardBlockKeys.measures(blockId),
+      });
     },
   });
 }

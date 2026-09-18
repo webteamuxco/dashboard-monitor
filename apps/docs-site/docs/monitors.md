@@ -180,7 +180,10 @@ const factory = resolveMonitorFactory(wiring);   // or get<Family>Monitor(wiring
 const connection = factory.createConnection();
 const strategy = factory.createStrategy(connection);
 
-return strategy.getBlockMeasures(windowMinutes, environment, limit);
+return strategy.getBlockMeasures(windowMinutes, environment, limit, {
+  tagId,
+  showResolved,
+});
 ```
 
 `resolveMonitorFactory` ([src/lib/shared/factory/MonitorFactoryResolver.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/shared/factory/MonitorFactoryResolver.ts)) is the one entry point a data-access orchestrator uses: it maps `strategy.kind` onto the three `get<Family>Monitor` functions, so no feature has to switch on the family itself. It throws when the element declares no strategy at all.
@@ -198,7 +201,13 @@ export interface StrategyInterface {
     windowMinutes: number | null,
     environment: string | null,
     limit: number | null,
+    options?: BlockMeasureOptions,
   ): Promise<BlockMeasure>;
+}
+
+export interface BlockMeasureOptions {
+  tagId?: string | null;       // log-monitor: which declared tag to read
+  showResolved?: boolean;      // error-monitor: include the resolved issues
 }
 ```
 
@@ -212,10 +221,16 @@ arguments.
 whose Strapi `type` is not `interval` reads a total, and no family may fall back to a
 window. `limit` of `null` means the adapter's own default row cap.
 
-`LogMonitorStrategyInterface` widens `getBlockMeasures` with a fourth `tagId` argument:
-only the log family can narrow a block down to one of several declared tags. The id is
-matched against those tags rather than trusted, so nothing the browser sends reaches the
-provider query verbatim.
+The fourth argument is the **per-family knobs, in one bag**. Each family reads the one it
+understands and ignores the rest: the log monitor narrows a block down to one of its
+declared tags (`tagId` — matched against those tags rather than trusted, so nothing the
+browser sends reaches the provider query verbatim), the error monitor decides whether the
+resolved issues belong in the list (`showResolved`). They travel together rather than as
+positional arguments because the factories resolve to a **union** of the three strategies:
+a signature differing per family makes that union uncallable.
+
+The orchestrator fills the bag the same way for everyone — it does not switch on
+`strategy.kind` to decide what a family accepts.
 
 :::warning Both measures of a family must refuse the same wirings
 
@@ -254,6 +269,12 @@ export interface ErrorMonitorStrategyInterface extends StrategyInterface {
 - **Registered adapters:** `glitchtip` ([GlitchTipErrorMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/errorMonitor/adapters/glitchtip/GlitchTipErrorMonitorFactory.ts))
 - **Domain types:** `Issue`, `IssueEvent`, `IssueComment`, `TimeSeriesPoint`, `ErrorStatsSeries`, `ErrorLevel`
 
+Its list measure reads the **open** issues by default: `options.showResolved` is what drops
+the `is:unresolved` term. Asking for the resolved ones therefore widens the list to both
+statuses rather than swapping it for `is:resolved` — an `is:resolved` query would hide the
+very issues the card exists for. Each row carries an `isResolved` flag, which is how the
+list dims the resolved ones instead of making them indistinguishable.
+
 `getErrorStats` returns an `ErrorStatsSeries` — `{ interval, points }` — rather than bare points, because a provider does not always serve the granularity the period asked for. GlitchTip's `stats_v2` honours the requested interval, but it ignores `environment`; an environment-scoped series is therefore summed per issue from `issues-stats`, which only exposes **hourly** buckets (span ≤ 24h) and **daily** ones beyond. A 30-minute window asking for minutes gets one hourly bucket, and the served `interval` is what tells the card to say so instead of drawing a near-empty minute series. Whoever labels the points reads `interval`, never the one it requested.
 
 ### logMonitor
@@ -264,15 +285,11 @@ export interface ErrorMonitorStrategyInterface extends StrategyInterface {
 export interface LogMonitorStrategyInterface extends StrategyInterface {
   getLogs(projectId: string, filters?: LogFilters, period?: Period): Promise<Log[]>;
 
-  // Widened: only this family can narrow a block to one declared tag.
-  getBlockMeasures(
-    windowMinutes: number | null,
-    environment: string | null,
-    limit: number | null,
-    tagId?: string | null,
-  ): Promise<BlockMeasure>;
 }
 ```
+
+It adds nothing to `getBlockMeasures`: the tag it reads arrives as `options.tagId` of the
+shared signature.
 
 - **Strapi strategy name:** `log-monitor`
 - **Entry point:** [GetLogMonitor.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/logMonitor/GetLogMonitor.ts) — `getLogMonitor(wiring)`

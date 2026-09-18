@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 
 import { useState } from "react";
 import {
+  canFilterResolved,
   DashboardBlock,
   isListBlock,
   isWindowedBlock,
@@ -45,11 +46,17 @@ export function BlockCard({ dashboardBlock, limit, intervalMs }: BlockProps) {
   // valid when an admin drops the tag it pointed at.
   const tags = logMonitorTags(dashboardBlock);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
+  const [showResolved, setShowResolved] = useState(false);
   const activeTagId = tags.some((tag) => tag.id === selectedTagId)
     ? selectedTagId
     : tags[0]?.id ?? null;
   const activeTag = tags.find((tag) => tag.id === activeTagId);
   const selectableTags = isDashboardInteractive() ? tags : [];
+
+  // The resolved rows are asked of the provider rather than hidden here, so the
+  // row cap and the header count both count what the card actually shows.
+  const canToggleResolved =
+    canFilterResolved(dashboardBlock) && isDashboardInteractive();
 
   const { data, isPending, isFetching, isError, error } = useBlock(
     dashboardBlock.id,
@@ -58,6 +65,7 @@ export function BlockCard({ dashboardBlock, limit, intervalMs }: BlockProps) {
     rows,
     activeTagId,
     intervalMs,
+    canToggleResolved && showResolved,
   );
 
   const showBackgroundDot = isFetching && !isPending;
@@ -82,6 +90,11 @@ export function BlockCard({ dashboardBlock, limit, intervalMs }: BlockProps) {
         tags={selectableTags}
         selectedTagId={activeTagId}
         onSelectTag={setSelectedTagId}
+        resolvedFilter={
+          canToggleResolved
+            ? { showResolved, onToggleResolved: setShowResolved }
+            : null
+        }
       ></BlockCardHeader>
 
       <BlockCardContent

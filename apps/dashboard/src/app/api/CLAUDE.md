@@ -42,6 +42,8 @@ Every data route's id carries a **dashboard element**'s Strapi `documentId` — 
 
 **`/api/blocks/[blockId]?tag=` names one of the element's own tags, never a query.** A log-monitor block declaring several tags is read one tag at a time — the provider ANDs the terms of a single query, so asking for all of them at once returns their intersection. The route forwards the raw param and the **log strategy** matches it against `strategy.tags`, throwing when it matches none: nothing the browser sends ever reaches the provider query verbatim. Omitting the param keeps the historical behaviour (every declared tag in one ANDed query), which is what a single-tag element wants.
 
+**`/api/blocks/[blockId]?showResolved=true` widens an error-monitor list to the resolved issues.** Absent — or anything other than the literal `true` — the route asks for the open ones alone, which is what the card shows by default. The filter is the provider's, not the browser's: the row cap then counts rows the card actually renders, and the two lists are two datasets, each with its own query key. The flag is meaningless for a log list and for every series, and the strategies that cannot use it ignore it.
+
 An element declaring **no tag at all** is refused before any request goes out, for both the KPI and the block measure: an empty tag list builds an empty query, which the provider reads as *everything*. The 502 the route returns is the intended visible failure — better than a card confidently showing the project's whole log volume.
 
 **The element measures carry no type param.** `/api/kpis/[kpiId]` and `/api/blocks/[blockId]` read the absence of `windowMinutes` as "this element is not windowed": a KPI whose Strapi `type` is not `interval` reads a total, a block whose `type` draws no time series — anything but `rate`, `bar` and `stackedBar` — reads a list. The wiring does not carry the element's `type`, so never default that param — a default silently turns every total into a windowed count.
@@ -51,7 +53,7 @@ An element declaring **no tag at all** is refused before any request goes out, f
 ```ts
 import { DASHBOARD_BLOCK } from "@/lib/config/domain/loadToolWiring";
 
-const data = await blocksDataAccess.getMeasure(DASHBOARD_BLOCK, blockId, windowMinutes, environment, limit, tag);
+const data = await blocksDataAccess.getMeasure(DASHBOARD_BLOCK, blockId, windowMinutes, environment, limit, tag, showResolved);
 ```
 
 The route is the only layer that knows this — it is what the URL means. The data-access layer turns the pair into a `ToolWiring`; the monitor layer never sees either. The `/api/kpis/*` routes pass `DASHBOARD_KPI`, the `/api/blocks/*` ones `DASHBOARD_BLOCK`, and nothing below them changes.

@@ -1,6 +1,9 @@
 import { MonitorStrategy, MonitorStrategyTag } from "./MonitorStrategy";
 import { Level } from "./Level";
-import { LOG_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
+import {
+    ERROR_MONITOR_STRATEGY_ENUM,
+    LOG_MONITOR_STRATEGY_ENUM,
+} from "@/lib/shared/strategiesEnum";
 
 /**
  * Purely a front-end concern: which card component renders the KPI. It is
@@ -40,6 +43,17 @@ export function isWindowedBlock(type: DashboardBlockType | null): boolean {
 
 export function isListBlock(type: DashboardBlockType | null): boolean {
     return type === LIST_TYPE;
+}
+
+/**
+ * Only an error-monitor list carries a resolution status, and only its
+ * unwindowed branch reads rows — a series has no issue to hide.
+ */
+export function canFilterResolved(block: DashboardBlock): boolean {
+    return (
+        isListBlock(block.type) &&
+        block.strategy?.kind === ERROR_MONITOR_STRATEGY_ENUM
+    );
 }
 
 export function logMonitorTags(block: DashboardBlock): MonitorStrategyTag[] {

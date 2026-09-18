@@ -24,7 +24,7 @@ import { mapGlitchTipComment } from "./mappers/CommentMapper";
 import { mapGlitchTipIssueStats } from "./mappers/issueStatsMapper";
 import { GlitchtipConnection } from "@/lib/config/domain/tool/GlitchtipConfigurationStrategy";
 import { KpiMeasure } from "@/lib/shared/domain/KpiMeasure";
-import { BlockListEntry, BlockMeasure } from "@/lib/shared/domain/BlockMeasure";
+import { BlockListEntry, BlockMeasure, BlockMeasureOptions } from "@/lib/shared/domain/BlockMeasure";
 import { buildBlockPeriod, buildKpiPeriod, formatRelative, INTERVAL_SIZE_MS, resolveBuckets, toPoint } from "@/lib/shared/helper/periodHelper";
 import {  GlitchTipIssueStatusPayloadDto } from "./dto/GlitchTipIssueStatus";
 import { GLITCHTIP_STATUSES, GlitchTipStatus, isGlitchTipStatus } from "@/lib/tool/glitchtip/dto/GlitchTipType";
@@ -61,6 +61,7 @@ function toIssueEntry(issue: Issue): BlockListEntry {
     count: issue.eventCount,
     timestampIso: issue.lastSeen,
     timestampLabel: formatRelative(issue.lastSeen),
+    isResolved: issue.isResolved
   };
 }
 
@@ -239,13 +240,17 @@ export class GlitchTipErrorMonitorStrategy implements ErrorMonitorStrategyInterf
     };
   }
 
-  async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null,): Promise<BlockMeasure> {
+  async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null, options?: BlockMeasureOptions): Promise<BlockMeasure> {
 
+    const showResolved = options?.showResolved ?? false;
     const rows = limit ?? DEFAULT_LIST_LIMIT;
     const now = new Date();
 
     if (windowMinutes === null) {
       const issues = await this.getIssues(this.connection.projectId, {
+        // Both statuses are asked for by leaving `resolved` unset: a
+        // `resolved: true` filter would return the resolved ones alone.
+        resolved: showResolved ? undefined : false,
         limit: rows,
         environment: environment ?? undefined,
       });

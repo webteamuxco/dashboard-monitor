@@ -79,11 +79,11 @@ The measure shape is uniform on purpose: one count, whichever family produced it
 Renders a panel's `DashboardBlock` elements — the large cards under the KPI strip. One block reads one measure, and its Strapi `type` picks the body that draws it.
 
 - **Monitors consumed:** `errorMonitor` (`getIssues`, `getErrorStats`), `logMonitor` (`getLogs`), `trackerMonitor` (`getActiveUsersTimeline`)
-- **API routes:** `GET /api/blocks/[blockId]?windowMinutes&limit&environment&tag`, `GET /api/config/dashboard-blocks?panelSlug`
+- **API routes:** `GET /api/blocks/[blockId]?windowMinutes&limit&environment&tag&showResolved`, `GET /api/config/dashboard-blocks?panelSlug`
 - **Domain types:** `BlockMeasure = SeriesBlockMeasure | ListBlockMeasure`, `BlockSeries`, `BlockListEntry`
-- **Hooks:** `useDashboardBlock(panelSlug, intervalMs)`, `useBlock(blockId, windowMinutes, environment, limit, tagId, intervalMs)`
-- **UI:** `BlockCard` → `BlockCardHeader` (+ `BlockTagSelector`) + `BlockCardContent`, then one body
-- **Query keys:** `["dashboardBlocks", "config", panelSlug]`, `["dashboardBlocks", "measure", blockId, windowMinutes, environment, limit, tagId]`
+- **Hooks:** `useDashboardBlock(panelSlug, intervalMs)`, `useBlock(blockId, windowMinutes, environment, limit, tagId, intervalMs, showResolved)`
+- **UI:** `BlockCard` → `BlockCardHeader` (+ `BlockTagSelector`, `ShowResolvedToggle`) + `BlockCardContent`, then one body
+- **Query keys:** `["dashboardBlocks", "config", panelSlug]`, `["dashboardBlocks", "measure", blockId, windowMinutes, environment, limit, tagId, showResolved]`
 
 | Block `type` | Body | Measure shape it reads |
 |---|---|---|
@@ -102,6 +102,8 @@ The log-monitor bar block is what used to be a standalone reservations panel: th
 **The card states the granularity it is actually drawing.** `SeriesBlockMeasure` carries an `interval` alongside its `windowMinutes`, and `BlockCardHeader` prints the pair (`1h · 24h`). It matters because a provider may coarsen what the window asked for: below 120 minutes `resolveBuckets` requests minute buckets, but GlitchTip cannot scope a minute series by environment (see [monitors.md](monitors.md#errormonitor)), so an environment-scoped error block gets hourly points — one single bucket on a 30-minute window. The labels follow the served interval too, so the axis never reads as minutes while the data is hourly.
 
 **One tag at a time when the strategy declares several.** The provider ANDs the terms of a single log query, so two tags in one query ask for the logs carrying both — an intersection that is almost always empty. A block declaring several tags therefore reads them one at a time: `BlockCard` holds the selection (local `useState`, since it is scoped to that one card), `BlockCardHeader` renders a `BlockTagSelector` next to the polling dot, and the id travels as `?tag=` down to `BlocksDataAccess`, which matches it against the tags the element declares — an unknown id throws rather than reaching the provider — and names the series after the tag. Each tag keeps its own cache entry through the last segment of the measure key, so switching back is instant. The card's caption carries both descriptions: the block's own on the left — the unit the card is read in, `req/min` — and the selected tag's on the right, which follows the selection. The selector is mounted only when the dashboard is interactive; a kiosk stays on the first tag Strapi lists.
+
+**The resolved issues are asked for, not filtered out on arrival.** An error-monitor list shows the open issues; `ShowResolvedToggle` in the header widens it to both statuses. The flag travels as `?showResolved=true` into the provider query (see [monitors.md](monitors.md#errormonitor)) rather than hiding rows in `BlockList`, for three reasons: the row cap then counts rows the card actually shows, the header's count badge stays truthful without a second filter, and the two lists are genuinely two datasets — so `showResolved` is the last segment of the measure key and each state keeps its own cache entry. `BlockCard` holds the state in a local `useState` like the tag selection, and the toggle is mounted only for a list whose strategy is `error-monitor` and only when the dashboard is interactive: a log line has no resolution status, and a series has no issue to hide (`canFilterResolved`). A resolved row is dimmed rather than plain, from the `isResolved` flag each entry carries.
 
 **The chart marks take the selected tag's colour.** A tag carries an optional `color` drawn from the very same Strapi enumeration as an element's `level`, so both resolve through `ACCENT_CHART`. `BlockCard` — the component that already derives the active tag — resolves `activeTag?.color ?? level` and hands it down as the body's `accent` prop, which `useSeriesChart` applies to the first series. Two boundaries are deliberate:
 

@@ -177,13 +177,13 @@ sequenceDiagram
     participant Mon as GlitchTipLogMonitorStrategy
     participant Ext as GlitchTip API
 
-    Card->>Hook: useBlock(blockId, windowMinutes, environment, limit, tagId, intervalMs)
+    Card->>Hook: useBlock(blockId, windowMinutes, environment, limit, tagId, intervalMs, showResolved)
     Hook->>TQ: useQuery({ queryKey, queryFn, refetchInterval })
 
     loop every intervalMs
-        TQ->>Fetch: fetchBlockMeasureClient(blockId, window, env, limit, tag)
-        Fetch->>Route: GET /api/blocks/{blockId}?windowMinutes&limit&environment&tag
-        Route->>DA: getMeasure(DASHBOARD_BLOCK, blockId, window, env, limit, tag)
+        TQ->>Fetch: fetchBlockMeasureClient(blockId, window, env, limit, tag, showResolved)
+        Fetch->>Route: GET /api/blocks/{blockId}?windowMinutes&limit&environment&tag&showResolved
+        Route->>DA: getMeasure(DASHBOARD_BLOCK, blockId, window, env, limit, tag, showResolved)
         Note over DA: Path 0 — wiring, factory, connection, strategy
         DA->>Mon: getLogs(connection.projectId, { query }, period)
         Mon->>Ext: GET /api/0/organizations/{org}/logs/
