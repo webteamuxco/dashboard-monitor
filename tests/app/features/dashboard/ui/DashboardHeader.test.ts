@@ -27,11 +27,13 @@ import { createTestQueryClient, withQueryClient } from "../../../../helpers/quer
 
 const INTERACTIVITY = "NEXT_PUBLIC_DASHBOARD_INTERACTIVITY";
 
-function renderHeader() {
+function renderHeader(devVersion?: boolean) {
+
   return renderWithQuery(
     createElement(DashboardHeader, {
       documentId: "project-1",
       intervalMs: 30_000,
+      showDevelopmentPanel: devVersion ?? false,
     }),
   );
 }
@@ -171,7 +173,7 @@ describe("DashboardHeader", () => {
     process.env.NEXT_PUBLIC_STRAPI_ADMIN_URL = "http://strapi.test";
     process.env.NEXT_PUBLIC_DOCS_SITE_URL = "http://docs.test/docs";
 
-    const { container } = renderHeader();
+    const { container } = renderHeader(true);
 
     const hrefs = Array.from(container.querySelectorAll("a")).map((anchor) =>
       anchor.getAttribute("href"),
