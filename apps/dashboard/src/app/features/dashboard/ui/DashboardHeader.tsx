@@ -1,7 +1,7 @@
 "use client";
 
 import { useIsFetching, useQueryClient } from "@tanstack/react-query";
-import { BookOpenText, CodeXml, LayoutDashboard, ListRestart, RotateCw, ShieldCheck } from "lucide-react";
+import { BookOpenText, CodeXml, Eye, LayoutDashboard, ListRestart, RotateCw, ShieldCheck, TestTubeDiagonal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { WindowSelector } from "./WindowSelector";
 import { ProjectSelector } from "./ProjectSelector";
@@ -12,12 +12,14 @@ import { useLastDataUpdate } from "../hooks/useLastDataUpdate";
 interface DashboardHeaderProps {
   documentId: string;
   intervalMs: number;
+  showDevelopmentPanel?: boolean;
 }
 
-export function DashboardHeader({ documentId, intervalMs }: DashboardHeaderProps) {
+export function DashboardHeader({ documentId, intervalMs, showDevelopmentPanel }: DashboardHeaderProps) {
 
   const adminUrl = process.env.NEXT_PUBLIC_STRAPI_ADMIN_URL ?? '/admin'
   const docsSiteUrl = process.env.NEXT_PUBLIC_DOCS_SITE_URL ?? '/docs'
+  const developmentLabUrl = process.env.NEXT_PUBLIC_LAB_SITE_URL ?? '/labs'
   const developmentPanelUrl = process.env.NEXT_PUBLIC_DEVELOPEMENT_SITE_PANEL ?? '/?showDevelopmentPanel=true'
   const queryClient = useQueryClient();
   const dataUpdatedAt = useLastDataUpdate();
@@ -85,35 +87,61 @@ export function DashboardHeader({ documentId, intervalMs }: DashboardHeaderProps
             Rafraîchir
           </Button>
 
-          <a href={adminUrl} target="_blank"> 
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
-            >
-              <LayoutDashboard /> Admin
-            </Button>
-           </a>
+          {!showDevelopmentPanel ? (
+            <a href={developmentPanelUrl} target="_blank"> 
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+              >
+                <CodeXml /> Dev Version
+              </Button>
+            </a>
+          ) : (
+            <a href="/" target="_blank"> 
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+              >
+                <Eye /> Public Version
+              </Button>
+            </a>
+          )}
 
-          <a href={docsSiteUrl} target="_blank"> 
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
-            >
-              <BookOpenText /> Documentation
-            </Button>
-          </a>
+          {showDevelopmentPanel && (
+            <>
+              <a href={adminUrl} target="_blank"> 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  <LayoutDashboard /> Admin
+                </Button>
+              </a>
 
-          <a href={developmentPanelUrl} target="_blank"> 
-            <Button
-              variant="outline"
-              size="sm"
-              className="cursor-pointer"
-            >
-              <CodeXml /> Dev Version
-            </Button>
-          </a>
+              <a href={docsSiteUrl} target="_blank"> 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  <BookOpenText /> Documentation
+                </Button>
+              </a>
+
+              <a href={developmentLabUrl} target="_blank"> 
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer"
+                >
+                  <TestTubeDiagonal /> Labs
+                </Button>
+              </a>
+            </>
+          )}
            </>
           )}
         </div>

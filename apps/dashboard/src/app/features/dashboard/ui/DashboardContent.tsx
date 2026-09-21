@@ -16,6 +16,7 @@ interface DashboardContentProps {
   initialWindowMinutes: number;
   limit: number;
   fallbackRefreshIntervalMs: number;
+  showDevelopmentPanel?: boolean;
 }
 
 
@@ -25,6 +26,7 @@ export function DashboardContent({
   initialWindowMinutes,
   limit,
   fallbackRefreshIntervalMs,
+  showDevelopmentPanel
 }: DashboardContentProps) {
 
   const hydrateFromStrapi = useDashboardWindow((s) => s.hydrateFromStrapi);
@@ -49,6 +51,7 @@ export function DashboardContent({
       <DashboardHeader
         documentId={documentId}
         intervalMs={refreshIntervalMs}
+        showDevelopmentPanel={showDevelopmentPanel}
       />
       <main className="flex flex-1 min-h-0 flex-col gap-3 p-4">
 

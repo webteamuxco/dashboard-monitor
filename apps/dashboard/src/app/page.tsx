@@ -65,6 +65,7 @@ export default async function Home({
         initialWindowMinutes={initialWindowMinutes}
         limit={DEFAULT_LIMIT}
         fallbackRefreshIntervalMs={fallbackRefreshIntervalMs}
+        showDevelopmentPanel={showDevelopmentPanel}
       />
     </HydrationBoundary>
   );
