@@ -52,6 +52,62 @@ describe("useSeriesChart", () => {
     expect(colorOf(result.current.config, "second")).toBe("var(--level-info)");
   });
 
+  it("prefers the level a series declares over the block accent", () => {
+    const stacked: SeriesBlockMeasure = {
+      type: "series",
+      windowMinutes: 30,
+      interval: "1m",
+      series: [
+        {
+          key: "t1",
+          label: "Envoyées",
+          color: LEVELS.NOTICE,
+          points: [{ bucketEpoch: 1_000, label: "08:00", count: 1 }],
+        },
+        {
+          key: "t2",
+          label: "Annulées",
+          color: LEVELS.ALERT,
+          points: [{ bucketEpoch: 1_000, label: "08:00", count: 2 }],
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useSeriesChart(stacked, "info"));
+
+    expect(colorOf(result.current.config, "t1")).toBe("var(--status-live)");
+    expect(colorOf(result.current.config, "t2")).toBe("var(--level-alert)");
+  });
+
+  // A stack of more than three tags would otherwise wrap the shared palette
+  // and paint two segments the same colour.
+  it("falls back to the palette only for the series declaring no level", () => {
+    const stacked: SeriesBlockMeasure = {
+      type: "series",
+      windowMinutes: 30,
+      interval: "1m",
+      series: [
+        {
+          key: "t1",
+          label: "Envoyées",
+          color: null,
+          points: [{ bucketEpoch: 1_000, label: "08:00", count: 1 }],
+        },
+        {
+          key: "t2",
+          label: "Annulées",
+          color: LEVELS.CRITICAL,
+          points: [{ bucketEpoch: 1_000, label: "08:00", count: 2 }],
+        },
+      ],
+    };
+
+    const { result } = renderHook(() => useSeriesChart(stacked, "warning"));
+
+    expect(colorOf(result.current.config, "t1")).toBe("var(--level-warning)");
+    expect(colorOf(result.current.config, "t2")).toBe("var(--level-critical)");
+  });
+
   it("merges the series into one row per bucket, sorted by epoch", () => {
     const { result } = renderHook(() =>
       useSeriesChart(

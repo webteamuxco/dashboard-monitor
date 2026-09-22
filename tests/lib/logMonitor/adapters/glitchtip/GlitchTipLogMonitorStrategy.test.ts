@@ -3,6 +3,7 @@ import { GlitchTipLogMonitorStrategy } from "@/lib/logMonitor/adapters/glitchtip
 import type { GlitchTipClient } from "@/lib/tool/glitchtip/GlitchTipClient";
 import type { ToolWiring } from "@/lib/config/domain/ToolWiring";
 import type { MonitorStrategyTag } from "@/lib/config/domain/MonitorStrategy";
+import { LEVELS } from "@/lib/config/domain/Level";
 import { glitchtipWiring } from "../../../../helpers/toolWiring";
 
 const CONNECTION = { baseUrl: "https://gt", organizationSlug: "org", projectId: "p" };
@@ -109,35 +110,108 @@ describe("GlitchTipLogMonitorStrategy.getKpiMeasures", () => {
     });
   });
 
-  it("builds the query from the tags Strapi declares, not from a constant", async () => {
+  it("builds the service filter from the tags Strapi declares, not from a constant", async () => {
     const { strategy, getPaginated } = buildStrategy(logWiring(ONE_TAG));
 
     await strategy.getKpiMeasures(15, null);
 
-    expect(getPaginated.mock.calls[0][1].query).toBe("reservation.sent");
+    expect(getPaginated.mock.calls[0][1].service).toBe("reservation.sent");
   });
 
-  // The environment is a suffix of the tag in this project's log naming.
-  it("suffixes each tag with the environment", async () => {
+  it("passes the environment as its own filter rather than as a tag suffix", async () => {
     const { strategy, getPaginated } = buildStrategy(logWiring(ONE_TAG));
 
     await strategy.getKpiMeasures(15, "staging");
 
-    expect(getPaginated.mock.calls[0][1].query).toBe(
-      "reservation.sent.staging",
-    );
+    const params = getPaginated.mock.calls[0][1];
+    expect(params.service).toBe("reservation.sent");
+    expect(params.environment).toBe("staging");
   });
 
-  // Several tags are ANDed, which is how the provider reads space-separated
-  // terms.
-  it("ANDs the terms when the element declares several tags", async () => {
+  it("asks one query per tag rather than joining their terms", async () => {
     const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
 
     await strategy.getKpiMeasures(15, null);
 
-    expect(getPaginated.mock.calls[0][1].query).toBe(
-      "reservation.sent reservation.cancelled",
+    expect(getPaginated).toHaveBeenCalledTimes(2);
+    expect(getPaginated.mock.calls.map((call) => call[1].service)).toEqual([
+      "reservation.sent",
+      "reservation.cancelled",
+    ]);
+  });
+
+  it("sums every tag into the value", async () => {
+    const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
+    getPaginated.mockImplementation((_path: string, params: { service: string }) =>
+      Promise.resolve(
+        params.service === "reservation.sent"
+          ? [{ id: "a" }, { id: "b" }]
+          : [{ id: "c" }],
+      ),
     );
+
+    expect((await strategy.getKpiMeasures(15, null)).value).toBe(3);
+  });
+
+  describe("the breakdown", () => {
+    const DESCRIBED = [
+      { ...TWO_TAGS[0], description: "Réussie", color: LEVELS.NOTICE },
+      { ...TWO_TAGS[1], description: "Echecs", color: LEVELS.ALERT },
+    ];
+
+    it("splits the value per tag, labelled by the tag's description", async () => {
+      const { strategy, getPaginated } = buildStrategy(logWiring(DESCRIBED));
+      getPaginated.mockImplementation((_path: string, params: { service: string }) =>
+        Promise.resolve(
+          params.service === "reservation.sent"
+            ? [{ id: "a" }, { id: "b" }]
+            : [{ id: "c" }, { id: "d" }],
+        ),
+      );
+
+      expect((await strategy.getKpiMeasures(15, null)).breakdown).toEqual([
+        { key: "t1", label: "Réussie", value: 2, color: LEVELS.NOTICE },
+        { key: "t2", label: "Echecs", value: 2, color: LEVELS.ALERT },
+      ]);
+    });
+
+    // `description` is optional in Strapi admin, and a card with a bare count
+    // and no word next to it says nothing.
+    it("falls back to the tag's name when it carries no description", async () => {
+      const { strategy } = buildStrategy(logWiring(TWO_TAGS));
+
+      const measure = await strategy.getKpiMeasures(15, null);
+
+      expect(measure.breakdown?.map((entry) => entry.label)).toEqual([
+        "Envoyées",
+        "Annulées",
+      ]);
+    });
+
+    it("leaves it out for a single-tag element, which has nothing to split", async () => {
+      const { strategy } = buildStrategy(logWiring(ONE_TAG));
+
+      expect(
+        (await strategy.getKpiMeasures(15, null)).breakdown,
+      ).toBeUndefined();
+    });
+
+    // The total is what the card prints in its caption, and what any consumer
+    // ignoring the breakdown reads.
+    it("always sums to the value", async () => {
+      const { strategy, getPaginated } = buildStrategy(logWiring(DESCRIBED));
+      getPaginated.mockImplementation((_path: string, params: { service: string }) =>
+        Promise.resolve(
+          params.service === "reservation.sent" ? [{ id: "a" }] : [{ id: "b" }, { id: "c" }],
+        ),
+      );
+
+      const measure = await strategy.getKpiMeasures(15, null);
+
+      expect(
+        measure.breakdown?.reduce((sum, entry) => sum + entry.value, 0),
+      ).toBe(measure.value);
+    });
   });
 
   it("bounds the query with the window it was given", async () => {
@@ -160,7 +234,7 @@ describe("GlitchTipLogMonitorStrategy.getKpiMeasures", () => {
       windowMinutes: null,
     });
     const params = getPaginated.mock.calls[0][1];
-    expect(params.query).toBe("reservation.sent");
+    expect(params.service).toBe("reservation.sent");
     expect(params.start).toBeUndefined();
     expect(params.end).toBeUndefined();
   });
@@ -237,6 +311,42 @@ describe("GlitchTipLogMonitorStrategy — what both measures refuse", () => {
   }
 });
 
+// The same element wired to a KPI and to a block must be counted over the same
+// environment, or the card and the chart above it disagree by construction. The
+// KPI used to pin production while the block read every environment.
+describe("GlitchTipLogMonitorStrategy — the environment both measures send", () => {
+  const MEASURES: ReadonlyArray<{
+    name: string;
+    run: (
+      strategy: GlitchTipLogMonitorStrategy,
+      environment: string | null,
+    ) => Promise<unknown>;
+  }> = [
+    { name: "getKpiMeasures", run: (s, e) => s.getKpiMeasures(15, e) },
+    { name: "getBlockMeasures", run: (s, e) => s.getBlockMeasures(15, e, null) },
+  ];
+
+  for (const measure of MEASURES) {
+    it(`${measure.name} forwards the environment it is given`, async () => {
+      const { strategy, getPaginated } = buildStrategy(logWiring(ONE_TAG));
+
+      await measure.run(strategy, "staging");
+
+      expect(getPaginated.mock.calls[0][1].environment).toBe("staging");
+    });
+
+    // `null` means "every environment" everywhere else in the dashboard — see
+    // the isomorphic resolver in features/dashboard/state/environments.ts.
+    it(`${measure.name} sends no environment filter when given none`, async () => {
+      const { strategy, getPaginated } = buildStrategy(logWiring(ONE_TAG));
+
+      await measure.run(strategy, null);
+
+      expect(getPaginated.mock.calls[0][1].environment).toBeUndefined();
+    });
+  }
+});
+
 describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
   it("returns one series shape whichever chart will draw it", async () => {
     const { strategy } = buildStrategy(logWiring(ONE_TAG));
@@ -246,7 +356,7 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
     if (measure.type !== "series") throw new Error("expected a series");
     expect(measure.windowMinutes).toBe(30);
     expect(measure.series).toHaveLength(1);
-    expect(measure.series[0].key).toBe("count");
+    expect(measure.series[0].key).toBe("t1");
   });
 
   it("buckets the log timestamps the provider returns", async () => {
@@ -305,19 +415,95 @@ describe("GlitchTipLogMonitorStrategy.getBlockMeasures", () => {
 
       await strategy.getBlockMeasures(30, "production", null, { tagId: "t2" });
 
-      expect(getPaginated.mock.calls[0][1].query).toBe(
-        "reservation.cancelled.production",
-      );
+      expect(getPaginated).toHaveBeenCalledTimes(1);
+      const params = getPaginated.mock.calls[0][1];
+      expect(params.service).toBe("reservation.cancelled");
+      expect(params.environment).toBe("production");
     });
 
-    it("keeps the legacy behaviour when no tag is selected", async () => {
+    // Joining the tags into one query would AND them and count their
+    // intersection — which is nothing, since a log line carries one service.
+    it("asks one query per tag rather than joining their terms", async () => {
       const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
 
       await strategy.getBlockMeasures(30, null, null);
 
-      expect(getPaginated.mock.calls[0][1].query).toBe(
-        "reservation.sent reservation.cancelled",
+      expect(getPaginated).toHaveBeenCalledTimes(2);
+      expect(
+        getPaginated.mock.calls.map((call) => call[1].service),
+      ).toEqual(["reservation.sent", "reservation.cancelled"]);
+    });
+
+    it("returns one series per tag, named and coloured after it", async () => {
+      const { strategy } = buildStrategy(
+        logWiring([
+          { ...TWO_TAGS[0], color: LEVELS.NOTICE },
+          { ...TWO_TAGS[1], color: LEVELS.ALERT },
+        ]),
       );
+
+      const measure = await strategy.getBlockMeasures(30, null, null);
+
+      if (measure.type !== "series") throw new Error("expected a series");
+      expect(
+        measure.series.map(({ key, label, color }) => ({ key, label, color })),
+      ).toEqual([
+        { key: "t1", label: "Envoyées", color: LEVELS.NOTICE },
+        { key: "t2", label: "Annulées", color: LEVELS.ALERT },
+      ]);
+    });
+
+    it("counts each tag into its own series rather than into a shared total", async () => {
+      const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
+      const now = new Date().toISOString();
+      getPaginated.mockImplementation((_path: string, params: { service: string }) =>
+        Promise.resolve(
+          params.service === "reservation.sent"
+            ? [{ id: "a", body: "m", level: "info", timestamp: now }]
+            : [
+                { id: "b", body: "m", level: "info", timestamp: now },
+                { id: "c", body: "m", level: "info", timestamp: now },
+              ],
+        ),
+      );
+
+      const measure = await strategy.getBlockMeasures(30, null, null);
+
+      if (measure.type !== "series") throw new Error("expected a series");
+      expect(
+        measure.series.map((series) =>
+          series.points.reduce((sum, point) => sum + (point.count ?? 0), 0),
+        ),
+      ).toEqual([1, 2]);
+    });
+
+    // A stack draws one row per bucket: series that disagreed on their epochs
+    // would leave holes in every segment but the first.
+    it("aligns every series on the same buckets", async () => {
+      const { strategy } = buildStrategy(logWiring(TWO_TAGS));
+
+      const measure = await strategy.getBlockMeasures(30, null, null);
+
+      if (measure.type !== "series") throw new Error("expected a series");
+      expect(measure.series[1].points.map((point) => point.bucketEpoch)).toEqual(
+        measure.series[0].points.map((point) => point.bucketEpoch),
+      );
+    });
+
+    it("merges every tag into one list when the block has no window", async () => {
+      const { strategy, getPaginated } = buildStrategy(logWiring(TWO_TAGS));
+      getPaginated.mockImplementation((_path: string, params: { service: string }) =>
+        Promise.resolve(
+          params.service === "reservation.sent"
+            ? [{ id: "old", body: "m", level: "info", timestamp: "2026-05-28T08:00:00Z" }]
+            : [{ id: "new", body: "m", level: "info", timestamp: "2026-05-28T09:00:00Z" }],
+        ),
+      );
+
+      const measure = await strategy.getBlockMeasures(null, null, null);
+
+      if (measure.type !== "list") throw new Error("expected a list");
+      expect(measure.entries.map((entry) => entry.id)).toEqual(["new", "old"]);
     });
 
     // The id comes from the browser: it is matched against the tags the element
