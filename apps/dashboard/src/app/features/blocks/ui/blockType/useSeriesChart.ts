@@ -50,8 +50,9 @@ export function useSeriesChart(
           series.key,
           {
             label: series.label,
-            color:
-              index === 0
+            color: series.color
+              ? ACCENT_CHART[series.color]
+              : index === 0
                 ? ACCENT_CHART[accent]
                 : SECONDARY_SERIES_COLORS[
                     (index - 1) % SECONDARY_SERIES_COLORS.length

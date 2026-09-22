@@ -1,3 +1,4 @@
+import type { Level } from "@/lib/config/domain/Level";
 import type { ErrorLevel } from "@/lib/errorMonitor/domain/ErrorLevel";
 import type { PeriodInterval } from "@/lib/shared/domain/Period";
 
@@ -32,9 +33,13 @@ export interface ListBlockMeasure {
   windowMinutes: number | null;
 }
 
+// A stack draws as many series as the element declares tags, so the block's
+// single accent no longer tells them apart: each carries the level its tag
+// declares, and the chart falls back to the accent only when none does.
 export interface BlockSeries {
   key: string;
   label: string;
+  color?: Level | null;
   points: BlockSeriesPoint[];
 }
 

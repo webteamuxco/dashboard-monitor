@@ -211,7 +211,7 @@ The tool's configuration exists but one of url / organization / projectId is emp
 
 ### A log-monitor card is empty, or shows one point
 
-Two distinct causes. If the element declares **several tags**, they are read one at a time — the provider ANDs the terms of a single query, so asking for all of them returns their intersection; use the tag selector in the card's header. If an **environment is selected**, GlitchTip can only scope an error series per hour, so a window under two hours yields one or two buckets: the card's header states the granularity it actually drew (`1h · 30m`). See [monitors.md](monitors.md#errormonitor).
+Two distinct causes. If the element declares **several tags**, check its `type`: a `bar` reads one tag at a time and shows a selector in its header, while a `stackedBar` draws them all as a stack — so a `bar` looks empty whenever the tag it landed on is quiet. If an **environment is selected**, GlitchTip can only scope an error series per hour, so a window under two hours yields one or two buckets: the card's header states the granularity it actually drew (`1h · 30m`). See [monitors.md](monitors.md#errormonitor).
 
 ### Cards load but never refresh
 

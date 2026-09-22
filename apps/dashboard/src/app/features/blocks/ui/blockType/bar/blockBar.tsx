@@ -4,6 +4,8 @@ import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { EmptyState } from "@/app/features/dashboard/ui/EmptyState";
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   chartAxisTick,
@@ -53,6 +55,9 @@ export function BlockBar({ measure, accent, stacked = false }: BlockBarProps) {
             cursor={{ fill: "var(--muted)", opacity: 0.4 }}
             content={<ChartTooltipContent labelKey="label" />}
           />
+          {measure.series.length > 1 && (
+            <ChartLegend content={<ChartLegendContent />} />
+          )}
           {measure.series.map((series, index) => (
             <Bar
               key={series.key}

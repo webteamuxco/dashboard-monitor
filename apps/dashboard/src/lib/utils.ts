@@ -13,10 +13,9 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function buildLogQuery(
   tags: MonitorStrategyTag[],
-  environment: string | null,
 ): string {
   return tags
-    .map((tag) => (environment ? `${tag.value}.${environment}` : tag.value))
+    .map((tag) => (`${tag.value}`))
     .join(" ");
 }
 

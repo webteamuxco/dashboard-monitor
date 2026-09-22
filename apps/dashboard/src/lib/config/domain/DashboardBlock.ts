@@ -12,10 +12,10 @@ import {
  */
 export type DashboardBlockType = "list" | "rate" | "stackedBar" | "bar"
 
-const RATE_TYPE = "rate" satisfies DashboardBlockType;
-const BAR_TYPE = "bar" satisfies DashboardBlockType;
-const STACKED_BAR = "stackedBar" satisfies DashboardBlockType;
-const LIST_TYPE = "list" satisfies DashboardBlockType;
+export const RATE_TYPE = "rate" satisfies DashboardBlockType;
+export const BAR_TYPE = "bar" satisfies DashboardBlockType;
+export const STACKED_BAR = "stackedBar" satisfies DashboardBlockType;
+export const LIST_TYPE = "list" satisfies DashboardBlockType;
 
 export interface DashboardBlock {
     slug: string
@@ -43,6 +43,15 @@ export function isWindowedBlock(type: DashboardBlockType | null): boolean {
 
 export function isListBlock(type: DashboardBlockType | null): boolean {
     return type === LIST_TYPE;
+}
+
+/**
+ * Only the plain bar reads its tags one at a time. Every other type draws them
+ * all at once — a stacked bar has one series per tag, a list merges them — so
+ * pinning a selection there would drop every tag but one.
+ */
+export function isTagSelectableBlock(type: DashboardBlockType | null): boolean {
+    return type === BAR_TYPE;
 }
 
 /**

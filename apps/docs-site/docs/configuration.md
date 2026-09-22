@@ -113,7 +113,7 @@ One token per vendor, per deployment. Pointing two elements at two different Gli
 - **Example:** `production,staging`
 - **Default:** empty (no environment filter)
 - **Consumed by:** [environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/environments.ts)
-- **Effect:** comma-separated list the environment selector offers. The selected value is part of every measure key and reaches the provider as an environment filter — on GlitchTip logs it is appended to the tag (`reservation.sent.production`), on issues it is a query param.
+- **Effect:** comma-separated list the environment selector offers. The selected value is part of every measure key and reaches the provider as an environment filter — on GlitchTip logs it is its own `environment` param alongside the tag's `service`, on issues it is a query param.
 
 :::note The environment selector is currently commented out in `DashboardHeader`
 

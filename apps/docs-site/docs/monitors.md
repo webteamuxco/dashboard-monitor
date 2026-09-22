@@ -296,9 +296,13 @@ shared signature.
 - **Registered adapters:** `glitchtip` ([GlitchTipLogMonitorFactory.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorFactory.ts))
 - **Domain types:** `Log`, `LogLevel`, `LogFilters`
 
-> A bar block consumes this monitor with the tag filter its Strapi strategy declares (`reservation.sent`, suffixed with the selected environment) to aggregate business events on top of the log layer.
+> A bar block consumes this monitor with the tag filter its Strapi strategy declares (`reservation.sent`, sent as the provider's `service` filter) to aggregate business events on top of the log layer. The selected environment travels as its own filter alongside it, not as a suffix of the tag.
 
-The tags are the whole filter, which is why an element declaring none is refused rather than measured — see the warning above. Several tags are ANDed (the provider reads space-separated terms as a conjunction), so a block wanting them one at a time passes a `tagId`.
+The tags are the whole filter, which is why an element declaring none is refused rather than measured — see the warning above. **The block measure never joins them into one query**: the provider reads space-separated terms as a conjunction, and a log line carries one service, so their intersection is empty. `getLogsPerTag` issues one query per tag and awaits them together, then builds one series per tag — which is what a `stackedBar` stacks and what an unwindowed block merges into a single time-sorted list. A `tagId` narrows that set to the one tag it names, which is how a plain `bar` reads them one at a time.
+
+The KPI measure reads its tags the same way, one query each. `value` is their sum, and from two tags up the measure also carries a `breakdown` — one entry per tag, `{ key, label, value, color }`, labelled by the tag's `description` and falling back to its `name`. `value` stays the total whether or not the breakdown is there, so a card reading nothing but the figure is still right, and the two other families leave the field out entirely.
+
+Both measures send the same `environment` filter, and send none when the dashboard names none — `null` means *every environment* here as it does everywhere else in the dashboard ([environments.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/apps/dashboard/src/app/features/dashboard/state/environments.ts) resolves it on both sides of the hydration boundary). A KPI that pinned an environment its block did not would disagree with the chart under it by construction; the cross-measure test in [GlitchTipLogMonitorStrategy.test.ts](https://github.com/webteamuxco/dashboard-monitor/tree/main/tests/lib/logMonitor/adapters/glitchtip/GlitchTipLogMonitorStrategy.test.ts) asserts the pair.
 
 ### trackerMonitor
 

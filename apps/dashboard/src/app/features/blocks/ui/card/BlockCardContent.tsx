@@ -10,11 +10,13 @@ import { EmptyState } from "@/app/features/dashboard/ui/EmptyState";
 import { BlockList } from "../blockType/list/blockList";
 import { BlockRate } from "../blockType/rate/blockRate";
 import { BlockBar, StackedBlockBar } from "../blockType/bar/blockBar";
+import { MonitorStrategy } from "@/lib/config/domain/MonitorStrategy";
 
 export interface BlockBodyProps<TMeasure extends BlockMeasure = BlockMeasure> {
     blockId: string;
     measure: TMeasure;
     accent: Level;
+    strategy?: MonitorStrategy
 }
 
 type ShapeOf<TType extends DashboardBlockType> = TType extends "list"
@@ -105,5 +107,5 @@ function BlockBody({
 
     const renderer = body as ComponentType<BlockBodyProps>;
 
-    return createElement(renderer, { blockId: dashboardBlock.id, measure, accent });
+    return createElement(renderer, { blockId: dashboardBlock.id, measure, accent, strategy: dashboardBlock.strategy });
 }

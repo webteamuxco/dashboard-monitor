@@ -7,6 +7,7 @@ import {
   canFilterResolved,
   DashboardBlock,
   isListBlock,
+  isTagSelectableBlock,
   isWindowedBlock,
   logMonitorTags,
 } from "@/lib/config/domain/DashboardBlock";
@@ -41,17 +42,20 @@ export function BlockCard({ dashboardBlock, limit, intervalMs }: BlockProps) {
   const environment = useEnvironment((s) => s.environment);
   const rows = isListBlock(dashboardBlock.type) ? limit : null;
 
-  // The provider ANDs the terms of one log query, so several tags are read one
-  // at a time. Deriving the active id rather than storing it keeps a selection
-  // valid when an admin drops the tag it pointed at.
+  // A null id asks for every tag, which is what a stack and a list want.
+  // Deriving the active id rather than storing it keeps a selection valid when
+  // an admin drops the tag it pointed at.
   const tags = logMonitorTags(dashboardBlock);
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
   const [showResolved, setShowResolved] = useState(false);
-  const activeTagId = tags.some((tag) => tag.id === selectedTagId)
-    ? selectedTagId
-    : tags[0]?.id ?? null;
+  const tagSelectable = isTagSelectableBlock(dashboardBlock.type);
+  const activeTagId = !tagSelectable
+    ? null
+    : tags.some((tag) => tag.id === selectedTagId)
+      ? selectedTagId
+      : tags[0]?.id ?? null;
   const activeTag = tags.find((tag) => tag.id === activeTagId);
-  const selectableTags = isDashboardInteractive() ? tags : [];
+  const selectableTags = tagSelectable && isDashboardInteractive() ? tags : [];
 
   // The resolved rows are asked of the provider rather than hidden here, so the
   // row cap and the header count both count what the card actually shows.

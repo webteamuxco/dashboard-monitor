@@ -6,13 +6,17 @@ import { isDashboardInteractive } from "@/app/features/dashboard/state/useDashbo
 import { IssueDetailSheet } from "@/app/features/issues/ui/IssueDetailSheet";
 import { BlockLine } from "./blockLine";
 import { ListBlockMeasure } from "../../../../../../lib/shared/domain/BlockMeasure";
+import { MonitorStrategy } from "@/lib/config/domain/MonitorStrategy";
+import { ERROR_MONITOR_STRATEGY_ENUM } from "@/lib/shared/strategiesEnum";
 
 export function BlockList({
   blockId,
   measure,
+  strategy,
 }: {
   blockId: string;
   measure: ListBlockMeasure;
+  strategy?: MonitorStrategy;
 }) {
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
   const canOpenDetail = measure.hasDetail && isDashboardInteractive();
@@ -20,6 +24,8 @@ export function BlockList({
   if (measure.entries.length === 0) {
     return <EmptyState>Aucune donnée</EmptyState>;
   }
+
+  const showUpdateStatusButton = strategy ? strategy.kind === ERROR_MONITOR_STRATEGY_ENUM : false
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
@@ -29,6 +35,7 @@ export function BlockList({
             key={entry.id}
             blockId={blockId}
             entry={entry}
+            showUpdateStatusButton={showUpdateStatusButton}
             onSelect={
               canOpenDetail ? () => setSelectedEntryId(entry.id) : undefined
             }

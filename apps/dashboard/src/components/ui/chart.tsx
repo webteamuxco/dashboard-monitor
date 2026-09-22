@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Tooltip as RechartsTooltip, ResponsiveContainer } from "recharts";
+import {
+  Legend as RechartsLegend,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+} from "recharts";
 import { cn } from "@/lib/utils";
 
 export type ChartConfig = Record<
@@ -57,6 +61,37 @@ export function ChartContainer({ config, className, children, ...rest }: ChartCo
 }
 
 export const ChartTooltip = RechartsTooltip;
+
+export const ChartLegend = RechartsLegend;
+
+interface ChartLegendContentProps {
+  payload?: Array<{ dataKey?: string | number }>;
+}
+
+export function ChartLegendContent({ payload }: ChartLegendContentProps) {
+  const config = useChartConfig();
+
+  if (!payload?.length) return null;
+
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 pt-1.5 font-mono text-[0.625rem]">
+      {payload.map((entry) => {
+        const key = String(entry.dataKey ?? "");
+        const cfg = config[key];
+        return (
+          <div key={key} className="flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 rounded-sm"
+              style={{ background: cfg?.color }}
+              aria-hidden
+            />
+            <span className="text-muted-foreground">{cfg?.label ?? key}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 interface ChartTooltipContentProps {
   active?: boolean;

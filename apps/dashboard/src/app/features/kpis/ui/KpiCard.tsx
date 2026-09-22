@@ -62,6 +62,7 @@ export function KpiCard({ dashboardKpi, intervalMs }: KpiCardProps) {
   );
 
   const value = isError ? "!" : isPending && !data ? "—" : data.value;
+  const breakdown = data?.breakdown ?? null;
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-border bg-card px-4 py-3.5 w-[stretch]">
@@ -72,10 +73,28 @@ export function KpiCard({ dashboardKpi, intervalMs }: KpiCardProps) {
         })}
         {dashboardKpi.title}
       </div>
-      <div className={cn("font-mono text-3xl font-semibold leading-none", ACCENT_VALUE[dashboardKpi.level])}>
-        {value}
-      </div>
-      <div className="mt-1 font-mono font-bold text-[0.725rem] text-muted-foreground/60">{dashboardKpi.description}
+      {breakdown ? (
+        <div className="flex flex-wrap items-baseline gap-x-2 font-mono text-xl font-semibold leading-tight">
+          {breakdown.map((entry, index) => (
+            <span key={entry.key} className="flex items-baseline gap-1.5">
+              {index > 0 && <span className="text-muted-foreground/40">-</span>}
+              <span className={ACCENT_VALUE[entry.color ?? dashboardKpi.level]}>
+                {entry.value}
+              </span>
+              <span className="text-[0.725rem] font-bold text-muted-foreground/60">
+                {entry.label}
+              </span>
+            </span>
+          ))}
+        </div>
+      ) : (
+        <div className={cn("font-mono text-3xl font-semibold leading-none", ACCENT_VALUE[dashboardKpi.level])}>
+          {value}
+        </div>
+      )}
+      <div className="mt-1 font-mono font-bold text-[0.725rem] text-muted-foreground/60">
+        {breakdown && <span>{data?.value} total - </span>}
+        {dashboardKpi.description}
         {windowMinutes && (
           <span> - {formatWindowLabel(windowMinutes)}</span>
         )}

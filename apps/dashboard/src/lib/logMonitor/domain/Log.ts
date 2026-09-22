@@ -9,4 +9,6 @@ export interface Log {
 
 export interface LogFilters {
   query?: string;
+  service?: string;
+  environment?: string;
 }

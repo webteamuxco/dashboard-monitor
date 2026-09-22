@@ -7,10 +7,12 @@ import { UpdateStatusButton } from "../../card/UpdateStatusButton";
 export function BlockLine({
   blockId,
   entry,
+  showUpdateStatusButton = false,
   onSelect,
 }: {
   blockId: string;
   entry: BlockListEntry;
+  showUpdateStatusButton: boolean,
   onSelect?: () => void;
 }) {
   return (
@@ -59,13 +61,15 @@ export function BlockLine({
               {entry.timestampLabel}
             </span>
           </div>
-          <UpdateStatusButton
-            blockId={blockId}
-            issueId={entry.id}
-            isResolved={entry.isResolved ?? false}
-            revealOnHover
-            className="pointer-events-auto"
-          />
+          {showUpdateStatusButton && 
+            <UpdateStatusButton
+              blockId={blockId}
+              issueId={entry.id}
+              isResolved={entry.isResolved ?? false}
+              revealOnHover
+              className="pointer-events-auto"
+            />
+          }
         </div>
       </div>
     </li>

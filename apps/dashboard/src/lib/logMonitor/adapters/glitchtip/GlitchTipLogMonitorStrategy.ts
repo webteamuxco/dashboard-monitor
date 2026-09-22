@@ -30,10 +30,10 @@ function toLogEntry(log: Log): BlockListEntry {
 
 
 /**
- * The provider ANDs the terms of one query, so a block declaring several tags
- * reads them one at a time. The id comes from the browser: it is matched
- * against the tags the element declares rather than trusted, so nothing the
- * client sends ever reaches the provider query verbatim.
+ * The id comes from the browser: it is matched against the tags the element
+ * declares rather than trusted, so nothing the client sends ever reaches the
+ * provider query verbatim. No id means every tag, which a stacked bar draws as
+ * one series each.
  */
 function selectLogTags(
   tags: MonitorStrategyTag[],
@@ -72,6 +72,8 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
         start: period?.from,
         end: period?.to,
         query: filters?.query,
+        service: filters?.service,
+        environment: filters?.environment
       },
     );
     return dto.map(mapGlitchTipLog);
@@ -115,13 +117,28 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
 
     const period = windowMinutes === null ? null : buildKpiPeriod(windowMinutes);
 
-    const logs = await this.getLogs(
-      this.connection.projectId,
-      { query: buildLogQuery(strategy.tags, environment) },
+    const logsPerTag = await this.getLogsPerTag(
+      strategy.tags,
+      environment ?? undefined,
       period ?? undefined,
     );
 
-    return { value: logs.length, windowMinutes };
+    const value = logsPerTag.reduce((sum, logs) => sum + logs.length, 0);
+
+    if (strategy.tags.length < 2) {
+      return { value, windowMinutes };
+    }
+
+    return {
+      value,
+      windowMinutes,
+      breakdown: strategy.tags.map((tag, index) => ({
+        key: tag.id,
+        label: tag.description ?? tag.name,
+        value: logsPerTag[index].length,
+        color: tag.color,
+      })),
+    };
   }
 
   async getBlockMeasures(windowMinutes: number | null, environment: string | null, limit: number | null, options?: BlockMeasureOptions): Promise<BlockMeasure> {
@@ -133,10 +150,10 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
 
     const tags = selectLogTags(strategy.tags, tagId, this.wiring.id);
 
-    const filters = { query: buildLogQuery(tags, environment) };
-
     if (windowMinutes === null) {
-      const logs = await this.getLogs(this.connection.projectId, filters);
+      const logs = (
+        await this.getLogsPerTag(tags, environment ?? undefined)
+      ).flat();
 
       return {
         type: "list",
@@ -155,27 +172,47 @@ export class GlitchTipLogMonitorStrategy implements LogMonitorStrategyInterface 
     }
 
     const buckets = resolveBuckets(windowMinutes);
-    const logs = await this.getLogs(
-      this.connection.projectId,
-      filters,
+    const logsPerTag = await this.getLogsPerTag(
+      tags,
+      environment ?? undefined,
       buildBlockPeriod(now, windowMinutes, buckets.interval),
     );
+    const emptyBuckets = buildEmptyBuckets(now, windowMinutes, buckets.sizeMs);
 
     return {
       type: "series",
       windowMinutes,
       interval: buckets.interval,
-      series: [
-        {
-          key: "count",
-          label: strategy.tags.length === 1 ? strategy.tags[0].name : "Occurrences",
-          points: aggregateByBucket(
-            logs.map((log) => log.timestamp),
-            buildEmptyBuckets(now, windowMinutes, buckets.sizeMs),
-            buckets.sizeMs,
-          ),
-        },
-      ],
+      series: tags.map((tag, index) => ({
+        key: tag.id,
+        label: tag.name,
+        color: tag.color,
+        points: aggregateByBucket(
+          logsPerTag[index].map((log) => log.timestamp),
+          emptyBuckets,
+          buckets.sizeMs,
+        ),
+      })),
     };
+  }
+
+  /**
+   * The provider ANDs the terms of one query, so tags are never joined: each
+   * one is a query of its own, and the calls run together.
+   */
+  private getLogsPerTag(
+    tags: MonitorStrategyTag[],
+    environment: string | undefined,
+    period?: Period,
+  ): Promise<Log[][]> {
+    return Promise.all(
+      tags.map((tag) =>
+        this.getLogs(
+          this.connection.projectId,
+          { service: buildLogQuery([tag]), environment },
+          period,
+        ),
+      ),
+    );
   }
 }
