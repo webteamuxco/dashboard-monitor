@@ -5,8 +5,10 @@ info:
 
 http:
   method: GET
-  url: "{{url}}/api/0/organizations/{{organizationSlug}}/issues/33/"
-  auth: inherit
+  url: "{{glitchtip-url}}/api/0/organizations/{{organizationSlug}}/issues/"
+  auth:
+    type: bearer
+    token: 
 
 settings:
   encodeUrl: true
