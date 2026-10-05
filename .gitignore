@@ -41,3 +41,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+
+# gitleaks (binaire téléchargé par scripts/gitleaks.sh)
+.cache/

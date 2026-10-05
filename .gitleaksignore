@@ -1,0 +1,8 @@
+# Exceptions gitleaks, par empreinte (commit:fichier:règle:ligne). Une ligne = une alerte précise.
+# Ne jamais ajouter une empreinte sans expliquer pourquoi ce n'est pas un secret.
+#
+# bruno/ai-agent/folder.yml dans 6cf37e5 : valeur d'exemple de AGENT_CONFIG_TOKEN reprise de
+# apps/admin/.env.example (placeholder documenté, pas un secret). Corrigée en {{agent-config-token}}
+# par le commit suivant ; l'empreinte reste dans l'historique déjà fusionné dans develop.
+6cf37e551d4757bef55ed6410753c9102b754390:bruno/ai-agent/folder.yml:bruno-env-plaintext-secret:8
+6cf37e551d4757bef55ed6410753c9102b754390:bruno/ai-agent/folder.yml:bruno-literal-token:8

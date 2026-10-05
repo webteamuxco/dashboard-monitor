@@ -1,1 +1,2 @@
+sh scripts/gitleaks.sh git --pre-commit --staged --redact --no-banner -v
 pnpm typecheck && pnpm test && pnpm lint

@@ -1,0 +1,60 @@
+# Configuration gitleaks — bookingenginev2
+# Règles par défaut de gitleaks + règles propres au dépôt (Bruno, APIM, agent IA).
+# Doc : https://github.com/gitleaks/gitleaks#configuration
+
+title = "bookingenginev2"
+
+[extend]
+useDefault = true
+
+# --- Bruno : variable sensible avec une valeur en clair dans bruno/environments/*.yml
+#   - name: crm-sub-key
+#     value: <valeur>          <- interdit ; utiliser `secret: true` sans valeur
+[[rules]]
+id = "bruno-env-plaintext-secret"
+description = "Variable Bruno sensible (key/token/secret/password) avec une valeur en clair"
+path = '''bruno/.*\.ya?ml$'''
+regex = '''name:\s*[\w-]*(?:key|token|secret|password|pwd)[\w-]*\s*\n\s*value:\s*["']?([^"'\s{][^"'\s]{7,})'''
+secretGroup = 1
+keywords = ["key", "token", "secret", "password", "pwd"]
+
+# --- Bruno : jeton Bearer ou valeur de x-service-token en dur dans une requête ou un dossier
+[[rules]]
+id = "bruno-literal-token"
+description = "Jeton en dur dans une requête Bruno (utiliser {{variable}} ou auth: inherit)"
+path = '''bruno/.*\.ya?ml$'''
+regex = '''(?:token|x-service-token[\s\S]{0,20}?value)\s*:\s*["']?([A-Za-z0-9._~+/=-]{16,})'''
+secretGroup = 1
+keywords = ["token"]
+
+# --- Clé d'abonnement Azure API Management (32 hex), où qu'elle soit
+[[rules]]
+id = "azure-apim-subscription-key"
+description = "Clé d'abonnement Azure APIM (Ocp-Apim-Subscription-Key, sub-key)"
+regex = '''(?i)(?:ocp-apim-subscription-key|subscription[_-]?key|sub[_-]?key)["']?\s*[:=]?\s*(?:\n\s*value:\s*)?["']?([0-9a-f]{32})\b'''
+secretGroup = 1
+keywords = ["subscription", "sub-key", "sub_key", "subkey"]
+
+# --- Variables d'environnement secrètes du dépôt avec une valeur (y compris dans les .env.example)
+[[rules]]
+id = "repo-env-secret-assignment"
+description = "Secret du dépôt affecté en dur (APIM_TOKEN_*, ECCO_*_SECRET, JWT_SIGNING_KEY, AGENT_CONFIG_TOKEN…)"
+# Limité aux fichiers de configuration : dans le code TS, ces noms sont des clés de schéma zod, pas des valeurs.
+path = '''(^|/)([^/]*\.env(\.[^/]*)?|\.env[^/]*|[^/]+\.(ya?ml|json|sh|toml|ini|conf|properties|md|txt)|Dockerfile[^/]*)$'''
+regex = '''\b(?:APIM_TOKEN_WEB_\d{3}|APIM_SUBSCRIPTION_KEY(?:_BACKUP)?|ECCO_TOKEN_CLIENT_SECRET|ECCO_OCP_APIM_KEY|JWT_SIGNING_KEY|AGENT_CONFIG_TOKEN|ANTHROPIC_API_KEY|AZURE_OPENAI_(?:API_)?KEY|AZURE_SEARCH_(?:ADMIN|QUERY)_KEY|GLICHTIP_API_TOKEN)[ \t]*[=:][ \t]*["']?([^"'\s#$<{][^"'\s#]{7,})'''
+secretGroup = 1
+keywords = ["apim_token", "apim_subscription", "ecco_", "jwt_signing", "agent_config", "anthropic", "azure_openai", "azure_search", "glichtip"]
+
+[allowlist]
+description = "Fichiers sans secret réel"
+paths = [
+  '''pnpm-lock\.yaml$''',
+  '''docs/contexte/inventaires/.*''',      # sorties de scan, valeurs masquées
+  '''apps/tunnel/src/features/shared/domain/dataCode/country\.ts$''',  # GUID de référentiel CRM
+]
+regexes = [
+  '''\{\{[\w-]+\}\}''',                    # variable Bruno
+  '''(\.\.\.|…)$''',                        # valeur tronquée d'exemple (ex. sk-ant-...)
+]
+# Valeurs d'exemple (.env.example, docs) : ignorées si elles contiennent un de ces mots.
+stopwords = ["change-me", "changeme", "replace", "remplacer", "example", "exemple", "your-", "votre", "placeholder", "xxxx"]
