@@ -370,7 +370,7 @@ describe("GlitchTipErrorMonitorStrategy", () => {
       ).toBe(30 * 60_000);
     });
 
-    it("treats a null bucket as zero without coercing the sum to NaN", async () => {
+    it("treats a null bucket as zero without coercing the sum to Number.NaN", async () => {
       get.mockResolvedValue({
         intervals: ["2026-09-09T08:00:00Z", "2026-09-09T08:01:00Z"],
         groups: [{ series: { "sum(quantity)": [null, 2] } }],

@@ -131,7 +131,7 @@ describe("PostHogStrategy.getKpiMeasures", () => {
     expect(measure).toEqual({ value: 6, windowMinutes: 60 });
   });
 
-  it("reports zero rather than NaN when nobody visited", async () => {
+  it("reports zero rather than Number.NaN when nobody visited", async () => {
     const { client } = makeClient({ results: [] });
 
     expect(

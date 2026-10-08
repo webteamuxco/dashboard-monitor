@@ -1,0 +1,3 @@
+[submodule "tools/docker-stack-process"]
+	path = tools/docker-stack-process
+	url = git@github.com:webteamuxco/docker-stack-process.git

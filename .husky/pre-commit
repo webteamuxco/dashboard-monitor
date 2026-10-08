@@ -1,2 +1,10 @@
 sh scripts/gitleaks.sh git --pre-commit --staged --redact --no-banner -v
 pnpm typecheck && pnpm test && pnpm lint
+
+# docker-stack-process: pre-commit
+stack_hook="$(git rev-parse --show-toplevel)/tools/docker-stack-process/git-hooks/pre-commit"
+if [ -f "$stack_hook" ]; then
+    sh "$stack_hook" "$@"
+else
+    echo "docker-stack-process: $stack_hook not found, hook skipped (https://github.com/webteamuxco/docker-stack-process is missing to folder tools/docker-stack-process)." >&2
+fi

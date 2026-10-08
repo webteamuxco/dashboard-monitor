@@ -34,34 +34,34 @@ export function DashboardHeader({ documentId, intervalMs, showDevelopmentPanel }
 
   return (
     <>
-    <header className="sticky top-0 z-50 flex h-13 items-center justify-between border-b border-border bg-card px-5">
-      <div className="flex items-center gap-4">
-        <div className="flex items-center gap-2 font-mono text-sm font-semibold">
-          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
-            <ShieldCheck className="h-4 w-4 text-primary-foreground" />
+      <header className="sticky top-0 z-50 flex h-13 items-center justify-between border-b border-border bg-card px-5">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 font-mono text-sm font-semibold">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary">
+              <ShieldCheck className="h-4 w-4 text-primary-foreground" />
+            </span>
+            <span className="pointer-events-none font-mono text-sm font-semibold">
+              {process.env.NEXT_PUBLIC_PROJECT_TITLE}
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={`h-1.5 w-1.5 rounded-full bg-status-live ${
+                isFetching ? "animate-pulse" : ""
+              }`}
+              aria-hidden
+            />
+            EN DIRECT
+          </div>
+
+          <span className="flex rounded border gap-2.5 border-border bg-muted px-2 py-0.5 font-mono text-[0.6875rem] text-muted-foreground">
+            <ListRestart className="w-4 h-4" /> polling {intervalSeconds}s
           </span>
-          <span className="pointer-events-none font-mono text-sm font-semibold">
-            {process.env.NEXT_PUBLIC_PROJECT_TITLE}
-        </span>
-        </div>
-        <div className="flex items-center gap-1.5 rounded border border-status-live/25 bg-status-live-bg px-2 py-0.5 font-mono text-[0.6875rem] text-status-live">
-          <span
-            className={`h-1.5 w-1.5 rounded-full bg-status-live ${
-              isFetching ? "animate-pulse" : ""
-            }`}
-            aria-hidden
-          />
-          EN DIRECT
+
         </div>
 
-        <span className="flex rounded border gap-2.5 border-border bg-muted px-2 py-0.5 font-mono text-[0.6875rem] text-muted-foreground">
-          <ListRestart className="w-4 h-4"/> polling {intervalSeconds}s
-        </span>
-
-      </div>
 
 
-      
         <div className="flex items-center gap-2">
           {isInteractive && (
             <>
@@ -76,73 +76,73 @@ export function DashboardHeader({ documentId, intervalMs, showDevelopmentPanel }
           <span className="font-mono text-[0.6875rem] text-muted-foreground/60">Dernier rafraîchissement: {lastUpdate}</span>
           {isInteractive && (
             <>
-          <Button
-            variant="outline"
-            size="sm"
-            className={isFetching ? "cursor-progress" : "cursor-pointer"}
-            onClick={() => queryClient.invalidateQueries()}
-            disabled={isFetching}
-          >
-            <RotateCw className={isFetching ? "animate-spin" : ""} />
-            Rafraîchir
-          </Button>
-
-          {!showDevelopmentPanel ? (
-            <a href={developmentPanelUrl} target="_blank"> 
               <Button
                 variant="outline"
                 size="sm"
-                className="cursor-pointer"
+                className={isFetching ? "cursor-progress" : "cursor-pointer"}
+                onClick={() => queryClient.invalidateQueries()}
+                disabled={isFetching}
               >
-                <CodeXml /> Dev Version
+                <RotateCw className={isFetching ? "animate-spin" : ""} />
+                Rafraîchir
               </Button>
-            </a>
-          ) : (
-            <a href="/" target="_blank"> 
-              <Button
-                variant="outline"
-                size="sm"
-                className="cursor-pointer"
-              >
-                <Eye /> Public Version
-              </Button>
-            </a>
-          )}
 
-          {showDevelopmentPanel && (
-            <>
-              <a href={adminUrl} target="_blank"> 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer"
-                >
-                  <LayoutDashboard /> Admin
-                </Button>
-              </a>
+              {!showDevelopmentPanel ? (
+                <a href={developmentPanelUrl} target="_blank">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer"
+                  >
+                    <CodeXml /> Dev Version
+                  </Button>
+                </a>
+              ) : (
+                <a href="/" target="_blank">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="cursor-pointer"
+                  >
+                    <Eye /> Public Version
+                  </Button>
+                </a>
+              )}
 
-              <a href={docsSiteUrl} target="_blank"> 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer"
-                >
-                  <BookOpenText /> Documentation
-                </Button>
-              </a>
+              {showDevelopmentPanel && (
+                <>
+                  <a href={adminUrl} target="_blank">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                    >
+                      <LayoutDashboard /> Admin
+                    </Button>
+                  </a>
 
-              <a href={developmentLabUrl} target="_blank"> 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="cursor-pointer"
-                >
-                  <TestTubeDiagonal /> Labs
-                </Button>
-              </a>
+                  <a href={docsSiteUrl} target="_blank">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                    >
+                      <BookOpenText /> Documentation
+                    </Button>
+                  </a>
+
+                  <a href={developmentLabUrl} target="_blank">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="cursor-pointer"
+                    >
+                      <TestTubeDiagonal /> Labs
+                    </Button>
+                  </a>
+                </>
+              )}
             </>
-          )}
-           </>
           )}
         </div>
 

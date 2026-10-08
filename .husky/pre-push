@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+
+echo "================================"
+echo "GENERATE CODE COVERAGE REPORT"
+echo "================================"
+
+pnpm vitest run --coverage
+
+# docker-stack-process: pre-push
+stack_hook="$(git rev-parse --show-toplevel)/tools/docker-stack-process/git-hooks/pre-push"
+if [ -f "$stack_hook" ]; then
+    sh "$stack_hook" "$@"
+else
+    echo "docker-stack-process: $stack_hook not found, hook skipped (https://github.com/webteamuxco/docker-stack-process is missing to folder tools/docker-stack-process)." >&2
+fi

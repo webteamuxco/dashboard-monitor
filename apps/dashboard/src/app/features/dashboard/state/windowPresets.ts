@@ -27,7 +27,7 @@ export function formatWindowLabel(minutes: number): string {
 
 export function readDefaultWindowMinutesFromEnv(): number {
   const raw = process.env.NEXT_PUBLIC_DASHBOARD_RESERVATIONS_WINDOW_MINUTES;
-  const parsed = raw ? Number(raw) : NaN;
+  const parsed = raw ? Number(raw) : Number.NaN;
   return Number.isInteger(parsed) && parsed > 0 ? parsed : 30;
 }
 
